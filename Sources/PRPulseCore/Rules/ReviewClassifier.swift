@@ -9,8 +9,8 @@ public enum ReviewClassifier {
         let ignored = Set(ignoredRepos.map { $0.lowercased() })
         return prs
             .filter { needsViewerReview($0, viewer: viewer, ignored: ignored) }
+            .map { ReviewItem(pr: $0, isRequested: isRequested($0, viewer: viewer)) }
             .sorted(by: listOrder)
-            .map(ReviewItem.init)
     }
 
     private static func needsViewerReview(_ pr: PullRequestSnapshot, viewer: String, ignored: Set<String>) -> Bool {
@@ -27,12 +27,18 @@ public enum ReviewClassifier {
 
     private static func isHiddenByRepo(_ pr: PullRequestSnapshot, viewer: String, ignored: Set<String>) -> Bool {
         guard ignored.contains(pr.ref.repo.lowercased()) else { return false }
-        return !pr.requestedReviewers.contains { $0.caseInsensitiveCompare(viewer) == .orderedSame }
+        return !isRequested(pr, viewer: viewer)
     }
 
-    private static func listOrder(_ a: PullRequestSnapshot, _ b: PullRequestSnapshot) -> Bool {
-        if a.isDraft != b.isDraft { return !a.isDraft }
-        if a.createdAt != b.createdAt { return a.createdAt < b.createdAt }
-        return a.ref.number < b.ref.number
+    private static func isRequested(_ pr: PullRequestSnapshot, viewer: String) -> Bool {
+        pr.requestedReviewers.contains { $0.caseInsensitiveCompare(viewer) == .orderedSame }
+    }
+
+    /// Requests to the viewer first, then ready PRs before drafts, then the one waiting longest.
+    private static func listOrder(_ a: ReviewItem, _ b: ReviewItem) -> Bool {
+        if a.isRequested != b.isRequested { return a.isRequested }
+        if a.pr.isDraft != b.pr.isDraft { return !a.pr.isDraft }
+        if a.pr.createdAt != b.pr.createdAt { return a.pr.createdAt < b.pr.createdAt }
+        return a.pr.ref.number < b.pr.ref.number
     }
 }

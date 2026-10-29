@@ -13,6 +13,7 @@ public struct ViewerInfo: Equatable, Sendable {
 public struct GitHubClient: Sendable {
     static let searchEpoch = Date(timeIntervalSince1970: 1_420_070_400)
     static let searchEndMargin: TimeInterval = 86_400
+    private static let activityLookback: TimeInterval = 90 * 86_400
     private static let searchCap = 1000
     private static let checksBatchSize = 25
 
@@ -36,6 +37,38 @@ public struct GitHubClient: Sendable {
             throw GitHubError.malformed("viewer is missing")
         }
         return ViewerInfo(login: login, organizations: viewer.nodes("organizations").compactMap { $0.string("login") })
+    }
+
+    /// Orders the organizations by how much the viewer worked in them over the last months.
+    public func rankedOrganizations(_ organizations: [String], viewer: String) async throws -> [String] {
+        guard !organizations.isEmpty else { return [] }
+        let since = clock.now.addingTimeInterval(-Self.activityLookback).formatted(.iso8601.year().month().day())
+        let data = try await execute(Queries.activity(organizations: organizations, viewer: viewer, since: since), [:])
+        let activity = organizations.enumerated().map { index, login in
+            let search = data.object("o\(index)")
+            return OrganizationActivity(
+                login: login,
+                recentPullRequests: search?.int("issueCount") ?? 0,
+                lastActivity: parseDate(search?.nodes("nodes").first?.string("updatedAt"))
+            )
+        }
+        return OrganizationRanking.order(activity)
+    }
+
+    /// Names of the owner's non-archived repositories, most recently pushed first.
+    public func repositories(owner: String) async throws -> [String] {
+        var names: [String] = []
+        var cursor: String?
+        repeat {
+            var variables: [String: Any] = ["owner": owner]
+            if let cursor { variables["after"] = cursor }
+            let data = try await execute(Queries.repositories, variables)
+            let connection = data.object("repositoryOwner")?.object("repositories")
+            names += (connection?.array("nodes") ?? []).compactMap { $0.string("name") }
+            let info = connection?.object("pageInfo")
+            cursor = info?.bool("hasNextPage") == true ? info?.string("endCursor") : nil
+        } while cursor != nil
+        return names
     }
 
     public func verifyOrganization(_ org: String) async throws {

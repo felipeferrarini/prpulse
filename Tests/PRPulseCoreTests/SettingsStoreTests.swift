@@ -17,6 +17,7 @@ private func freshDefaults() -> UserDefaults {
     #expect(!defaults.hasCompletedSetup)
     #expect(defaults.authSource == .ghCli)
     #expect(defaults.org == "")
+    #expect(defaults.popoverLayout == .single)
 }
 
 @Test func settingsRoundTripAndCorruptDataFallsBack() {
@@ -42,4 +43,14 @@ private func freshDefaults() -> UserDefaults {
     #expect(decoded.org == "acme")
     #expect(decoded.refreshMinutes == 5)
     #expect(decoded.ignoredBots == ["coderabbitai", "sonarqubecloud"])
+}
+
+@Test func popoverLayoutSurvivesARoundTripAndOldDataFallsBackToSingle() throws {
+    var settings = AppSettings.defaults
+    settings.popoverLayout = .split
+    let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
+    #expect(decoded.popoverLayout == .split)
+
+    let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"org":"acme"}"#.utf8))
+    #expect(old.popoverLayout == .single)
 }

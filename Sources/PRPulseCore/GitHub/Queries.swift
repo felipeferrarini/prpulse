@@ -11,6 +11,25 @@ enum Queries {
     query($login: String!) { organization(login: $login) { login } }
     """
 
+    static let repositories = """
+    query($owner: String!, $after: String) {
+      repositoryOwner(login: $owner) {
+        repositories(first: 100, after: $after, isArchived: false, orderBy: { field: PUSHED_AT, direction: DESC }) {
+          pageInfo { hasNextPage endCursor }
+          nodes { name }
+        }
+      }
+    }
+    """
+
+    static func activity(organizations: [String], viewer: String, since: String) -> String {
+        let aliases = organizations.enumerated().map { index, org in
+            let search = escaped("org:\(org) is:pr involves:\(viewer) updated:>=\(since)")
+            return "o\(index): search(query: \"\(search)\", type: ISSUE, first: 1) { issueCount nodes { ... on PullRequest { updatedAt } } }"
+        }
+        return "query {\n\(aliases.joined(separator: "\n"))\n}"
+    }
+
     static let reviewThreadsPage = """
     query($id: ID!, $after: String) {
       node(id: $id) {

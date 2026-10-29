@@ -55,3 +55,15 @@ private func review(_ state: ReviewState, by login: String = viewer) -> ReviewSn
     let pr = PullRequestSnapshot.fixture(author: .ghost)
     #expect(items([pr]).count == 1)
 }
+
+@Test func requestsToTheViewerComeFirstAndAreFlagged() {
+    let prs = [
+        PullRequestSnapshot.fixture(number: 1, author: otherHuman, createdAt: at(0)),
+        PullRequestSnapshot.fixture(number: 2, author: otherHuman, createdAt: at(50), requestedReviewers: [viewer]),
+        PullRequestSnapshot.fixture(number: 3, author: otherHuman, isDraft: true, createdAt: at(10), requestedReviewers: [viewer.uppercased()]),
+    ]
+    let result = items(prs)
+
+    #expect(result.map(\.pr.ref.number) == [2, 3, 1])
+    #expect(result.map(\.isRequested) == [true, true, false])
+}

@@ -15,6 +15,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var notificationsEnabled: Bool
     public var launchAtLogin: Bool
     public var hasCompletedSetup: Bool
+    public var popoverLayout: PopoverLayout
 
     public static let defaults = AppSettings(
         org: "",
@@ -24,7 +25,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         ignoredBots: defaultIgnoredBots,
         notificationsEnabled: true,
         launchAtLogin: false,
-        hasCompletedSetup: false
+        hasCompletedSetup: false,
+        popoverLayout: .single
     )
 
     public init(
@@ -35,7 +37,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         ignoredBots: [String],
         notificationsEnabled: Bool,
         launchAtLogin: Bool,
-        hasCompletedSetup: Bool
+        hasCompletedSetup: Bool,
+        popoverLayout: PopoverLayout = .single
     ) {
         self.org = org
         self.authSource = authSource
@@ -45,6 +48,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.notificationsEnabled = notificationsEnabled
         self.launchAtLogin = launchAtLogin
         self.hasCompletedSetup = hasCompletedSetup
+        self.popoverLayout = popoverLayout
     }
 
     public init(from decoder: Decoder) throws {
@@ -58,5 +62,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
         notificationsEnabled = try values.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? base.notificationsEnabled
         launchAtLogin = try values.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? base.launchAtLogin
         hasCompletedSetup = try values.decodeIfPresent(Bool.self, forKey: .hasCompletedSetup) ?? base.hasCompletedSetup
+        popoverLayout = try values.decodeIfPresent(PopoverLayout.self, forKey: .popoverLayout) ?? base.popoverLayout
     }
 }

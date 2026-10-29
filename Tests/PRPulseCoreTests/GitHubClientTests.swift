@@ -258,3 +258,59 @@ private func emptySearch() -> Data {
 
     #expect(prs.map(\.ref.number).sorted() == [3, 4])
 }
+
+private func activityResponse(_ counts: [Int], updatedAt: String? = nil) -> Data {
+    var data: [String: Any] = [:]
+    for (index, count) in counts.enumerated() {
+        let nodes: [[String: Any]] = count > 0 && updatedAt != nil ? [["updatedAt": updatedAt!]] : []
+        data["o\(index)"] = ["issueCount": count, "nodes": nodes]
+    }
+    return json(["data": data])
+}
+
+@Test func organizationsAreRankedByRecentInvolvement() async throws {
+    let transport = FakeTransport { _, _ in activityResponse([1, 30, 0], updatedAt: "2026-10-01T00:00:00Z") }
+    let ranked = try await client(transport).rankedOrganizations(["a", "b", "c"], viewer: "me")
+
+    #expect(ranked == ["b", "a", "c"])
+}
+
+@Test func rankingSearchesEachOrganizationInvolvingTheViewerSinceNinetyDaysAgo() async throws {
+    let transport = FakeTransport { _, _ in activityResponse([0, 0]) }
+    _ = try await client(transport).rankedOrganizations(["acme", "other-org"], viewer: "me")
+
+    let query = try #require(transport.calls.first?.query)
+    #expect(query.contains("org:acme is:pr involves:me updated:>=2026-07-28"))
+    #expect(query.contains("org:other-org is:pr involves:me"))
+    #expect(query.contains("o1: search"))
+}
+
+@Test func rankingWithoutOrganizationsSkipsTheRequest() async throws {
+    let transport = FakeTransport { _, _ in Issue.record("no request expected"); return Data() }
+
+    #expect(try await client(transport).rankedOrganizations([], viewer: "me").isEmpty)
+    #expect(transport.calls.isEmpty)
+}
+
+private func repositoriesResponse(_ names: [String], next: String? = nil) -> Data {
+    json(["data": ["repositoryOwner": ["repositories": [
+        "pageInfo": ["hasNextPage": next != nil, "endCursor": next as Any],
+        "nodes": names.map { ["name": $0] },
+    ]]]])
+}
+
+@Test func repositoriesFollowPaginationAndKeepTheOrder() async throws {
+    let transport = FakeTransport { _, variables in
+        variables["after"] as? String == "c1" ? repositoriesResponse(["web"]) : repositoriesResponse(["api", "docs"], next: "c1")
+    }
+    let names = try await client(transport).repositories(owner: "acme")
+
+    #expect(names == ["api", "docs", "web"])
+    #expect(transport.calls.map { $0.variables["owner"] as? String } == ["acme", "acme"])
+}
+
+@Test func repositoriesOfAnUnknownOwnerAreEmpty() async throws {
+    let transport = FakeTransport { _, _ in json(["data": ["repositoryOwner": NSNull()]]) }
+
+    #expect(try await client(transport).repositories(owner: "ghost").isEmpty)
+}

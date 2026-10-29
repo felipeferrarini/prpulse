@@ -86,7 +86,7 @@ private func checker(
 
     _ = try await checker.check(source: .personalToken, typedToken: "   ")
 
-    #expect(transport?.seenTokens == ["stored_token"])
+    #expect(Set(transport?.seenTokens ?? []) == ["stored_token"])
     #expect(try store.load() == "stored_token")
 }
 
@@ -97,7 +97,7 @@ private func checker(
 
     _ = try await checker.check(source: .ghCli, typedToken: "ignored_typed_token")
 
-    #expect(transport?.seenTokens == ["gh_token"])
+    #expect(Set(transport?.seenTokens ?? []) == ["gh_token"])
     #expect(try store.load() == "stored_token")
 }
 
@@ -123,4 +123,22 @@ private func checker(
     let store = MemoryStore()
     _ = try await checker(store: store, scopes: nil).check(source: .personalToken, typedToken: "github_pat_fine_grained")
     #expect(try store.load() == "github_pat_fine_grained")
+}
+
+@Test func organizationsComeBackRankedByActivity() async throws {
+    let body = json(["data": [
+        "viewer": ["login": "me", "organizations": ["nodes": [["login": "acme"], ["login": "other-org"]]]],
+        "o0": ["issueCount": 1, "nodes": []],
+        "o1": ["issueCount": 9, "nodes": []],
+    ]])
+    let info = try await checker(store: MemoryStore(), outcome: .success(body)).check(source: .ghCli, typedToken: nil)
+
+    #expect(info.organizations == ["other-org", "acme"])
+}
+
+@Test func organizationsFallBackToAlphabeticalWhenRankingIsUnavailable() async throws {
+    let body = json(["data": ["viewer": ["login": "me", "organizations": ["nodes": [["login": "zeta"], ["login": "alpha"]]]]]])
+    let info = try await checker(store: MemoryStore(), outcome: .success(body)).check(source: .ghCli, typedToken: nil)
+
+    #expect(info.organizations == ["alpha", "zeta"])
 }
