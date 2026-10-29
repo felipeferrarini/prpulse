@@ -67,8 +67,13 @@ final class AppRuntime: ObservableObject {
     func openSettings() {
         guard settings.settings.hasCompletedSetup else { return showSetup() }
         let setup = SetupModel(settings: settings.settings, isSetup: false)
-        windows.show(id: Self.settingsWindow, title: tr("settings.title")) {
-            SettingsView(model: setup, onSave: { [weak self] draft in self?.save(draft) }, onRedoSetup: { [weak self] in self?.redoSetup() })
+        windows.show(id: Self.settingsWindow, title: tr("settings.title"), chrome: .borderless) {
+            SettingsView(
+                model: setup,
+                onSave: { [weak self] draft in self?.save(draft) },
+                onRedoSetup: { [weak self] in self?.redoSetup() },
+                onClose: { [weak self] in self?.windows.close(id: Self.settingsWindow) }
+            )
         }
     }
 
@@ -119,7 +124,7 @@ final class AppRuntime: ObservableObject {
 
     private func save(_ draft: AppSettings) {
         var chosen = draft
-        chosen.popoverLayout = popoverLayout
+        popoverLayout = chosen.popoverLayout
         chosen.hasCompletedSetup = true
         settings.settings = chosen
         LaunchAtLogin.apply(chosen.launchAtLogin)

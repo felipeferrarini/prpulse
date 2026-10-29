@@ -24,6 +24,7 @@ final class SetupModel: ObservableObject {
     @Published private(set) var hasStoredToken = false
     @Published private(set) var repositories = RepositoryList.idle
     @Published private(set) var organizationActivity: [String: Int] = [:]
+    @Published private(set) var login: String?
 
     private let tokens: TokenStore
     private let isSetup: Bool
@@ -48,6 +49,10 @@ final class SetupModel: ObservableObject {
     }
 
     func validateConnection() async -> Bool {
+        if isPreview {
+            validation = .ok
+            return true
+        }
         validation = .checking
         let checker = ConnectionChecker(
             makeTransport: { provider in URLSessionTransport(token: { try await provider.token() }) },
@@ -59,6 +64,7 @@ final class SetupModel: ObservableObject {
             hasStoredToken = ((try? tokens.load()) ?? nil) != nil
             organizations = info.organizations + [info.login]
             organizationActivity = info.recentPullRequests
+            login = info.login
             return resolveOrganization()
         } catch {
             validation = .failed(Self.message(for: error))
@@ -116,8 +122,9 @@ final class SetupModel: ObservableObject {
         if case .loaded(let names) = repositories { names } else { [] }
     }
 
-    func loadPreview(organizations: [String], gh: GhStatus, repositories: [String] = [], activity: [String: Int] = [:]) {
+    func loadPreview(organizations: [String], gh: GhStatus, repositories: [String] = [], activity: [String: Int] = [:], login: String? = nil) {
         self.organizations = organizations
+        self.login = login
         organizationActivity = activity
         ghStatus = gh
         self.repositories = .loaded(repositories)

@@ -13,6 +13,7 @@ enum WizardPalette {
     static let accent = Palette.dynamic(light: 0x2F55FF, dark: 0x8EA6FF)
     static let soft = Palette.dynamic(light: 0xE3E9FF, dark: 0x1B2750)
     static let onAccent = Palette.dynamic(light: 0xFFFFFF, dark: 0x0A0F1F)
+    static let side = Palette.dynamic(light: 0xE9EEFB, dark: 0x0D1326)
     static let danger = Palette.dynamic(light: 0xD7382B, dark: 0xFF8577)
     static let success = Palette.dynamic(light: 0x16784A, dark: 0x52CF92)
 
@@ -49,13 +50,46 @@ struct WizardPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(WizardPalette.onAccent)
+            .foregroundStyle(isEnabled ? WizardPalette.onAccent : WizardPalette.ink3)
             .frame(minWidth: 130)
             .frame(height: 40)
             .padding(.horizontal, 20)
-            .background(WizardPalette.accent, in: RoundedRectangle(cornerRadius: 11))
-            .opacity(isEnabled ? 1 : 0.35)
+            .background(isEnabled ? WizardPalette.accent : WizardPalette.card2, in: RoundedRectangle(cornerRadius: 11))
+            .animation(.easeOut(duration: 0.2), value: isEnabled)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+extension View {
+    /// The look of the app's windows that have no system title bar: rounded, with a hairline edge.
+    func borderlessWindowChrome(cornerRadius: CGFloat = 16) -> some View {
+        background(WizardPalette.bg)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5))
+            .focusEffectDisabled()
+    }
+}
+
+struct WindowCloseButton: View {
+    let action: () -> Void
+
+    @LocalState private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(isHovering ? WizardPalette.ink : WizardPalette.ink3)
+                .frame(width: 28, height: 28)
+                .background(isHovering ? WizardPalette.card2 : .clear, in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .keyboardShortcut(.cancelAction)
+        .help(tr("wizard.close"))
+        .accessibilityLabel(tr("wizard.close"))
+        .animation(.easeOut(duration: 0.15), value: isHovering)
     }
 }

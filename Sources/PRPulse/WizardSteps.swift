@@ -1,7 +1,7 @@
 import PRPulseCore
 import SwiftUI
 
-private struct StepTitle: View {
+struct StepTitle: View {
     let title: String
     var lead: String?
 
@@ -36,7 +36,7 @@ private struct StepFrame<Content: View>: View {
     }
 }
 
-private struct SelectableCard<Content: View>: View {
+struct SelectableCard<Content: View>: View {
     let selected: Bool
     let action: () -> Void
     @ViewBuilder let content: Content
@@ -60,7 +60,7 @@ private struct SelectableCard<Content: View>: View {
     }
 }
 
-private struct RadioMark: View {
+struct RadioMark: View {
     let selected: Bool
 
     var body: some View {
@@ -117,25 +117,31 @@ struct ConnectBody: View {
     var body: some View {
         StepFrame {
             StepTitle(title: tr("setup.connect.title"), lead: tr("wizard.connect.lead"))
-            VStack(alignment: .leading, spacing: 10) {
-                option(.ghCli, symbol: "terminal", title: tr("setup.connect.gh"), detail: tr("wizard.connect.gh.detail"), status: ghStatus)
-                option(.personalToken, symbol: "key", title: tr("setup.connect.token"), detail: tr("wizard.connect.token.detail"), status: nil)
-                if model.draft.authSource == .personalToken { tokenField.transition(.opacity.combined(with: .move(edge: .top))) }
-                if case .failed(let message) = model.validation {
-                    Label(message, systemImage: "exclamationmark.triangle.fill")
-                        .font(.system(size: 12.5))
-                        .foregroundStyle(WizardPalette.danger)
-                }
-                Label(tr("setup.connect.privacy"), systemImage: "lock")
-                    .font(.system(size: 12))
-                    .foregroundStyle(WizardPalette.ink3)
-                    .padding(.top, 6)
-            }
-            .padding(.top, 20)
-            .staggered(2)
-            .animation(.spring(response: 0.45, dampingFraction: 0.85), value: model.draft.authSource)
+            ConnectionContent(model: model).padding(.top, 20).staggered(2)
             Spacer(minLength: 0)
         }
+    }
+}
+
+struct ConnectionContent: View {
+    @ObservedObject var model: SetupModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            option(.ghCli, symbol: "terminal", title: tr("setup.connect.gh"), detail: tr("wizard.connect.gh.detail"), status: ghStatus)
+            option(.personalToken, symbol: "key", title: tr("setup.connect.token"), detail: tr("wizard.connect.token.detail"), status: nil)
+            if model.draft.authSource == .personalToken { tokenField.transition(.opacity.combined(with: .move(edge: .top))) }
+            if case .failed(let message) = model.validation {
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(WizardPalette.danger)
+            }
+            Label(tr("setup.connect.privacy"), systemImage: "lock")
+                .font(.system(size: 12))
+                .foregroundStyle(WizardPalette.ink3)
+                .padding(.top, 6)
+        }
+        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: model.draft.authSource)
         .task { await model.checkGh() }
     }
 
@@ -196,14 +202,21 @@ struct OrganizationBody: View {
         StepFrame {
             StepTitle(title: tr("setup.org.title"), lead: tr("setup.org.caption"))
             ScrollView {
-                VStack(spacing: 8) {
-                    ForEach(Array(model.organizations.enumerated()), id: \.element) { index, org in
-                        row(org).staggered(2 + index)
-                    }
-                }
-                .padding(.vertical, 2)
+                OrganizationContent(model: model).padding(.vertical, 2)
             }
             .padding(.top, 14)
+        }
+    }
+}
+
+struct OrganizationContent: View {
+    @ObservedObject var model: SetupModel
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ForEach(Array(model.organizations.enumerated()), id: \.element) { index, org in
+                row(org).staggered(2 + index)
+            }
         }
     }
 
@@ -244,22 +257,31 @@ struct OrganizationBody: View {
 
 struct ExceptionsBody: View {
     @ObservedObject var model: SetupModel
+
+    var body: some View {
+        StepFrame {
+            StepTitle(title: tr("setup.exceptions.title"))
+            ExceptionsContent(model: model).padding(.top, 14)
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+struct ExceptionsContent: View {
+    @ObservedObject var model: SetupModel
     @LocalState private var filter = ""
     @LocalState private var botInput = ""
     @LocalState private var repoInput = ""
 
     var body: some View {
-        StepFrame {
-            StepTitle(title: tr("setup.exceptions.title"))
+        VStack(alignment: .leading, spacing: 0) {
             section(tr("setup.exceptions.repos"), caption: tr("setup.exceptions.repos.caption")) { repositories }
-                .padding(.top, 14)
                 .staggered(1)
             section(tr("setup.exceptions.bots"), caption: tr("setup.exceptions.bots.caption")) {
                 chips(items: $model.draft.ignoredBots, input: $botInput, kind: .account)
             }
             .padding(.top, 18)
             .staggered(2)
-            Spacer(minLength: 0)
         }
         .task(id: model.draft.org) { await model.loadRepositories() }
     }
@@ -367,16 +389,74 @@ struct GeneralBody: View {
     var body: some View {
         StepFrame {
             StepTitle(title: tr("wizard.general.title"), lead: tr("wizard.general.lead"))
-            VStack(spacing: 0) {
-                intervalRow.staggered(2)
-                switchRow(tr("setup.general.notifications"), detail: tr("wizard.general.notifications.detail"), isOn: $model.draft.notificationsEnabled)
-                    .staggered(3)
-                switchRow(tr("setup.general.launch"), detail: tr("wizard.general.launch.detail"), isOn: $model.draft.launchAtLogin)
-                    .staggered(4)
-            }
-            .padding(.top, 14)
+            GeneralContent(model: model).padding(.top, 14)
             Spacer(minLength: 0)
         }
+    }
+}
+
+struct GeneralContent: View {
+    @ObservedObject var model: SetupModel
+    var onRedoSetup: (() -> Void)?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            intervalRow.staggered(2)
+            if onRedoSetup != nil { layoutRow.staggered(3) }
+            switchRow(tr("setup.general.notifications"), detail: tr("wizard.general.notifications.detail"), isOn: $model.draft.notificationsEnabled)
+                .staggered(4)
+            switchRow(tr("setup.general.launch"), detail: tr("wizard.general.launch.detail"), isOn: $model.draft.launchAtLogin)
+                .staggered(5)
+            if let onRedoSetup { redoRow(onRedoSetup).staggered(6) }
+        }
+    }
+
+    private var layoutRow: some View {
+        HStack {
+            label(tr("settings.layout.title"), detail: tr("settings.layout.detail"))
+            Spacer()
+            HStack(spacing: 2) {
+                layoutOption(.single, symbol: "rectangle", title: tr("settings.layout.single"))
+                layoutOption(.split, symbol: "rectangle.split.2x1", title: tr("settings.layout.split"))
+            }
+            .padding(3)
+            .background(WizardPalette.card, in: RoundedRectangle(cornerRadius: 11))
+            .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(WizardPalette.line))
+        }
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) { Rectangle().fill(WizardPalette.line).frame(height: 1) }
+    }
+
+    private func layoutOption(_ layout: PopoverLayout, symbol: String, title: String) -> some View {
+        let selected = model.draft.popoverLayout == layout
+        return Button { withAnimation(.easeOut(duration: 0.2)) { model.draft.popoverLayout = layout } } label: {
+            HStack(spacing: 7) {
+                Image(systemName: symbol).font(.system(size: 12))
+                Text(title).font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(selected ? WizardPalette.ink : WizardPalette.ink2)
+            .padding(.horizontal, 12)
+            .frame(height: 32)
+            .background(selected ? WizardPalette.card2 : .clear, in: RoundedRectangle(cornerRadius: 8))
+            .shadow(color: .black.opacity(selected ? 0.18 : 0), radius: 1.5, y: 1)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private func redoRow(_ action: @escaping () -> Void) -> some View {
+        HStack {
+            label(tr("settings.redo.title"), detail: tr("settings.redo.help"))
+            Spacer()
+            Button(action: action) {
+                Label(tr("settings.redo.action"), systemImage: "arrow.clockwise")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(WizardPalette.accent)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 14)
     }
 
     private var intervalRow: some View {

@@ -19,7 +19,6 @@ struct WizardView: View {
     static let slideCount = 3
     static let size = CGSize(width: 900, height: 590)
     private static let stageWidth: CGFloat = 378
-    private static let cornerRadius: CGFloat = 16
 
     init(
         model: SetupModel,
@@ -43,17 +42,14 @@ struct WizardView: View {
             main
         }
         .frame(width: Self.size.width, height: Self.size.height)
-        .background(WizardPalette.bg)
-        .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous).strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5))
-        .focusEffectDisabled()
+        .borderlessWindowChrome()
     }
 
     private var main: some View {
         VStack(spacing: 0) {
             HStack(spacing: 16) {
                 WizardProgress(current: step.rawValue, count: SetupStep.allCases.count)
-                CloseButton(action: onCancel)
+                WindowCloseButton(action: onCancel)
             }
             .padding(.leading, 32)
             .padding(.trailing, 18)
@@ -181,28 +177,5 @@ private struct WizardProgress: View {
         .animation(.spring(duration: 0.6), value: current)
         .accessibilityElement()
         .accessibilityLabel("\(current + 1) / \(count)")
-    }
-}
-
-private struct CloseButton: View {
-    let action: () -> Void
-
-    @LocalState private var isHovering = false
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "xmark")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(isHovering ? WizardPalette.ink : WizardPalette.ink3)
-                .frame(width: 28, height: 28)
-                .background(isHovering ? WizardPalette.card2 : .clear, in: Circle())
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
-        .keyboardShortcut(.cancelAction)
-        .help(tr("wizard.close"))
-        .accessibilityLabel(tr("wizard.close"))
-        .animation(.easeOut(duration: 0.15), value: isHovering)
     }
 }

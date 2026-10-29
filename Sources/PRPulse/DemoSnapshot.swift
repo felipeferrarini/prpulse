@@ -29,9 +29,28 @@ enum DemoSnapshot {
         for step in SetupStep.allCases {
             write(wizard(step), named: "wizard-\(step.rawValue + 1)-\(step)", to: directory)
         }
+        for page in SettingsPage.allCases {
+            write(settings(page), named: "settings-\(page)", to: directory)
+        }
         for slide in 1 ..< WizardView.slideCount {
             write(wizard(.welcome, slide: slide), named: "wizard-1-welcome-\(slide + 1)", to: directory)
         }
+    }
+
+    private static func settings(_ page: SettingsPage) -> some View {
+        var settings = AppSettings.defaults
+        settings.org = "acme"
+        settings.ignoredRepos = ["docs", "infra-legacy"]
+        let model = SetupModel(settings: settings, isSetup: false)
+        model.loadPreview(
+            organizations: ["acme", "acme-labs", "orbit", "octocat"],
+            gh: .available,
+            repositories: ["web", "api", "docs", "infra-legacy", "mobile", "design-system", "billing", "ops", "playground", "website"],
+            activity: ["acme": 87, "acme-labs": 14, "orbit": 2],
+            login: "felipeferrarini"
+        )
+        model.draft.refreshMinutes = page == .general ? 10 : 5
+        return SettingsView(model: model, initialPage: page, onSave: { _ in }, onRedoSetup: {})
     }
 
     private static func wizard(_ step: SetupStep, slide: Int = 0) -> some View {
