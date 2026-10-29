@@ -37,7 +37,7 @@ enum DemoSnapshot {
         }
     }
 
-    private static func settings(_ page: SettingsPage) -> some View {
+    static func settings(_ page: SettingsPage, login: String = "felipeferrarini") -> some View {
         var settings = AppSettings.defaults
         settings.org = "acme"
         settings.ignoredRepos = ["docs", "infra-legacy"]
@@ -47,13 +47,13 @@ enum DemoSnapshot {
             gh: .available,
             repositories: ["web", "api", "docs", "infra-legacy", "mobile", "design-system", "billing", "ops", "playground", "website"],
             activity: ["acme": 87, "acme-labs": 14, "orbit": 2],
-            login: "felipeferrarini"
+            login: login
         )
         model.draft.refreshMinutes = page == .general ? 10 : 5
         return SettingsView(model: model, initialPage: page, onSave: { _ in }, onRedoSetup: {})
     }
 
-    private static func wizard(_ step: SetupStep, slide: Int = 0) -> some View {
+    static func wizard(_ step: SetupStep, slide: Int = 0) -> some View {
         var settings = AppSettings.defaults
         settings.org = step == .organization ? "" : "acme"
         settings.ignoredRepos = ["docs", "infra-legacy"]
@@ -67,7 +67,7 @@ enum DemoSnapshot {
         return WizardView(model: model, initialStep: step, initialSlide: slide, onFinish: { nil })
     }
 
-    private static func popover(
+    static func popover(
         _ data: ViewData, _ scheme: ColorScheme, layout: PopoverLayout, tab: PopoverTab = .review, filter: ActionLane? = nil
     ) -> some View {
         PopoverView(data: data, layout: .constant(layout), initialTab: tab, initialFilter: filter, onRefresh: {}, onSettings: {})

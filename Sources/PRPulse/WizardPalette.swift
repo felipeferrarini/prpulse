@@ -93,3 +93,25 @@ struct WindowCloseButton: View {
         .animation(.easeOut(duration: 0.15), value: isHovering)
     }
 }
+
+struct WizardSwitchStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button { configuration.isOn.toggle() } label: {
+            Capsule()
+                .fill(configuration.isOn ? WizardPalette.accent : WizardPalette.off)
+                .frame(width: 42, height: 25)
+                .overlay(alignment: configuration.isOn ? .trailing : .leading) {
+                    Circle()
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.3), radius: 1.5, y: 1)
+                        .frame(width: 19, height: 19)
+                        .padding(3)
+                }
+                .animation(.spring(response: 0.35, dampingFraction: 0.7), value: configuration.isOn)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isToggle)
+        .accessibilityValue(configuration.isOn ? "1" : "0")
+    }
+}

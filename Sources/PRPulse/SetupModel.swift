@@ -129,6 +129,7 @@ final class SetupModel: ObservableObject {
         ghStatus = gh
         self.repositories = .loaded(repositories)
         isPreview = true
+        validation = .ok
     }
 
     func isPersonal(_ org: String) -> Bool {

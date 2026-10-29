@@ -142,7 +142,11 @@ final class AppRuntime: ObservableObject {
     private func writeSnapshotsIfRequested() {
         guard let directory = DemoSnapshot.directory else { return }
         DispatchQueue.main.async {
-            DemoSnapshot.writeAll(to: directory)
+            if ProcessInfo.processInfo.environment["PRPULSE_SNAPSHOT_STYLE"] == "readme" {
+                ReadmeShots.writeAll(to: directory)
+            } else {
+                DemoSnapshot.writeAll(to: directory)
+            }
             NSApp.terminate(nil)
         }
     }

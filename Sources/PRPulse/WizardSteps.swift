@@ -491,7 +491,7 @@ struct GeneralContent: View {
         HStack {
             label(title, detail: detail)
             Spacer()
-            Toggle(title, isOn: isOn).toggleStyle(.switch).tint(WizardPalette.accent).labelsHidden()
+            Toggle(title, isOn: isOn).toggleStyle(WizardSwitchStyle()).labelsHidden()
         }
         .padding(.vertical, 14)
         .overlay(alignment: .bottom) { Rectangle().fill(WizardPalette.line).frame(height: 1) }
