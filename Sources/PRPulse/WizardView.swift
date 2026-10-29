@@ -2,50 +2,79 @@ import PRPulseCore
 import SwiftUI
 
 enum SetupStep: Int, CaseIterable {
-    case welcome, connect, organization, exceptions, general
+    case welcome, connect, organization, exceptions, general, done
 }
 
 struct WizardView: View {
     @ObservedObject var model: SetupModel
     let onFinish: () async -> String?
+    let onClose: () -> Void
+    let onCancel: () -> Void
 
     @LocalState private var step: SetupStep
-    @LocalState private var slide = 0
+    @LocalState private var slide: Int
     @LocalState private var movingForward = true
     @LocalState private var isBusy = false
 
-    private static let slideCount = 3
+    static let slideCount = 3
+    static let size = CGSize(width: 900, height: 590)
+    private static let stageWidth: CGFloat = 378
+    private static let cornerRadius: CGFloat = 16
 
-    init(model: SetupModel, initialStep: SetupStep = .welcome, onFinish: @escaping () async -> String?) {
+    init(
+        model: SetupModel,
+        initialStep: SetupStep = .welcome,
+        initialSlide: Int = 0,
+        onFinish: @escaping () async -> String?,
+        onClose: @escaping () -> Void = {},
+        onCancel: @escaping () -> Void = {}
+    ) {
         self.model = model
         self.onFinish = onFinish
+        self.onClose = onClose
+        self.onCancel = onCancel
         _step = LocalState(initialValue: initialStep)
+        _slide = LocalState(initialValue: initialSlide)
     }
 
     var body: some View {
+        HStack(spacing: 0) {
+            WizardStage(model: model, step: step, slide: slide).frame(width: Self.stageWidth)
+            main
+        }
+        .frame(width: Self.size.width, height: Self.size.height)
+        .background(WizardPalette.bg)
+        .clipShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous).strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5))
+        .focusEffectDisabled()
+    }
+
+    private var main: some View {
         VStack(spacing: 0) {
-            ProgressDots(count: SetupStep.allCases.count, index: step.rawValue).padding(.top, 18)
-            ZStack {
-                content.id(step).transition(transition)
+            HStack(spacing: 16) {
+                WizardProgress(current: step.rawValue, count: SetupStep.allCases.count)
+                CloseButton(action: onCancel)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.leading, 32)
+            .padding(.trailing, 18)
+            .padding(.top, 18)
+            ZStack {
+                content.id(step.rawValue * 10 + slide).transition(transition)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .clipped()
             footer
         }
-        .frame(width: 600, height: 470)
     }
 
     @ViewBuilder private var content: some View {
         switch step {
-        case .welcome: WelcomeStep(slide: $slide)
-        case .connect: StepFrame(title: tr("setup.connect.title")) { ConnectionSection(model: model) }
-        case .organization: StepFrame(title: tr("setup.org.title")) { OrganizationSection(model: model) }
-        case .exceptions: StepFrame(title: tr("setup.exceptions.title")) { ExceptionsSection(model: model) }
-        case .general:
-            StepFrame(title: tr("setup.general.title")) {
-                GeneralSection(model: model)
-                ValidationBanner(validation: model.validation)
-            }
+        case .welcome: WelcomeBody(slide: slide) { go(to: .connect) }
+        case .connect: ConnectBody(model: model)
+        case .organization: OrganizationBody(model: model)
+        case .exceptions: ExceptionsBody(model: model)
+        case .general: GeneralBody(model: model)
+        case .done: DoneBody(model: model)
         }
     }
 
@@ -60,24 +89,43 @@ struct WizardView: View {
 
     private var footer: some View {
         HStack {
-            if step == .welcome {
-                Button(tr("setup.skip")) { go(to: .connect) }.buttonStyle(.borderless).focusable(false)
-            } else {
-                Button(tr("setup.back")) { goBack() }.disabled(isBusy)
-            }
+            Button(tr("setup.back")) { goBack() }
+                .buttonStyle(.plain)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(WizardPalette.ink2)
+                .disabled(isBusy)
+                .opacity(canGoBack ? 1 : 0)
+                .allowsHitTesting(canGoBack)
             Spacer()
-            if isBusy { ProgressView().controlSize(.small) }
-            Button(step == .general ? tr("setup.finish") : tr("setup.continue")) { Task { await advance() } }
+            if isBusy { ProgressView().controlSize(.small).padding(.trailing, 8) }
+            Button(primaryTitle) { Task { await advance() } }
+                .buttonStyle(WizardPrimaryButtonStyle())
                 .keyboardShortcut(step == .exceptions ? nil : .defaultAction)
                 .disabled(isBusy || (step == .organization && model.draft.org.isEmpty))
         }
-        .padding(18)
+        .padding(.horizontal, 32)
+        .padding(.top, 16)
+        .padding(.bottom, 22)
+    }
+
+    private var canGoBack: Bool {
+        step != .done && !(step == .welcome && slide == 0)
+    }
+
+    private var primaryTitle: String {
+        switch step {
+        case .welcome: slide < Self.slideCount - 1 ? tr("setup.continue") : tr("wizard.start")
+        case .connect: isBusy ? tr("setup.checking") : tr("wizard.connect.action")
+        case .general: tr("setup.finish")
+        case .done: tr("wizard.done.open")
+        default: tr("setup.continue")
+        }
     }
 
     private func advance() async {
         switch step {
         case .welcome:
-            if slide < Self.slideCount - 1 { withAnimation(.spring(duration: 0.4)) { slide += 1 } } else { go(to: .connect) }
+            if slide < Self.slideCount - 1 { goSlide(slide + 1) } else { go(to: .connect) }
         case .connect:
             isBusy = true
             let valid = await model.validateConnection()
@@ -87,105 +135,74 @@ struct WizardView: View {
         case .exceptions: go(to: .general)
         case .general:
             isBusy = true
-            if let failure = await onFinish() { model.reportFailure(failure) }
+            if let failure = await onFinish() { model.reportFailure(failure) } else { go(to: .done) }
             isBusy = false
+        case .done: onClose()
         }
     }
 
     private func goBack() {
+        if step == .welcome, slide > 0 { return goSlide(slide - 1) }
         guard let previous = SetupStep(rawValue: step.rawValue - 1) else { return }
         go(to: previous)
     }
 
+    private func goSlide(_ next: Int) {
+        movingForward = next > slide
+        withAnimation(.spring(duration: 0.45)) { slide = next }
+    }
+
     private func go(to next: SetupStep) {
         movingForward = next.rawValue > step.rawValue
-        withAnimation(.spring(duration: 0.45)) { step = next }
-    }
-}
-
-private struct StepFrame<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text(title).font(.title2.weight(.semibold))
-            content
-            Spacer(minLength: 0)
+        withAnimation(.spring(duration: 0.45)) {
+            step = next
+            if next == .welcome { slide = 0 }
         }
-        .padding(.horizontal, 36)
-        .padding(.top, 24)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-private struct ProgressDots: View {
+private struct WizardProgress: View {
+    let current: Int
     let count: Int
-    let index: Int
 
     var body: some View {
         HStack(spacing: 6) {
-            ForEach(0 ..< count, id: \.self) { position in
+            ForEach(0 ..< count, id: \.self) { index in
                 Capsule()
-                    .fill(position == index ? Color.accentColor : Color.primary.opacity(0.2))
-                    .frame(width: position == index ? 22 : 7, height: 7)
+                    .fill(WizardPalette.card2)
+                    .frame(height: 4)
+                    .overlay(alignment: .leading) {
+                        Capsule().fill(WizardPalette.accent)
+                            .scaleEffect(x: index <= current ? 1 : 0, anchor: .leading)
+                    }
+                    .clipShape(Capsule())
             }
         }
-        .animation(.spring(duration: 0.4), value: index)
+        .animation(.spring(duration: 0.6), value: current)
+        .accessibilityElement()
+        .accessibilityLabel("\(current + 1) / \(count)")
     }
 }
 
-private struct WelcomeStep: View {
-    @Binding var slide: Int
+private struct CloseButton: View {
+    let action: () -> Void
 
-    private let slides = [
-        ("setup.welcome.1.title", "setup.welcome.1.body"),
-        ("setup.welcome.2.title", "setup.welcome.2.body"),
-        ("setup.welcome.3.title", "setup.welcome.3.body"),
-    ]
+    @LocalState private var isHovering = false
 
     var body: some View {
-        VStack(spacing: 22) {
-            PulsingIcon()
-            VStack(spacing: 8) {
-                Text(tr(slides[slide].0)).font(.title2.weight(.semibold)).multilineTextAlignment(.center)
-                Text(tr(slides[slide].1)).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            }
-            .id(slide)
-            .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
-            HStack(spacing: 6) {
-                ForEach(0 ..< slides.count, id: \.self) { position in
-                    Circle().fill(position == slide ? Color.accentColor : Color.primary.opacity(0.2)).frame(width: 7, height: 7)
-                }
-            }
+        Button(action: action) {
+            Image(systemName: "xmark")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(isHovering ? WizardPalette.ink : WizardPalette.ink3)
+                .frame(width: 28, height: 28)
+                .background(isHovering ? WizardPalette.card2 : .clear, in: Circle())
+                .contentShape(Circle())
         }
-        .padding(.horizontal, 60)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .animation(.spring(duration: 0.45), value: slide)
-    }
-}
-
-private struct PulsingIcon: View {
-    @LocalState private var animate = false
-
-    var body: some View {
-        ZStack {
-            Circle().stroke(Color.orange, lineWidth: 2)
-                .frame(width: 84, height: 84)
-                .scaleEffect(animate ? 1.7 : 1)
-                .opacity(animate ? 0 : 0.6)
-                .animation(.easeOut(duration: 1.8).repeatForever(autoreverses: false), value: animate)
-            RoundedRectangle(cornerRadius: 20).fill(Color.orange.gradient)
-                .frame(width: 84, height: 84)
-                .overlay(Image(systemName: "arrow.triangle.branch").font(.system(size: 40, weight: .semibold)).foregroundStyle(.white))
-                .overlay(alignment: .topTrailing) {
-                    Text("3").font(.caption.bold()).foregroundStyle(.white)
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(Color.red, in: Capsule())
-                        .offset(x: 10, y: -8)
-                }
-        }
-        .frame(height: 130)
-        .onAppear { animate = true }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .keyboardShortcut(.cancelAction)
+        .help(tr("wizard.close"))
+        .accessibilityLabel(tr("wizard.close"))
+        .animation(.easeOut(duration: 0.15), value: isHovering)
     }
 }

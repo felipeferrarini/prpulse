@@ -23,6 +23,7 @@ final class SetupModel: ObservableObject {
     @Published private(set) var ghStatus = GhStatus.unknown
     @Published private(set) var hasStoredToken = false
     @Published private(set) var repositories = RepositoryList.idle
+    @Published private(set) var organizationActivity: [String: Int] = [:]
 
     private let tokens: TokenStore
     private let isSetup: Bool
@@ -57,6 +58,7 @@ final class SetupModel: ObservableObject {
             if draft.authSource == .personalToken, !personalToken.isEmpty { personalToken = "" }
             hasStoredToken = ((try? tokens.load()) ?? nil) != nil
             organizations = info.organizations + [info.login]
+            organizationActivity = info.recentPullRequests
             return resolveOrganization()
         } catch {
             validation = .failed(Self.message(for: error))
@@ -110,8 +112,13 @@ final class SetupModel: ObservableObject {
         validation = .failed(message)
     }
 
-    func loadPreview(organizations: [String], gh: GhStatus, repositories: [String] = []) {
+    var repositoryNames: [String] {
+        if case .loaded(let names) = repositories { names } else { [] }
+    }
+
+    func loadPreview(organizations: [String], gh: GhStatus, repositories: [String] = [], activity: [String: Int] = [:]) {
         self.organizations = organizations
+        organizationActivity = activity
         ghStatus = gh
         self.repositories = .loaded(repositories)
         isPreview = true

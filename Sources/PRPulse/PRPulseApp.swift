@@ -4,8 +4,10 @@ import SwiftUI
 struct PRPulseApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
+    /// The app has no scene of its own: the popover and the windows are AppKit. A menu bar extra that is never
+    /// inserted keeps the SwiftUI lifecycle (and the standard Edit menu shortcuts) without opening any window.
     var body: some Scene {
-        Settings { EmptyView() }
+        MenuBarExtra("PRPulse", systemImage: "arrow.triangle.branch", isInserted: .constant(false)) { EmptyView() }
     }
 }
 

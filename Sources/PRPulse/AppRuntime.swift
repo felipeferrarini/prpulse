@@ -84,8 +84,13 @@ final class AppRuntime: ObservableObject {
 
     private func showSetup(settings initial: AppSettings) {
         let setup = SetupModel(settings: initial)
-        windows.show(id: Self.setupWindow, title: "PRPulse") {
-            WizardView(model: setup) { [weak self] in await self?.finishSetup(setup.draft) }
+        windows.show(id: Self.setupWindow, title: "PRPulse", chrome: .borderless) {
+            WizardView(
+                model: setup,
+                onFinish: { [weak self] in await self?.finishSetup(setup.draft) },
+                onClose: { [weak self] in self?.windows.close(id: Self.setupWindow) },
+                onCancel: { [weak self] in self?.windows.close(id: Self.setupWindow) }
+            )
         }
     }
 
@@ -99,7 +104,6 @@ final class AppRuntime: ObservableObject {
         await model.completeSetup()
         guard settings.settings.hasCompletedSetup else { return Self.failureMessage(model) }
         model.start()
-        windows.close(id: Self.setupWindow)
         return nil
     }
 

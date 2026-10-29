@@ -29,20 +29,23 @@ enum DemoSnapshot {
         for step in SetupStep.allCases {
             write(wizard(step), named: "wizard-\(step.rawValue + 1)-\(step)", to: directory)
         }
+        for slide in 1 ..< WizardView.slideCount {
+            write(wizard(.welcome, slide: slide), named: "wizard-1-welcome-\(slide + 1)", to: directory)
+        }
     }
 
-    private static func wizard(_ step: SetupStep) -> some View {
+    private static func wizard(_ step: SetupStep, slide: Int = 0) -> some View {
         var settings = AppSettings.defaults
         settings.org = step == .organization ? "" : "acme"
         settings.ignoredRepos = ["docs", "infra-legacy"]
         let model = SetupModel(settings: settings)
         model.loadPreview(
-            organizations: ["acme", "acme-labs", "orbit", "northwind", "globex", "initech", "umbrella", "octocat"],
+            organizations: ["acme", "acme-labs", "orbit", "octocat"],
             gh: .available,
-            repositories: ["web", "api", "docs", "infra-legacy", "mobile", "design-system", "billing", "ops", "playground", "website"]
+            repositories: ["web", "api", "docs", "infra-legacy", "mobile", "design-system", "billing", "ops", "playground", "website"],
+            activity: ["acme": 87, "acme-labs": 14, "orbit": 2]
         )
-        return WizardView(model: model, initialStep: step) { nil }
-            .background(Color(nsColor: .windowBackgroundColor))
+        return WizardView(model: model, initialStep: step, initialSlide: slide, onFinish: { nil })
     }
 
     private static func popover(
