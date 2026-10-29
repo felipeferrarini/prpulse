@@ -1,38 +1,130 @@
-# PRPulse
+<p align="center">
+  <img src="docs/images/icon.png" width="112" alt="PRPulse app icon">
+</p>
 
-[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white)](#install)
-[![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](Package.swift)
+<h1 align="center">PRPulse</h1>
 
-> A menu bar app that watches one GitHub organization and tells you which pull requests need **you**.
+<p align="center">
+  <b>Know which pull requests need you, before anyone has to ask.</b><br>
+  A native menu bar app for macOS that watches one GitHub organization and tells you what to act on.
+</p>
+
+<p align="center">
+  <a href="https://github.com/felipeferrarini/prpulse/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/felipeferrarini/prpulse?color=FF7A2C&label=release"></a>
+  <a href="#install"><img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white"></a>
+  <a href="Package.swift"><img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white"></a>
+  <a href="#install"><img alt="Homebrew cask" src="https://img.shields.io/badge/brew-cask-FBB040?logo=homebrew&logoColor=white"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-2F55FF"></a>
+</p>
+
+<p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#what-you-get">What you get</a> ·
+  <a href="#what-counts-as-needs-you">What counts</a> ·
+  <a href="#privacy">Privacy</a> ·
+  <a href="#development">Development</a> ·
+  <a href="README.pt-BR.md">Português</a>
+</p>
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/popover-dark.png">
-    <img src="docs/images/popover-light.png" alt="PRPulse summary with My PRs and To review sections" width="380">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/hero-dark.png">
+    <img src="docs/images/hero-light.png" alt="The PRPulse popover open from the menu bar, with the PRs to review on the left and your own PRs on the right" width="900">
   </picture>
 </p>
 
-Reviewers leave comments you only see hours later. Open PRs from teammates sit without your review because nothing reminds you. PRPulse polls GitHub every few minutes, keeps two short lists in the menu bar and changes its icon (plus a notification) when something new needs you.
+## Why
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/icons-dark.png">
-  <img src="docs/images/icons-light.png" alt="Icon states: up to date, pending, new, error">
-</picture>
+Reviewers leave comments you only notice hours later. Teammates open PRs that sit for days because nothing reminds you to look. And "what do I need to do today?" means opening five GitHub tabs.
 
-Left to right: all clear, something pending, something new (the halo pulses for a few seconds), and an error you need to fix.
+PRPulse polls GitHub every few minutes, keeps **two short lists** in your menu bar, and changes its icon (plus one notification) the moment something new needs you. It is built around a single question: *what is waiting on me?*
 
-## Features
+## What you get
 
-- **My PRs:** open PRs you authored that need an action from you.
-- **To review:** every open PR in the organization you haven't reviewed yet, even if nobody requested you.
-- **Quiet by design:** bots are ignored, a first run never floods you with old backlog, and an item notifies once.
-- **One org at a time**, with a list of repositories to ignore (PRs where you are a requested reviewer, directly or through a team such as CODEOWNERS, still show).
-- **Private:** talks only to GitHub with your own token, kept in the macOS Keychain. No server, no analytics.
-- English and Portuguese (follows the system language).
+### Two lists, ordered by what to do first
+
+**To review** has every open PR in the organization that you haven't reviewed yet, even when nobody asked you. The ones that requested you come first, and each row shows how long it has been waiting, in amber after a day and red after three. **My PRs** has your own PRs that need an action from you, each tagged with the verb that clears it: *Update*, *Reply*, *Fix CI*, *Conflict*, *Merge*.
+
+Tap the action filters to dim everything else, or switch between a single view and a side by side one. The choice is remembered.
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/popover-dark.png">
+        <img src="docs/images/popover-light.png" alt="Single view of the popover" width="100%">
+      </picture>
+      <br><sub>Single view, with a tab for each list</sub>
+    </td>
+    <td width="50%" align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/popover-split-dark.png">
+        <img src="docs/images/popover-split-light.png" alt="Side by side view of the popover" width="100%">
+      </picture>
+      <br><sub>Side by side, both lists at once</sub>
+    </td>
+  </tr>
+</table>
+
+### An icon that tells you before you look
+
+The menu bar icon is a drawn pull request mark. When everything is clear it is a plain glyph that follows your menu bar theme. When something needs you it becomes one orange pill with the count, rings out when a new item arrives, and turns red if it can't update.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/menubar-dark.png">
+    <img src="docs/images/menubar-light.png" alt="The four icon states: up to date, needs you, new item, can't update" width="640">
+  </picture>
+</p>
+
+### A menu one right click away
+
+Right click (or control click) the icon for the things you do without opening the popover.
+
+<table>
+  <tr>
+    <td width="320"><img src="docs/images/menu.png" alt="The right click menu" width="292"></td>
+    <td>
+      <ul>
+        <li><b>Refresh now</b> (⌘R) instead of waiting for the next cycle.</li>
+        <li><b>Open on GitHub</b> jumps to a search already filtered to your organization: PRs to review, or your PRs.</li>
+        <li><b>Notifications</b> is a quick mute that doesn't need the settings window.</li>
+        <li><b>Settings…</b> (⌘,), <b>About</b> and <b>Quit</b>.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+### Set up in a minute
+
+A short wizard connects your account, picks the organization, and asks what to leave out. A live preview of the popover on the left reacts to every choice, so you see the effect of ignoring a repository before you finish.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/wizard-dark.png">
+    <img src="docs/images/wizard-light.png" alt="The setup wizard with a live preview of the popover" width="760">
+  </picture>
+</p>
+
+Everything can be changed later in **Settings**, which counts your unsaved changes, marks the section they are in, and lets you discard them or save with ⌘S.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-dark.png">
+    <img src="docs/images/settings-light.png" alt="The settings window" width="760">
+  </picture>
+</p>
+
+### Quiet by design
+
+- **Bots are ignored.** Comments from CodeRabbit, SonarQube and any account GitHub marks as a bot never count (the list is yours to edit).
+- **No flood on day one.** The first run learns what is already pending and stays silent. An item notifies once.
+- **One organization at a time**, with a list of repositories to ignore. A PR in an ignored repository still shows if you are a requested reviewer, directly or through a team such as CODEOWNERS.
+- English and Portuguese, following your system language.
 
 ## Install
 
-With [Homebrew](https://brew.sh):
+### Homebrew
 
 ```bash
 brew tap felipeferrarini/tap
@@ -42,74 +134,114 @@ brew install --cask prpulse
 
 Recent Homebrew versions refuse to load casks from a third-party tap until you trust it, which is what the `brew trust` line does. Older versions don't have that command; skip it there.
 
-Or download `PRPulse-<version>.dmg` from the [releases page](../../releases), drag **PRPulse** to Applications and open it.
+### Download
+
+Get `PRPulse-<version>.dmg` from the [releases page](https://github.com/felipeferrarini/prpulse/releases/latest), drag **PRPulse** to Applications and open it.
 
 > [!IMPORTANT]
-> The app is not signed with an Apple Developer ID, so macOS blocks the first launch. Open it once, then go to **System Settings → Privacy & Security**, scroll to the Security section and click **Open Anyway** next to PRPulse. You only do this once. The button appears only after a blocked launch attempt.
+> The app is not signed with an Apple Developer ID yet, so macOS blocks the first launch. Open it once, then go to **System Settings → Privacy & Security**, scroll to the Security section and click **Open Anyway** next to PRPulse. You only do this once, and the button appears only after a blocked launch attempt.
 
-Prefer to build it yourself? A locally built app is not quarantined, so there is no prompt:
+### Build it yourself
+
+A locally built app is not quarantined, so there is no prompt:
 
 ```bash
 git clone https://github.com/felipeferrarini/prpulse && cd prpulse
 make install
 ```
 
-You need macOS 14+ and the Swift toolchain (Xcode or the Command Line Tools).
+You need macOS 14 or later and the Swift toolchain (Xcode or the Command Line Tools). Builds are universal (Apple silicon and Intel).
 
 ## First run
 
-A short wizard asks for:
-
 1. **Connection:** reuse your [`gh`](https://cli.github.com) login, or paste a personal token with the `repo` and `read:org` scopes.
-2. **Organization** to watch.
-3. **Exceptions:** repositories and bot accounts to ignore.
-4. **General:** refresh interval, notifications, open at login.
-
-Everything can be changed later from the gear icon in the summary.
+2. **Organization:** the ones you worked in most over the last 90 days come first, with a count.
+3. **Exceptions:** tick repositories to ignore (they are listed from the organization) and edit the bot accounts to skip.
+4. **Settings:** refresh interval, notifications, open at login.
 
 > [!NOTE]
 > If your organization enforces SAML SSO, authorize the token for it on GitHub, otherwise the icon turns into the error state. The same happens if the organization is renamed or your token can't see it. Classic tokens must include the `repo` scope, or private repositories would never show up.
 
-## What shows up
+## What counts as "needs you"
 
 ### My PRs
 
-| Reason | When |
+| Action | When it shows |
 | --- | --- |
-| changes requested | a reviewer requested changes |
-| open threads | there are unresolved review threads (resolve them to clear) |
-| unanswered comment | the last comment from someone else is newer than your last commit and your last comment (approvals with a "LGTM" body don't count) |
-| CI failed | a required check is failing (if the repo defines none, any failed check) |
-| conflict | the PR can't merge because of conflicts |
-| ready to merge | the merge button is enabled |
+| **Update** | a reviewer requested changes |
+| **Reply** (open threads) | there are unresolved review threads; resolve them to clear |
+| **Reply** (comment) | the last comment from someone else is newer than your last commit and your last comment (approvals with an "LGTM" body don't count) |
+| **Fix CI** | a required check is failing (if the repository defines none, any failed check) |
+| **Conflict** | the PR can't merge because of conflicts |
+| **Merge** | the merge button is enabled |
 
-A PR with several reasons appears once, with the most urgent one highlighted. Your own drafts only show feedback reasons.
+A PR with several reasons appears once, with the most urgent one highlighted and a `+1` for the rest, in the order above. Your own drafts only show feedback reasons.
 
 ### To review
 
-Open PRs from other people in the organization where you have no submitted review. Drafts appear last, labeled. A PR leaves the list as soon as you submit a review, and doesn't come back when new commits arrive.
+Open PRs from other people in the organization where you have no submitted review. Requests to you come first, drafts go last, and the oldest wait first. A PR leaves the list as soon as you submit a review, and it doesn't come back when new commits arrive.
+
+### Waiting time
+
+Every row shows how long the PR has been open: neutral under a day, amber from one day, red from three. The little bar fills over four days.
+
+## Privacy
+
+- PRPulse talks **only to GitHub** (`api.github.com`) with your own credentials. There is no server of ours, no analytics and no telemetry.
+- A personal token is stored in the **macOS Keychain**. With the `gh` option, the token is read from `gh` on demand and never stored by PRPulse.
+- The app is open source (MIT), so all of this is checkable.
+
+## Settings at a glance
+
+| Section | What you can change |
+| --- | --- |
+| **Connection** | `gh` login or a personal token |
+| **Organization** | which organization to watch |
+| **Exceptions** | repositories and bot accounts to ignore |
+| **General** | refresh interval (1 to 30 minutes), popover layout, notifications, open at login, run the setup again |
 
 ## Known limits
 
 - One organization at a time.
 - Sign-in through the browser is not available yet; use `gh` or a token.
-- The app is signed ad hoc, so after each update macOS may ask again whether PRPulse can read its Keychain item. Choose **Always Allow**; if you deny it, the icon shows the sign-in error.
+- The app is signed ad hoc, so after each update macOS may ask again whether PRPulse can read its Keychain item. Choose **Always Allow**; if you deny it, the icon shows the error state.
 
 ## Development
 
-```bash
-make test      # unit tests (Swift Testing)
-make app       # universal, ad-hoc signed build/PRPulse.app
-make dmg       # build/PRPulse-<version>.dmg
+```text
+Sources/PRPulseCore   rules, GitHub client, auth, notification planner (pure, tested)
+Sources/PRPulse       the macOS shell: status item, popover, wizard, settings
+Tests/                170+ unit tests (Swift Testing)
+scripts/              build, dmg, icon and test helpers
+docs/images/          the pictures above, generated by `make screenshots`
 ```
 
-`PRPulseCore` holds all the rules and the GitHub client as pure, tested code; `PRPulse` is the SwiftUI shell. Run the app with fake data using `PRPULSE_DEMO=pending|fresh|empty|error|unconfigured`, and render screenshots with `PRPULSE_SNAPSHOT_DIR=/some/folder`.
+```bash
+make test         # unit tests
+make app          # universal, ad-hoc signed build/PRPulse.app
+make dmg          # build/PRPulse-<version>.dmg
+make install      # build and copy to /Applications
+make screenshots  # re-render docs/images with fake data (English UI)
+```
+
+Run the app with fake data using `PRPULSE_DEMO=pending|fresh|empty|error|unconfigured`. To iterate on the interface without a GitHub account, that is all you need.
 
 > [!TIP]
 > With only the Command Line Tools installed, use `scripts/test.sh` (what `make test` runs). Plain `swift test` can lose the Swift Testing macro plugin on incremental builds.
 
-## Português
+## Roadmap
 
-O PRPulse é um app de barra de menu que acompanha uma organização do GitHub e mostra duas listas: **Minhas PRs** (pediu alterações, threads abertas, comentário sem resposta, CI falhou, conflito, pronta para merge) e **Para revisar** (PRs abertas de outras pessoas sem review seu). O ícone muda de cor e o app notifica quando aparece algo novo.
+Ideas, in no particular order. Open an issue if one matters to you.
 
-Instalação: baixe o `.dmg` nas releases, arraste para Aplicativos e abra. Como o app não é assinado, na primeira vez vá em **Ajustes do Sistema → Privacidade e Segurança** e clique em **Abrir Mesmo Assim**. Ou rode `make install` para compilar localmente, sem esse passo.
+- [ ] Developer ID signing and notarization, so there is no "Open Anyway" step
+- [ ] Sign in with GitHub in the browser (device flow)
+- [ ] More than one organization
+- [ ] Snooze a PR, or mute a repository straight from the list
+
+## Contributing
+
+Issues and pull requests are welcome. Keep the rules in `PRPulseCore` covered by tests, and run `make test` before opening a PR. For a visual change, attach a before and after picture (`PRPULSE_DEMO` makes that easy).
+
+## License
+
+[MIT](LICENSE) © Felipe Ferrarini
