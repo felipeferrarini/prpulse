@@ -16,7 +16,19 @@ final class StubURLProtocol: URLProtocol {
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
+    private static let failureLock = NSLock()
+    nonisolated(unsafe) private static var storedFailure: Error?
+
+    static var failure: Error? {
+        get { failureLock.withLock { storedFailure } }
+        set { failureLock.withLock { storedFailure = newValue } }
+    }
+
     override func startLoading() {
+        if let failure = Self.failure {
+            client?.urlProtocol(self, didFailWithError: failure)
+            return
+        }
         let result = Self.handler!(request)
         let response = HTTPURLResponse(url: request.url!, statusCode: result.status, httpVersion: nil, headerFields: result.headers)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
@@ -92,6 +104,24 @@ struct URLSessionTransportTests {
         StubURLProtocol.handler = { _ in (401, [:], Data("{}".utf8)) }
         await #expect(throws: GitHubError.unauthorized) {
             try await transport().oauthScopes()
+        }
+    }
+
+    @Test func cancelledRequestSurfacesAsCancellationNotANetworkError() async {
+        StubURLProtocol.failure = URLError(.cancelled)
+        defer { StubURLProtocol.failure = nil }
+
+        await #expect(throws: CancellationError.self) {
+            try await transport().send(query: "q", variables: [:])
+        }
+    }
+
+    @Test func otherConnectionFailuresStillMapToNetwork() async {
+        StubURLProtocol.failure = URLError(.notConnectedToInternet)
+        defer { StubURLProtocol.failure = nil }
+
+        await #expect(throws: GitHubError.self) {
+            try await transport().send(query: "q", variables: [:])
         }
     }
 }

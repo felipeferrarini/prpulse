@@ -33,7 +33,7 @@ private func placeholders(_ text: String) -> [String] {
 
 @Test func bothLanguagesHaveTheSameKeys() throws {
     let english = Set(try strings("en").keys)
-    let portuguese = Set(try strings("pt-BR").keys)
+    let portuguese = Set(try strings("pt").keys)
 
     #expect(english.subtracting(portuguese).isEmpty, "missing in pt-BR: \(english.subtracting(portuguese).sorted())")
     #expect(portuguese.subtracting(english).isEmpty, "missing in en: \(portuguese.subtracting(english).sorted())")
@@ -41,7 +41,7 @@ private func placeholders(_ text: String) -> [String] {
 
 @Test func bothLanguagesUseTheSamePlaceholders() throws {
     let english = try strings("en")
-    let portuguese = try strings("pt-BR")
+    let portuguese = try strings("pt")
     for (key, text) in english {
         #expect(placeholders(text) == placeholders(portuguese[key] ?? ""), "placeholder mismatch in \(key)")
     }
@@ -60,7 +60,7 @@ private func placeholders(_ text: String) -> [String] {
 }
 
 @Test func noTranslationIsEmpty() throws {
-    for language in ["en", "pt-BR"] {
+    for language in ["en", "pt"] {
         for (key, text) in try strings(language) {
             #expect(!text.trimmingCharacters(in: .whitespaces).isEmpty, "\(language) \(key) is empty")
         }

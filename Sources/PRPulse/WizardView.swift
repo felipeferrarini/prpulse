@@ -61,7 +61,7 @@ struct WizardView: View {
     private var footer: some View {
         HStack {
             if step == .welcome {
-                Button(tr("setup.skip")) { go(to: .connect) }.buttonStyle(.borderless)
+                Button(tr("setup.skip")) { go(to: .connect) }.buttonStyle(.borderless).focusEffectDisabled()
             } else {
                 Button(tr("setup.back")) { goBack() }.disabled(isBusy)
             }
@@ -174,6 +174,7 @@ private struct PulsingIcon: View {
                 .frame(width: 84, height: 84)
                 .scaleEffect(animate ? 1.7 : 1)
                 .opacity(animate ? 0 : 0.6)
+                .animation(.easeOut(duration: 1.8).repeatForever(autoreverses: false), value: animate)
             RoundedRectangle(cornerRadius: 20).fill(Color.orange.gradient)
                 .frame(width: 84, height: 84)
                 .overlay(Image(systemName: "arrow.triangle.branch").font(.system(size: 40, weight: .semibold)).foregroundStyle(.white))
@@ -185,8 +186,6 @@ private struct PulsingIcon: View {
                 }
         }
         .frame(height: 130)
-        .onAppear {
-            withAnimation(.easeOut(duration: 1.8).repeatForever(autoreverses: false)) { animate = true }
-        }
+        .onAppear { animate = true }
     }
 }

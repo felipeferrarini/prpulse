@@ -54,6 +54,7 @@ public struct URLSessionTransport: GraphQLTransport, ScopeProbing {
         do {
             return try await session.data(for: request)
         } catch let error as URLError {
+            if error.code == .cancelled { throw CancellationError() }
             throw GitHubError.network(error.localizedDescription)
         }
     }

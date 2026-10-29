@@ -83,3 +83,4 @@
 "error.org.title" = "Organization not reachable";
 "error.org.body" = "Your token can't see %@. It may have been renamed, you may have left it, or the token needs access. Check Settings.";
 "setup.error.missingScope" = "This token has no repo scope, so private repositories would never show up. Create one with repo and read:org.";
+"setup.error.orgMissing" = "Your token no longer sees %@. Pick another organization below.";

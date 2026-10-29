@@ -8,6 +8,9 @@ source "$root/scripts/config.sh"
 version="${1:-0.1.0}"
 
 cd "$root"
+# Drop stale resource bundles so renamed or removed resources never ship.
+find "$root/.build-release" -name "*_$APP_NAME.bundle" -prune -exec rm -rf {} + 2>/dev/null || true
+
 build_flags=(-c release --arch arm64 --arch x86_64 --scratch-path "$root/.build-release")
 swift build "${build_flags[@]}"
 bin_dir="$(swift build "${build_flags[@]}" --show-bin-path)"
@@ -22,6 +25,8 @@ sed -e "s/__APP_NAME__/$APP_NAME/g" \
     -e "s/__VERSION__/$version/g" \
     -e "s/__MIN_MACOS__/$MIN_MACOS/g" \
     "$root/Resources/Info.plist.template" > "$app/Contents/Info.plist"
+
+cp "$root/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
 
 for bundle in "$bin_dir"/*_"$APP_NAME".bundle; do
     [ -e "$bundle" ] && cp -R "$bundle" "$app/Contents/Resources/"

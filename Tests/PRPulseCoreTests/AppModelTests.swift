@@ -20,6 +20,17 @@ private final class World: @unchecked Sendable {
     var failure: Error?
     var viewerLogin = "me"
     var orgAccessible = true
+    var firstClientDelayMilliseconds = 0
+
+    private let delayLock = NSLock()
+    private var delayConsumed = false
+
+    func takeFirstClientDelay() -> Int {
+        delayLock.withLock {
+            defer { delayConsumed = true }
+            return delayConsumed ? 0 : firstClientDelayMilliseconds
+        }
+    }
 
     private let lock = NSLock()
     private var recordedQueries: [String] = []
@@ -72,6 +83,8 @@ private struct Harness {
             notified: notified,
             makeClient: {
                 if let makeClientError { throw makeClientError }
+                let delay = world.takeFirstClientDelay()
+                if delay > 0 { try await Task.sleep(for: .milliseconds(delay)) }
                 return GitHubClient(transport: FakeTransport(world.respond), clock: clock)
             },
             sink: sink,
@@ -266,4 +279,43 @@ private struct Harness {
     h.world.failure = nil
     await h.model.refresh()
     #expect(h.model.nextDelay() == 300)
+}
+
+@MainActor @Test func refreshDuringSetupDoesNotNotifyTheBacklog() async {
+    let h = Harness()
+    h.world.mine = [changesRequestedPR(1)]
+    h.world.firstClientDelayMilliseconds = 80
+
+    let setup = Task { await h.model.completeSetup() }
+    await Task.yield()
+    await h.model.refresh()
+    await setup.value
+
+    #expect(h.sink.batches.isEmpty)
+    #expect(h.notified.keys.count == 1)
+}
+
+@MainActor @Test func cancelledRequestDoesNotMarkOffline() async {
+    let h = Harness()
+    h.world.failure = CancellationError()
+
+    await h.model.refresh()
+
+    #expect(!h.model.isOffline)
+    #expect(h.model.state == .idle)
+}
+
+@MainActor @Test func restartPicksUpNewSettingsWithoutWaitingForTheNextCycle() async throws {
+    let h = Harness()
+    await h.model.refresh()
+    #expect(h.world.seenQueries.contains { $0.contains("org:org ") })
+
+    h.settings.settings.org = "other"
+    await h.model.restart()
+
+    for _ in 0 ..< 200 where !h.world.seenQueries.contains(where: { $0.contains("org:other ") }) {
+        try await Task.sleep(for: .milliseconds(10))
+    }
+    h.model.stop()
+    #expect(h.world.seenQueries.contains { $0.contains("org:other ") })
 }

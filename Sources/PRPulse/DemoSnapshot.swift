@@ -12,7 +12,7 @@ enum DemoSnapshot {
 
     static func writeAll(to directory: URL) {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        for mode in [DemoMode.pending, .empty, .error] {
+        for mode in [DemoMode.pending, .empty, .error, .unconfigured] {
             for scheme in [ColorScheme.light, .dark] {
                 write(popover(mode.viewData, scheme), named: "popover-\(mode.rawValue)-\(scheme == .dark ? "dark" : "light")", to: directory)
             }

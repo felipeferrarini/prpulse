@@ -12,6 +12,7 @@ public struct ViewerInfo: Equatable, Sendable {
 
 public struct GitHubClient: Sendable {
     static let searchEpoch = Date(timeIntervalSince1970: 1_420_070_400)
+    static let searchEndMargin: TimeInterval = 86_400
     private static let searchCap = 1000
     private static let checksBatchSize = 25
 
@@ -43,9 +44,9 @@ public struct GitHubClient: Sendable {
     }
 
     public func minePullRequests(org: String, viewer: String) async throws -> [PullRequestSnapshot] {
-        let query = "org:\(org) is:pr is:open author:\(viewer) archived:false"
-        let pullRequests = try await collect(query, .mine, size: 25)
-        return try await applyChecks(to: pullRequests)
+        let base = "org:\(org) is:pr is:open author:\(viewer) archived:false"
+        let pullRequests = try await fetchWindow(base: base, fragment: .mine, size: 25, window: fullWindow)
+        return try await applyChecks(to: unique(pullRequests))
     }
 
     public func reviewPullRequests(
@@ -55,11 +56,10 @@ public struct GitHubClient: Sendable {
     ) async throws -> [PullRequestSnapshot] {
         let exclusions = ignoredRepos.sorted().map { " -repo:\(org)/\($0)" }.joined()
         let base = "org:\(org) is:pr is:open archived:false -author:\(viewer) -reviewed-by:\(viewer)\(exclusions)"
-        let window = DateWindow(start: Self.searchEpoch, end: clock.now)
-        let listed = try await fetchWindow(base: base, window: window)
+        let listed = try await fetchWindow(base: base, fragment: .review, size: 50, window: fullWindow)
 
-        let requestedQuery = "org:\(org) is:pr is:open archived:false -author:\(viewer) review-requested:\(viewer)"
-        let requested = try await collect(requestedQuery, .review, size: 50)
+        let requestedBase = "org:\(org) is:pr is:open archived:false -author:\(viewer) review-requested:\(viewer)"
+        let requested = try await fetchWindow(base: requestedBase, fragment: .review, size: 50, window: fullWindow)
         return unique(requested.map { markingRequested($0, viewer: viewer) } + listed)
     }
 
@@ -70,15 +70,24 @@ public struct GitHubClient: Sendable {
         return alreadyListed ? pr : pr.with(requestedReviewers: pr.requestedReviewers + [viewer])
     }
 
-    private func fetchWindow(base: String, window: DateWindow) async throws -> [PullRequestSnapshot] {
+    private var fullWindow: DateWindow {
+        DateWindow(start: Self.searchEpoch, end: clock.now.addingTimeInterval(Self.searchEndMargin))
+    }
+
+    private func fetchWindow(
+        base: String,
+        fragment: PRFragment,
+        size: Int,
+        window: DateWindow
+    ) async throws -> [PullRequestSnapshot] {
         let query = "\(base) sort:created-asc \(window.qualifier)"
-        let first = try await fetchPage(query, .review, size: 50, after: nil)
+        let first = try await fetchPage(query, fragment, size: size, after: nil)
         guard first.issueCount > Self.searchCap, window.canSplit else {
-            return try await collect(query, .review, size: 50, startingWith: first)
+            return try await collect(query, fragment, size: size, startingWith: first)
         }
         let (older, newer) = window.halves()
-        let olderPRs = try await fetchWindow(base: base, window: older)
-        let newerPRs = try await fetchWindow(base: base, window: newer)
+        let olderPRs = try await fetchWindow(base: base, fragment: fragment, size: size, window: older)
+        let newerPRs = try await fetchWindow(base: base, fragment: fragment, size: size, window: newer)
         return olderPRs + newerPRs
     }
 

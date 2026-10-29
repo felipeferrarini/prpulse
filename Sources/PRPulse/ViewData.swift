@@ -7,4 +7,5 @@ struct ViewData {
     var lastUpdated: Date?
     var isOffline = false
     var freshUntil: Date?
+    var isSetupComplete = true
 }

@@ -54,7 +54,7 @@ private func emptySearch() -> Data {
     let prs = try await client(transport).minePullRequests(org: "acme", viewer: "me")
 
     #expect(prs.map(\.ref.number) == [348])
-    #expect(transport.searchQueries.first == "org:acme is:pr is:open author:me archived:false")
+    #expect(transport.searchQueries.first?.hasPrefix("org:acme is:pr is:open author:me archived:false sort:created-asc created:") == true)
 }
 
 @Test func searchPaginatesWithCursor() async throws {
@@ -94,10 +94,11 @@ private func emptySearch() -> Data {
 }
 
 @Test func searchOver1000SplitsDateWindowWithoutDuplicates() async throws {
-    let full = DateWindow(start: GitHubClient.searchEpoch, end: now)
+    let full = DateWindow(start: GitHubClient.searchEpoch, end: now.addingTimeInterval(GitHubClient.searchEndMargin))
     let (first, second) = full.halves()
     let transport = FakeTransport { _, variables in
         let q = variables["q"] as? String ?? ""
+        if q.contains("review-requested") { return searchResponse(nodes: []) }
         if q.contains(full.qualifier) { return searchResponse(nodes: [], issueCount: 1500) }
         if q.contains(first.qualifier) { return searchResponse(nodes: [minimalPR(number: 1), minimalPR(number: 2)], issueCount: 700) }
         if q.contains(second.qualifier) { return searchResponse(nodes: [minimalPR(number: 2), minimalPR(number: 3)], issueCount: 800) }
@@ -106,7 +107,7 @@ private func emptySearch() -> Data {
     let prs = try await client(transport).reviewPullRequests(org: "org", viewer: "me", ignoredRepos: [])
 
     #expect(prs.map(\.ref.number).sorted() == [1, 2, 3])
-    let windowQueries = Set(transport.searchQueries.filter { $0.contains("created:") })
+    let windowQueries = Set(transport.searchQueries.filter { $0.contains("created:") && !$0.contains("review-requested") })
     #expect(windowQueries.count == 3)
 }
 
@@ -213,4 +214,47 @@ private func emptySearch() -> Data {
     let prs = try await client(transport).reviewPullRequests(org: "org", viewer: "me", ignoredRepos: [])
 
     #expect(prs[0].requestedReviewers == ["Me"])
+}
+
+@Test func searchWindowEndsAfterTheLocalClockToToleratesSkew() async throws {
+    let transport = FakeTransport { _, _ in searchResponse(nodes: []) }
+    _ = try await client(transport).reviewPullRequests(org: "org", viewer: "me", ignoredRepos: [])
+
+    let expected = DateWindow(start: GitHubClient.searchEpoch, end: now.addingTimeInterval(GitHubClient.searchEndMargin)).qualifier
+    #expect(GitHubClient.searchEndMargin >= 3600)
+    #expect(transport.searchQueries.contains { $0.contains(expected) })
+}
+
+@Test func mineSearchOver1000SplitsTheWindowToo() async throws {
+    let full = DateWindow(start: GitHubClient.searchEpoch, end: now.addingTimeInterval(GitHubClient.searchEndMargin))
+    let (first, second) = full.halves()
+    let transport = FakeTransport { query, variables in
+        if query.contains("pr0:") { return json(["data": [:]]) }
+        let q = variables["q"] as? String ?? ""
+        if q.contains(full.qualifier) { return searchResponse(nodes: [], issueCount: 1200) }
+        if q.contains(first.qualifier) { return searchResponse(nodes: [minimalPR(number: 1, author: "me")], issueCount: 500) }
+        if q.contains(second.qualifier) { return searchResponse(nodes: [minimalPR(number: 2, author: "me")], issueCount: 700) }
+        return searchResponse(nodes: [])
+    }
+
+    let prs = try await client(transport).minePullRequests(org: "org", viewer: "me")
+
+    #expect(prs.map(\.ref.number).sorted() == [1, 2])
+}
+
+@Test func reviewRequestedSearchOver1000SplitsTheWindowToo() async throws {
+    let full = DateWindow(start: GitHubClient.searchEpoch, end: now.addingTimeInterval(GitHubClient.searchEndMargin))
+    let (first, second) = full.halves()
+    let transport = FakeTransport { _, variables in
+        let q = variables["q"] as? String ?? ""
+        guard q.contains("review-requested:me") else { return searchResponse(nodes: []) }
+        if q.contains(full.qualifier) { return searchResponse(nodes: [], issueCount: 1500) }
+        if q.contains(first.qualifier) { return searchResponse(nodes: [minimalPR(number: 3)], issueCount: 600) }
+        if q.contains(second.qualifier) { return searchResponse(nodes: [minimalPR(number: 4)], issueCount: 900) }
+        return searchResponse(nodes: [])
+    }
+
+    let prs = try await client(transport).reviewPullRequests(org: "org", viewer: "me", ignoredRepos: [])
+
+    #expect(prs.map(\.ref.number).sorted() == [3, 4])
 }

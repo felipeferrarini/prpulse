@@ -83,3 +83,4 @@
 "error.org.title" = "Organização inacessível";
 "error.org.body" = "Seu token não enxerga %@. Ela pode ter sido renomeada, você pode ter saído dela, ou o token precisa de acesso. Confira nos Ajustes.";
 "setup.error.missingScope" = "Este token não tem o escopo repo, então repositórios privados nunca apareceriam. Crie um com repo e read:org.";
+"setup.error.orgMissing" = "Seu token não enxerga mais %@. Escolha outra organização abaixo.";

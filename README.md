@@ -93,7 +93,7 @@ make app       # universal, ad-hoc signed build/PRPulse.app
 make dmg       # build/PRPulse-<version>.dmg
 ```
 
-`PRPulseCore` holds all the rules and the GitHub client as pure, tested code; `PRPulse` is the SwiftUI shell. Run the app with fake data using `PRPULSE_DEMO=pending|fresh|empty|error`, and render screenshots with `PRPULSE_SNAPSHOT_DIR=/some/folder`.
+`PRPulseCore` holds all the rules and the GitHub client as pure, tested code; `PRPulse` is the SwiftUI shell. Run the app with fake data using `PRPULSE_DEMO=pending|fresh|empty|error|unconfigured`, and render screenshots with `PRPULSE_SNAPSHOT_DIR=/some/folder`.
 
 > [!TIP]
 > With only the Command Line Tools installed, use `scripts/test.sh` (what `make test` runs). Plain `swift test` can lose the Swift Testing macro plugin on incremental builds.

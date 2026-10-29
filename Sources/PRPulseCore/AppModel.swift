@@ -38,6 +38,7 @@ public final class AppModel: ObservableObject {
 
     private var retryNotBefore: Date?
     private var isRefreshing = false
+    private var isSettingUp = false
     private var loop: Task<Void, Never>?
 
     public init(
@@ -70,6 +71,12 @@ public final class AppModel: ObservableObject {
         loop = nil
     }
 
+    public func restart() async {
+        stop()
+        while isRefreshing { try? await Task.sleep(for: .milliseconds(20)) }
+        start()
+    }
+
     public func nextDelay() -> TimeInterval {
         let interval = TimeInterval(max(settings.settings.refreshMinutes, 1) * 60)
         let base = isOffline && lastSummary == nil ? min(interval, Self.offlineRetry) : interval
@@ -78,7 +85,7 @@ public final class AppModel: ObservableObject {
     }
 
     public func refresh() async {
-        guard !isRefreshing else { return }
+        guard !isRefreshing, !isSettingUp else { return }
         isRefreshing = true
         defer { isRefreshing = false }
         guard let summary = await loadSummary() else { return }
@@ -86,6 +93,8 @@ public final class AppModel: ObservableObject {
     }
 
     public func completeSetup() async {
+        isSettingUp = true
+        defer { isSettingUp = false }
         guard let summary = await loadSummary() else { return }
         notified.replace(with: NotificationPlanner.seed(current: summary.pendingKeys))
         settings.settings.hasCompletedSetup = true
@@ -142,7 +151,7 @@ public final class AppModel: ObservableObject {
     private func handle(_ error: Error) {
         switch error {
         case is CancellationError:
-            break
+            if lastSummary == nil, state == .loading { state = .idle }
         case GitHubError.unauthorized, is AuthError, is KeychainTokenStore.KeychainError:
             isOffline = false
             state = .failed(.unauthenticated)

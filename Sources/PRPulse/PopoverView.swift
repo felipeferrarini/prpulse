@@ -17,6 +17,14 @@ struct PopoverView: View {
     }
 
     @ViewBuilder private var content: some View {
+        if !data.isSetupComplete {
+            FailureView(failure: .notConfigured, onSettings: onSettings)
+        } else {
+            stateContent
+        }
+    }
+
+    @ViewBuilder private var stateContent: some View {
         switch data.state {
         case .failed(let failure):
             FailureView(failure: failure, onSettings: onSettings)

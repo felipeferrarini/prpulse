@@ -2,7 +2,7 @@ import Foundation
 import PRPulseCore
 
 enum DemoMode: String {
-    case pending, fresh, error, empty
+    case pending, fresh, error, empty, unconfigured
 
     static var current: DemoMode? {
         guard let value = ProcessInfo.processInfo.environment["PRPULSE_DEMO"] else { return nil }
@@ -18,6 +18,7 @@ enum DemoMode: String {
             let empty = Summary(mine: [], review: [])
             return ViewData(state: .ready(empty), summary: empty, lastUpdated: now)
         case .error: return ViewData(state: .failed(.unauthenticated), summary: nil, lastUpdated: nil)
+        case .unconfigured: return ViewData(state: .idle, summary: nil, lastUpdated: nil, isSetupComplete: false)
         }
     }
 }

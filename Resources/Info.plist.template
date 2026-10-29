@@ -6,6 +6,8 @@
     <string>__APP_NAME__</string>
     <key>CFBundleDisplayName</key>
     <string>__APP_NAME__</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleExecutable</key>
     <string>__APP_NAME__</string>
     <key>CFBundleIdentifier</key>
@@ -27,7 +29,7 @@
     <key>CFBundleLocalizations</key>
     <array>
         <string>en</string>
-        <string>pt-BR</string>
+        <string>pt</string>
     </array>
 </dict>
 </plist>

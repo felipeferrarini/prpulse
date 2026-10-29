@@ -14,7 +14,9 @@ final class WindowManager {
         }
         let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.title = title
-        window.contentView = NSHostingView(rootView: content())
+        let hosting = NSHostingView(rootView: content())
+        window.contentView = hosting
+        window.setContentSize(hosting.fittingSize)
         window.isReleasedWhenClosed = false
         window.center()
         windows[id] = window

@@ -38,6 +38,7 @@ final class AppRuntime: ObservableObject {
             observation = model.objectWillChange.sink { [weak self] _ in
                 DispatchQueue.main.async { self?.syncFromModel() }
             }
+            data.isSetupComplete = settings.settings.hasCompletedSetup
             if settings.settings.hasCompletedSetup {
                 model.start()
             } else {
@@ -53,7 +54,7 @@ final class AppRuntime: ObservableObject {
 
     func openSettings() {
         guard settings.settings.hasCompletedSetup else { return showSetup() }
-        let setup = SetupModel(settings: settings.settings)
+        let setup = SetupModel(settings: settings.settings, autoPickOrganization: false)
         windows.show(id: Self.settingsWindow, title: tr("settings.title")) {
             SettingsView(model: setup) { [weak self] draft in self?.save(draft) }
         }
@@ -94,7 +95,8 @@ final class AppRuntime: ObservableObject {
         chosen.hasCompletedSetup = true
         settings.settings = chosen
         LaunchAtLogin.apply(chosen.launchAtLogin)
-        refresh()
+        guard let model else { return }
+        Task { await model.restart() }
     }
 
     private func writeSnapshotsIfRequested() {
@@ -112,7 +114,8 @@ final class AppRuntime: ObservableObject {
             summary: model.lastSummary,
             lastUpdated: model.lastUpdated,
             isOffline: model.isOffline,
-            freshUntil: model.freshUntil
+            freshUntil: model.freshUntil,
+            isSetupComplete: settings.settings.hasCompletedSetup
         )
         refreshIcon()
     }
