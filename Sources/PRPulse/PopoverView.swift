@@ -6,6 +6,11 @@ struct PopoverView: View {
     let onRefresh: () -> Void
     let onSettings: () -> Void
 
+    @LocalState private var contentHeight: CGFloat = 0
+
+    private static let maxListHeight: CGFloat = 460
+    private static let minListHeight: CGFloat = 120
+
     var body: some View {
         VStack(spacing: 0) {
             if data.isOffline { banner(data.summary == nil ? tr("popover.offline.noData") : tr("popover.offline")) }
@@ -47,8 +52,12 @@ struct PopoverView: View {
                     if !summary.review.isEmpty { reviewSection(summary.review) }
                 }
                 .padding(.vertical, 4)
+                .background(GeometryReader { proxy in
+                    Color.clear.preference(key: ListHeightKey.self, value: proxy.size.height)
+                })
             }
-            .frame(maxHeight: 460)
+            .frame(height: min(max(contentHeight, Self.minListHeight), Self.maxListHeight))
+            .onPreferenceChange(ListHeightKey.self) { contentHeight = $0 }
         }
     }
 
@@ -110,6 +119,16 @@ struct PopoverView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+}
+
+/// A window-style menu bar popover sizes itself from its content, and a bare ScrollView
+/// has no intrinsic height, so the list is measured and given an explicit height.
+private struct ListHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
