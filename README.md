@@ -32,7 +32,14 @@ Left to right: all clear, something pending, something new (the halo pulses for 
 
 ## Install
 
-Download `PRPulse-<version>.dmg` from the [releases page](../../releases), drag **PRPulse** to Applications and open it.
+With [Homebrew](https://brew.sh):
+
+```bash
+brew tap felipeferrarini/tap
+brew install --cask prpulse
+```
+
+Or download `PRPulse-<version>.dmg` from the [releases page](../../releases), drag **PRPulse** to Applications and open it.
 
 > [!IMPORTANT]
 > The app is not signed with an Apple Developer ID, so macOS blocks the first launch. Open it once, then go to **System Settings → Privacy & Security**, scroll to the Security section and click **Open Anyway** next to PRPulse. You only do this once. The button appears only after a blocked launch attempt.
