@@ -174,3 +174,9 @@
 "settings.redo.title" = "Setup assistant";
 "settings.redo.action" = "Run again";
 "settings.version" = "PRPulse %@";
+"menu.refresh" = "Refresh now";
+"menu.github" = "Open on GitHub";
+"menu.settings" = "Settings…";
+"menu.about" = "About PRPulse";
+"menu.quit" = "Quit PRPulse";
+"menu.status.error" = "can't update";

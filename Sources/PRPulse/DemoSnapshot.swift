@@ -76,14 +76,17 @@ enum DemoSnapshot {
     }
 
     private static func iconStrip(_ scheme: ColorScheme) -> some View {
-        let states: [(IconState, Double)] = [(.upToDate, 0), (.pending(4), 0), (.fresh(5), 0.15), (.fresh(5), 0.6), (.error, 0)]
-        return HStack(spacing: 18) {
+        let states: [(IconState, Double)] = [
+            (.upToDate, 0), (.pending(4), 0), (.pending(87), 0), (.pending(120), 0), (.fresh(5), 0.15), (.fresh(5), 0.6), (.error, 0),
+        ]
+        return HStack(spacing: 28) {
             ForEach(Array(states.enumerated()), id: \.offset) { _, entry in
-                Image(nsImage: StatusIconRenderer.image(for: entry.0, phase: entry.1))
+                let image = StatusIconRenderer.image(for: entry.0, phase: entry.1)
+                Image(nsImage: image).resizable().frame(width: image.size.width * 4, height: image.size.height * 4)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 16)
         .background(scheme == .dark ? Color(white: 0.16) : Color(white: 0.86))
         .foregroundStyle(scheme == .dark ? Color.white : Color.black)
         .environment(\.colorScheme, scheme)

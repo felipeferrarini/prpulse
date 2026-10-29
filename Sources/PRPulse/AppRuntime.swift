@@ -50,6 +50,13 @@ final class AppRuntime: ObservableObject {
         }
     }
 
+    var organization: String { settings.settings.org }
+    var notificationsEnabled: Bool { settings.settings.notificationsEnabled }
+
+    func toggleNotifications() {
+        settings.settings.notificationsEnabled.toggle()
+    }
+
     func popoverOpened() {
         openCount += 1
     }

@@ -97,7 +97,7 @@ final class PopoverController: NSObject, NSWindowDelegate {
         guard let button = statusItem.button else { return }
         button.target = self
         button.action = #selector(toggle)
-        button.sendAction(on: [.leftMouseUp])
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         button.imagePosition = .imageOnly
     }
 
@@ -105,7 +105,10 @@ final class PopoverController: NSObject, NSWindowDelegate {
         runtime.$iconState
             .combineLatest(runtime.$pulsePhase)
             .sink { [weak self] state, phase in
-                self?.statusItem.button?.image = StatusIconRenderer.image(for: state, phase: phase)
+                guard let button = self?.statusItem.button else { return }
+                button.image = StatusIconRenderer.image(for: state, phase: phase)
+                button.setAccessibilityLabel(Self.accessibilityLabel(for: state))
+                button.toolTip = Self.accessibilityLabel(for: state)
             }
             .store(in: &cancellables)
     }
@@ -136,7 +139,20 @@ final class PopoverController: NSObject, NSWindowDelegate {
         followTimer = nil
     }
 
+    private static func accessibilityLabel(for state: IconState) -> String {
+        switch state {
+        case .upToDate: "PRPulse, \(tr("popover.upToDate"))"
+        case .pending(let count), .fresh(let count): "PRPulse, \(tr("notification.title.other", count))"
+        case .error: "PRPulse, \(tr("menu.status.error"))"
+        }
+    }
+
     @objc private func toggle() {
+        if let event = NSApp.currentEvent, event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
+            hide()
+            showMenu()
+            return
+        }
         if panel.isVisible {
             hide()
         } else if Date().timeIntervalSince(lastHide) > 0.2 {
@@ -203,5 +219,86 @@ final class PopoverController: NSObject, NSWindowDelegate {
         image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
         image.resizingMode = .stretch
         return image
+    }
+}
+
+// MARK: - Context menu
+
+extension PopoverController {
+    private func showMenu() {
+        guard let button = statusItem.button else { return }
+        buildMenu().popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 4), in: button)
+    }
+
+    private func buildMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+
+        let status = NSMenuItem(title: statusText(), action: nil, keyEquivalent: "")
+        status.isEnabled = false
+        menu.addItem(status)
+        menu.addItem(.separator())
+
+        menu.addItem(item(tr("menu.refresh"), symbol: "arrow.clockwise", key: "r", action: #selector(refreshNow)))
+        menu.addItem(githubItem())
+        menu.addItem(.separator())
+
+        let notifications = item(tr("setup.general.notifications"), symbol: "bell", action: #selector(toggleNotifications))
+        notifications.state = runtime.notificationsEnabled ? .on : .off
+        menu.addItem(notifications)
+        menu.addItem(item(tr("menu.settings"), symbol: "slider.horizontal.3", key: ",", action: #selector(openSettings)))
+        menu.addItem(.separator())
+
+        menu.addItem(item(tr("menu.about"), symbol: "info.circle", action: #selector(openAbout)))
+        menu.addItem(item(tr("menu.quit"), symbol: "power", key: "q", action: #selector(quit)))
+        return menu
+    }
+
+    private func item(_ title: String, symbol: String, key: String = "", action: Selector) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        item.target = self
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        return item
+    }
+
+    private func githubItem() -> NSMenuItem {
+        let parent = NSMenuItem(title: tr("menu.github"), action: nil, keyEquivalent: "")
+        parent.image = NSImage(systemSymbolName: "arrow.up.right.square", accessibilityDescription: nil)
+        let org = runtime.organization
+        parent.isEnabled = !org.isEmpty
+        let submenu = NSMenu()
+        for (title, query) in [(tr("popover.review"), "review-requested:@me"), (tr("popover.mine"), "author:@me")] {
+            let entry = NSMenuItem(title: title, action: #selector(openGitHub(_:)), keyEquivalent: "")
+            entry.target = self
+            entry.representedObject = "https://github.com/pulls?q=\("is:open is:pr archived:false org:\(org) \(query)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+            submenu.addItem(entry)
+        }
+        parent.submenu = submenu
+        return parent
+    }
+
+    private func statusText() -> String {
+        let name = runtime.organization.isEmpty ? "PRPulse" : runtime.organization
+        switch runtime.iconState {
+        case .upToDate: return "\(name): \(tr("popover.empty.title"))"
+        case .pending(let count), .fresh(let count): return "\(name): \(tr("notification.title.other", count))"
+        case .error: return "\(name): \(tr("menu.status.error"))"
+        }
+    }
+
+    @objc private func refreshNow() { runtime.refresh() }
+
+    @objc private func toggleNotifications() { runtime.toggleNotifications() }
+
+    @objc private func openSettings() { runtime.openSettings() }
+
+    @objc private func openAbout() {
+        if let url = URL(string: "https://github.com/felipeferrarini/prpulse") { NSWorkspace.shared.open(url) }
+    }
+
+    @objc private func quit() { NSApp.terminate(nil) }
+
+    @objc private func openGitHub(_ sender: NSMenuItem) {
+        if let link = sender.representedObject as? String, let url = URL(string: link) { NSWorkspace.shared.open(url) }
     }
 }

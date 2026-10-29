@@ -174,3 +174,9 @@
 "settings.redo.title" = "Assistente de configuração";
 "settings.redo.action" = "Refazer";
 "settings.version" = "PRPulse %@";
+"menu.refresh" = "Atualizar agora";
+"menu.github" = "Abrir no GitHub";
+"menu.settings" = "Ajustes…";
+"menu.about" = "Sobre o PRPulse";
+"menu.quit" = "Sair do PRPulse";
+"menu.status.error" = "não consegue atualizar";
