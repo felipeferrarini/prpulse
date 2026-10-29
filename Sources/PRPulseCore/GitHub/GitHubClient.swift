@@ -3,10 +3,13 @@ import Foundation
 public struct ViewerInfo: Equatable, Sendable {
     public let login: String
     public let organizations: [String]
+    /// PRs the viewer was involved in over the last months, per organization, when that could be loaded.
+    public let recentPullRequests: [String: Int]
 
-    public init(login: String, organizations: [String]) {
+    public init(login: String, organizations: [String], recentPullRequests: [String: Int] = [:]) {
         self.login = login
         self.organizations = organizations
+        self.recentPullRequests = recentPullRequests
     }
 }
 
@@ -41,6 +44,11 @@ public struct GitHubClient: Sendable {
 
     /// Orders the organizations by how much the viewer worked in them over the last months.
     public func rankedOrganizations(_ organizations: [String], viewer: String) async throws -> [String] {
+        try await organizationActivity(organizations, viewer: viewer).map(\.login)
+    }
+
+    /// The organizations with how much the viewer worked in each, most active first.
+    public func organizationActivity(_ organizations: [String], viewer: String) async throws -> [OrganizationActivity] {
         guard !organizations.isEmpty else { return [] }
         let since = clock.now.addingTimeInterval(-Self.activityLookback).formatted(.iso8601.year().month().day())
         let data = try await execute(Queries.activity(organizations: organizations, viewer: viewer, since: since), [:])
@@ -52,7 +60,7 @@ public struct GitHubClient: Sendable {
                 lastActivity: parseDate(search?.nodes("nodes").first?.string("updatedAt"))
             )
         }
-        return OrganizationRanking.order(activity)
+        return OrganizationRanking.sorted(activity)
     }
 
     /// Names of the owner's non-archived repositories, most recently pushed first.

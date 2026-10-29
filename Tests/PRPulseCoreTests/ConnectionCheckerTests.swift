@@ -134,6 +134,7 @@ private func checker(
     let info = try await checker(store: MemoryStore(), outcome: .success(body)).check(source: .ghCli, typedToken: nil)
 
     #expect(info.organizations == ["other-org", "acme"])
+    #expect(info.recentPullRequests == ["acme": 1, "other-org": 9])
 }
 
 @Test func organizationsFallBackToAlphabeticalWhenRankingIsUnavailable() async throws {
@@ -141,4 +142,5 @@ private func checker(
     let info = try await checker(store: MemoryStore(), outcome: .success(body)).check(source: .ghCli, typedToken: nil)
 
     #expect(info.organizations == ["alpha", "zeta"])
+    #expect(info.recentPullRequests == ["alpha": 0, "zeta": 0])
 }

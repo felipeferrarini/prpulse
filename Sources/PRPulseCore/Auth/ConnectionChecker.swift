@@ -37,13 +37,19 @@ public struct ConnectionChecker: Sendable {
         let info = try await TokenValidator().validate(provider: provider, client: client)
         try await requireRepoScope(transport)
         if source == .personalToken, !typed.isEmpty { try store.save(typed) }
-        return ViewerInfo(login: info.login, organizations: await ranked(info, client))
+        return await ranked(info, client)
     }
 
     /// The order is a convenience, so a failure here must not fail the connection check.
-    private func ranked(_ info: ViewerInfo, _ client: GitHubClient) async -> [String] {
-        let ranked = try? await client.rankedOrganizations(info.organizations, viewer: info.login)
-        return ranked ?? OrganizationRanking.alphabetical(info.organizations)
+    private func ranked(_ info: ViewerInfo, _ client: GitHubClient) async -> ViewerInfo {
+        guard let activity = try? await client.organizationActivity(info.organizations, viewer: info.login) else {
+            return ViewerInfo(login: info.login, organizations: OrganizationRanking.alphabetical(info.organizations))
+        }
+        return ViewerInfo(
+            login: info.login,
+            organizations: activity.map(\.login),
+            recentPullRequests: Dictionary(uniqueKeysWithValues: activity.map { ($0.login, $0.recentPullRequests) })
+        )
     }
 
     private func provider(for source: AuthSource, typed: String) -> TokenProvider {

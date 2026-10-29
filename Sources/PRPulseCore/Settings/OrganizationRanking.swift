@@ -1,15 +1,25 @@
 import Foundation
 
-struct OrganizationActivity: Equatable, Sendable {
-    let login: String
-    let recentPullRequests: Int
-    let lastActivity: Date?
+public struct OrganizationActivity: Equatable, Sendable {
+    public let login: String
+    public let recentPullRequests: Int
+    public let lastActivity: Date?
+
+    public init(login: String, recentPullRequests: Int, lastActivity: Date?) {
+        self.login = login
+        self.recentPullRequests = recentPullRequests
+        self.lastActivity = lastActivity
+    }
 }
 
 enum OrganizationRanking {
     /// Most active first (PRs the viewer is involved in), then the most recent one, then by name.
+    static func sorted(_ activity: [OrganizationActivity]) -> [OrganizationActivity] {
+        activity.sorted(by: precedes)
+    }
+
     static func order(_ activity: [OrganizationActivity]) -> [String] {
-        activity.sorted(by: precedes).map(\.login)
+        sorted(activity).map(\.login)
     }
 
     static func alphabetical(_ logins: [String]) -> [String] {

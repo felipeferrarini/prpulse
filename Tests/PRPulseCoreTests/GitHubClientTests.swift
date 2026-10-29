@@ -314,3 +314,11 @@ private func repositoriesResponse(_ names: [String], next: String? = nil) -> Dat
 
     #expect(try await client(transport).repositories(owner: "ghost").isEmpty)
 }
+
+@Test func organizationActivityCarriesTheCountsInRankedOrder() async throws {
+    let transport = FakeTransport { _, _ in activityResponse([2, 40, 0]) }
+    let activity = try await client(transport).organizationActivity(["a", "b", "c"], viewer: "me")
+
+    #expect(activity.map(\.login) == ["b", "a", "c"])
+    #expect(activity.map(\.recentPullRequests) == [40, 2, 0])
+}
