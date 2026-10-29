@@ -54,7 +54,7 @@ final class AppRuntime: ObservableObject {
 
     func openSettings() {
         guard settings.settings.hasCompletedSetup else { return showSetup() }
-        let setup = SetupModel(settings: settings.settings, autoPickOrganization: false)
+        let setup = SetupModel(settings: settings.settings, isSetup: false)
         windows.show(id: Self.settingsWindow, title: tr("settings.title")) {
             SettingsView(model: setup) { [weak self] draft in self?.save(draft) }
         }

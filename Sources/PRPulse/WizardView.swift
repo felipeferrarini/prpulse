@@ -61,7 +61,7 @@ struct WizardView: View {
     private var footer: some View {
         HStack {
             if step == .welcome {
-                Button(tr("setup.skip")) { go(to: .connect) }.buttonStyle(.borderless).focusEffectDisabled()
+                Button(tr("setup.skip")) { go(to: .connect) }.buttonStyle(.borderless).focusable(false)
             } else {
                 Button(tr("setup.back")) { goBack() }.disabled(isBusy)
             }
@@ -69,7 +69,7 @@ struct WizardView: View {
             if isBusy { ProgressView().controlSize(.small) }
             Button(step == .general ? tr("setup.finish") : tr("setup.continue")) { Task { await advance() } }
                 .keyboardShortcut(step == .exceptions ? nil : .defaultAction)
-                .disabled(isBusy)
+                .disabled(isBusy || (step == .organization && model.draft.org.isEmpty))
         }
         .padding(18)
     }

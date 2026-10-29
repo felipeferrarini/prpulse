@@ -20,11 +20,11 @@ final class SetupModel: ObservableObject {
     @Published private(set) var hasStoredToken = false
 
     private let tokens: TokenStore
-    private let autoPickOrganization: Bool
+    private let isSetup: Bool
 
-    init(settings: AppSettings, autoPickOrganization: Bool = true, tokens: TokenStore = ClientFactory.tokenStore()) {
+    init(settings: AppSettings, isSetup: Bool = true, tokens: TokenStore = ClientFactory.tokenStore()) {
         draft = settings
-        self.autoPickOrganization = autoPickOrganization
+        self.isSetup = isSetup
         self.tokens = tokens
         hasStoredToken = ((try? tokens.load()) ?? nil) != nil
     }
@@ -51,22 +51,21 @@ final class SetupModel: ObservableObject {
             if draft.authSource == .personalToken, !personalToken.isEmpty { personalToken = "" }
             hasStoredToken = ((try? tokens.load()) ?? nil) != nil
             organizations = info.organizations + [info.login]
-            return resolveOrganization(defaultChoice: info.organizations.first ?? info.login)
+            return resolveOrganization()
         } catch {
             validation = .failed(Self.message(for: error))
             return false
         }
     }
 
-    private func resolveOrganization(defaultChoice: String) -> Bool {
-        let choice = OrganizationChoice.resolve(
-            current: draft.org, available: organizations, defaultChoice: defaultChoice, autoPick: autoPickOrganization
-        )
-        switch choice {
+    private func resolveOrganization() -> Bool {
+        switch OrganizationChoice.resolve(current: draft.org, available: organizations, isSetup: isSetup) {
         case .keep:
             break
         case .pick(let org):
             draft.org = org
+        case .choose:
+            draft.org = ""
         case .missing(let org):
             validation = .failed(tr("setup.error.orgMissing", org))
             return false

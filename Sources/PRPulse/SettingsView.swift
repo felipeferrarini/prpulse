@@ -51,6 +51,7 @@ struct SettingsView: View {
         let valid = await model.validateConnection()
         isBusy = false
         guard valid else { return }
+        guard !model.draft.org.isEmpty else { return model.reportFailure(tr("setup.org.required")) }
         onSave(model.draft)
         didSave = true
     }

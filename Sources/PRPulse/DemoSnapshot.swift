@@ -27,7 +27,7 @@ enum DemoSnapshot {
 
     private static func wizard(_ step: SetupStep) -> some View {
         var settings = AppSettings.defaults
-        settings.org = "acme"
+        settings.org = step == .organization ? "" : "acme"
         settings.ignoredRepos = ["docs", "infra-legacy"]
         let model = SetupModel(settings: settings)
         model.loadPreview(organizations: ["acme", "acme-labs", "octocat"], gh: .available)
