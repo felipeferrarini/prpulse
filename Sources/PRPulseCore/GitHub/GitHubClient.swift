@@ -1,0 +1,164 @@
+import Foundation
+
+public struct ViewerInfo: Equatable, Sendable {
+    public let login: String
+    public let organizations: [String]
+
+    public init(login: String, organizations: [String]) {
+        self.login = login
+        self.organizations = organizations
+    }
+}
+
+public struct GitHubClient: Sendable {
+    static let searchEpoch = Date(timeIntervalSince1970: 1_420_070_400)
+    private static let searchCap = 1000
+    private static let checksBatchSize = 25
+
+    private struct Page {
+        let issueCount: Int
+        let pullRequests: [PullRequestSnapshot]
+        let nextCursor: String?
+    }
+
+    private let transport: GraphQLTransport
+    private let clock: Clock
+
+    public init(transport: GraphQLTransport, clock: Clock) {
+        self.transport = transport
+        self.clock = clock
+    }
+
+    public func viewer() async throws -> ViewerInfo {
+        let data = try await execute(Queries.viewer, [:])
+        guard let viewer = data.object("viewer"), let login = viewer.string("login") else {
+            throw GitHubError.malformed("viewer is missing")
+        }
+        return ViewerInfo(login: login, organizations: viewer.nodes("organizations").compactMap { $0.string("login") })
+    }
+
+    public func verifyOrganization(_ org: String) async throws {
+        let data = try await execute(Queries.organization, ["login": org])
+        guard data.object("organization") != nil else { throw GitHubError.organizationNotAccessible(org) }
+    }
+
+    public func minePullRequests(org: String, viewer: String) async throws -> [PullRequestSnapshot] {
+        let query = "org:\(org) is:pr is:open author:\(viewer) archived:false"
+        let pullRequests = try await collect(query, .mine, size: 25)
+        return try await applyChecks(to: pullRequests)
+    }
+
+    public func reviewPullRequests(
+        org: String,
+        viewer: String,
+        ignoredRepos: Set<String>
+    ) async throws -> [PullRequestSnapshot] {
+        let exclusions = ignoredRepos.sorted().map { " -repo:\(org)/\($0)" }.joined()
+        let base = "org:\(org) is:pr is:open archived:false -author:\(viewer) -reviewed-by:\(viewer)\(exclusions)"
+        let window = DateWindow(start: Self.searchEpoch, end: clock.now)
+        let listed = try await fetchWindow(base: base, window: window)
+
+        let requestedQuery = "org:\(org) is:pr is:open archived:false -author:\(viewer) review-requested:\(viewer)"
+        let requested = try await collect(requestedQuery, .review, size: 50)
+        return unique(listed + requested)
+    }
+
+    private func fetchWindow(base: String, window: DateWindow) async throws -> [PullRequestSnapshot] {
+        let query = "\(base) sort:created-asc \(window.qualifier)"
+        let first = try await fetchPage(query, .review, size: 50, after: nil)
+        guard first.issueCount > Self.searchCap, window.canSplit else {
+            return try await collect(query, .review, size: 50, startingWith: first)
+        }
+        let (older, newer) = window.halves()
+        let olderPRs = try await fetchWindow(base: base, window: older)
+        let newerPRs = try await fetchWindow(base: base, window: newer)
+        return olderPRs + newerPRs
+    }
+
+    private func collect(
+        _ query: String,
+        _ fragment: PRFragment,
+        size: Int,
+        startingWith firstPage: Page? = nil
+    ) async throws -> [PullRequestSnapshot] {
+        var page: Page
+        if let firstPage {
+            page = firstPage
+        } else {
+            page = try await fetchPage(query, fragment, size: size, after: nil)
+        }
+        var all = page.pullRequests
+        while let cursor = page.nextCursor {
+            page = try await fetchPage(query, fragment, size: size, after: cursor)
+            all += page.pullRequests
+        }
+        return all
+    }
+
+    private func fetchPage(_ query: String, _ fragment: PRFragment, size: Int, after: String?) async throws -> Page {
+        var variables: [String: Any] = ["q": query, "first": size]
+        if let after { variables["after"] = after }
+        let search = try await execute(Queries.search(fragment), variables).object("search")
+        let nodes = (search?.array("nodes") ?? []).filter { $0.int("number") != nil }
+        let pageInfo = search?.object("pageInfo")
+        let hasNext = pageInfo?.bool("hasNextPage") ?? false
+        return Page(
+            issueCount: search?.int("issueCount") ?? 0,
+            pullRequests: try await withAllThreads(nodes),
+            nextCursor: hasNext ? pageInfo?.string("endCursor") : nil
+        )
+    }
+
+    private func withAllThreads(_ nodes: [JSONObject]) async throws -> [PullRequestSnapshot] {
+        var result: [PullRequestSnapshot] = []
+        for node in nodes {
+            let snapshot = try SnapshotMapper.snapshot(from: node)
+            guard let continuation = SnapshotMapper.threadContinuation(from: node) else {
+                result.append(snapshot)
+                continue
+            }
+            result.append(snapshot.with(threads: snapshot.threads + (try await remainingThreads(continuation))))
+        }
+        return result
+    }
+
+    private func remainingThreads(_ start: (id: String, cursor: String)) async throws -> [ThreadSnapshot] {
+        var threads: [ThreadSnapshot] = []
+        var cursor: String? = start.cursor
+        while let after = cursor {
+            let data = try await execute(Queries.reviewThreadsPage, ["id": start.id, "after": after])
+            let connection = data.object("node")?.object("reviewThreads")
+            threads += SnapshotMapper.threads(connection?.array("nodes") ?? [])
+            let info = connection?.object("pageInfo")
+            cursor = info?.bool("hasNextPage") == true ? info?.string("endCursor") : nil
+        }
+        return threads
+    }
+
+    private func applyChecks(to pullRequests: [PullRequestSnapshot]) async throws -> [PullRequestSnapshot] {
+        let targets = pullRequests.filter { !$0.isDraft }
+        var states: [PullRequestRef: ChecksState] = [:]
+        for batch in stride(from: 0, to: targets.count, by: Self.checksBatchSize) {
+            let chunk = Array(targets[batch ..< min(batch + Self.checksBatchSize, targets.count)])
+            let data = try await execute(Queries.checks(for: chunk.map(\.ref)), [:])
+            for (index, pr) in chunk.enumerated() {
+                states[pr.ref] = ChecksMapper.state(rollup: rollup(in: data.object("pr\(index)")))
+            }
+        }
+        return pullRequests.map { $0.with(checks: states[$0.ref] ?? $0.checks) }
+    }
+
+    private func rollup(in repository: JSONObject?) -> JSONObject? {
+        let commit = repository?.object("pullRequest")?.nodes("commits").first?.object("commit")
+        return commit?.object("statusCheckRollup")
+    }
+
+    private func unique(_ pullRequests: [PullRequestSnapshot]) -> [PullRequestSnapshot] {
+        var seen = Set<PullRequestRef>()
+        return pullRequests.filter { seen.insert($0.ref).inserted }
+    }
+
+    private func execute(_ query: String, _ variables: [String: Any]) async throws -> JSONObject {
+        try GraphQLResponse.data(from: try await transport.send(query: query, variables: variables))
+    }
+}

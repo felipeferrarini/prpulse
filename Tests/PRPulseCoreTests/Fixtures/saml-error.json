@@ -1,0 +1,9 @@
+{
+  "data": { "search": null },
+  "errors": [
+    {
+      "type": "FORBIDDEN",
+      "message": "Resource protected by organization SAML enforcement. You must grant your Personal Access token access to this organization."
+    }
+  ]
+}

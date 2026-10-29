@@ -1,0 +1,8 @@
+{
+  "data": {
+    "viewer": {
+      "login": "me",
+      "organizations": { "nodes": [ { "login": "acme" }, { "login": "other-org" } ] }
+    }
+  }
+}

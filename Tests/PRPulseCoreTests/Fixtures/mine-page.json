@@ -1,0 +1,74 @@
+{
+  "data": {
+    "search": {
+      "issueCount": 1,
+      "pageInfo": { "hasNextPage": false, "endCursor": "c1" },
+      "nodes": [
+        {
+          "number": 348,
+          "title": "Fix class filter",
+          "url": "https://github.com/acme/web/pull/348",
+          "isDraft": false,
+          "createdAt": "2026-10-20T10:00:00Z",
+          "repository": { "name": "web", "owner": { "login": "acme" } },
+          "author": { "login": "me", "__typename": "User" },
+          "reviewDecision": "CHANGES_REQUESTED",
+          "mergeable": "MERGEABLE",
+          "mergeStateStatus": "BLOCKED",
+          "reviewRequests": {
+            "nodes": [
+              { "requestedReviewer": { "login": "sam" } },
+              { "requestedReviewer": {} }
+            ]
+          },
+          "reviewThreads": {
+            "nodes": [
+              {
+                "isResolved": false,
+                "comments": { "nodes": [ { "author": { "login": "sam", "__typename": "User" } } ] }
+              },
+              {
+                "isResolved": true,
+                "comments": { "nodes": [ { "author": null } ] }
+              }
+            ]
+          },
+          "comments": {
+            "nodes": [
+              { "createdAt": "2026-10-21T10:00:00Z", "author": { "login": "coderabbitai", "__typename": "Bot" } },
+              { "createdAt": "2026-10-21T11:00:00Z", "author": null }
+            ]
+          },
+          "reviews": {
+            "nodes": [
+              {
+                "state": "CHANGES_REQUESTED",
+                "body": "Please fix X",
+                "submittedAt": "2026-10-21T12:00:00Z",
+                "author": { "login": "sam", "__typename": "User" }
+              },
+              {
+                "state": "APPROVED",
+                "body": "",
+                "submittedAt": "2026-10-21T13:00:00Z",
+                "author": { "login": "mia", "__typename": "User" }
+              },
+              {
+                "state": "PENDING",
+                "body": "draft text",
+                "submittedAt": null,
+                "author": { "login": "me", "__typename": "User" }
+              }
+            ]
+          },
+          "commits": {
+            "nodes": [
+              { "commit": { "authoredDate": "2026-10-20T09:00:00Z", "author": { "user": { "login": "me" } } } },
+              { "commit": { "authoredDate": "2026-10-20T09:30:00Z", "author": { "user": null } } }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
