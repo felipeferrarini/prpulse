@@ -12,15 +12,21 @@ final class SetupModel: ObservableObject {
         case idle, checking, failed(String), ok
     }
 
+    enum RepositoryList: Equatable {
+        case idle, loading, loaded([String]), failed
+    }
+
     @Published var draft: AppSettings
     @Published var personalToken = ""
     @Published private(set) var organizations: [String] = []
     @Published private(set) var validation = Validation.idle
     @Published private(set) var ghStatus = GhStatus.unknown
     @Published private(set) var hasStoredToken = false
+    @Published private(set) var repositories = RepositoryList.idle
 
     private let tokens: TokenStore
     private let isSetup: Bool
+    private var isPreview = false
 
     init(settings: AppSettings, isSetup: Bool = true, tokens: TokenStore = ClientFactory.tokenStore()) {
         draft = settings
@@ -74,13 +80,41 @@ final class SetupModel: ObservableObject {
         return true
     }
 
+    func loadRepositories() async {
+        let owner = draft.org
+        guard !isPreview, !owner.isEmpty else { return }
+        repositories = .loading
+        do {
+            let provider = repositoryTokenProvider()
+            let client = GitHubClient(transport: URLSessionTransport(token: { try await provider.token() }), clock: SystemClock())
+            let names = try await client.repositories(owner: owner)
+            guard owner == draft.org else { return }
+            repositories = .loaded(names)
+        } catch is CancellationError {
+            return
+        } catch {
+            guard owner == draft.org else { return }
+            repositories = .failed
+        }
+    }
+
+    private func repositoryTokenProvider() -> TokenProvider {
+        switch draft.authSource {
+        case .ghCli: GhCliTokenProvider()
+        case .personalToken:
+            personalToken.isEmpty ? StoredTokenProvider(store: tokens) : FixedTokenProvider(personalToken)
+        }
+    }
+
     func reportFailure(_ message: String) {
         validation = .failed(message)
     }
 
-    func loadPreview(organizations: [String], gh: GhStatus) {
+    func loadPreview(organizations: [String], gh: GhStatus, repositories: [String] = []) {
         self.organizations = organizations
         ghStatus = gh
+        self.repositories = .loaded(repositories)
+        isPreview = true
     }
 
     func isPersonal(_ org: String) -> Bool {

@@ -14,7 +14,13 @@ enum DemoSnapshot {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         for mode in [DemoMode.pending, .empty, .error, .unconfigured] {
             for scheme in [ColorScheme.light, .dark] {
-                write(popover(mode.viewData, scheme), named: "popover-\(mode.rawValue)-\(scheme == .dark ? "dark" : "light")", to: directory)
+                let name = "popover-\(mode.rawValue)-\(scheme == .dark ? "dark" : "light")"
+                write(popover(mode.viewData, scheme, layout: .single), named: name, to: directory)
+                if mode == .pending {
+                    write(popover(mode.viewData, scheme, layout: .split), named: "\(name)-split", to: directory)
+                    write(popover(mode.viewData, scheme, layout: .single, tab: .mine, filter: .ci), named: "\(name)-mine-filtered", to: directory)
+                    write(popover(mode.viewData, scheme, layout: .split, filter: .merge), named: "\(name)-split-filtered", to: directory)
+                }
             }
         }
         for scheme in [ColorScheme.light, .dark] {
@@ -30,13 +36,19 @@ enum DemoSnapshot {
         settings.org = step == .organization ? "" : "acme"
         settings.ignoredRepos = ["docs", "infra-legacy"]
         let model = SetupModel(settings: settings)
-        model.loadPreview(organizations: ["acme", "acme-labs", "octocat"], gh: .available)
+        model.loadPreview(
+            organizations: ["acme", "acme-labs", "orbit", "northwind", "globex", "initech", "umbrella", "octocat"],
+            gh: .available,
+            repositories: ["web", "api", "docs", "infra-legacy", "mobile", "design-system", "billing", "ops", "playground", "website"]
+        )
         return WizardView(model: model, initialStep: step) { nil }
             .background(Color(nsColor: .windowBackgroundColor))
     }
 
-    private static func popover(_ data: ViewData, _ scheme: ColorScheme) -> some View {
-        PopoverView(data: data, onRefresh: {}, onSettings: {})
+    private static func popover(
+        _ data: ViewData, _ scheme: ColorScheme, layout: PopoverLayout, tab: PopoverTab = .review, filter: ActionLane? = nil
+    ) -> some View {
+        PopoverView(data: data, layout: .constant(layout), initialTab: tab, initialFilter: filter, onRefresh: {}, onSettings: {})
             .background(Color(nsColor: .windowBackgroundColor))
             .environment(\.colorScheme, scheme)
     }

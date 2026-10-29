@@ -1,20 +1,22 @@
-import PRPulseCore
 import SwiftUI
 
 @main
 struct PRPulseApp: App {
-    @StateObject private var runtime = AppRuntime()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
     var body: some Scene {
-        MenuBarExtra {
-            PopoverView(
-                data: runtime.data,
-                onRefresh: { runtime.refresh() },
-                onSettings: { runtime.openSettings() }
-            )
-        } label: {
-            Image(nsImage: StatusIconRenderer.image(for: runtime.iconState, phase: runtime.pulsePhase))
-        }
-        .menuBarExtraStyle(.window)
+        Settings { EmptyView() }
+    }
+}
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var runtime: AppRuntime?
+    private var popover: PopoverController?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        let runtime = AppRuntime()
+        self.runtime = runtime
+        popover = PopoverController(runtime: runtime)
     }
 }

@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var model: SetupModel
     let onSave: (AppSettings) -> Void
+    let onRedoSetup: () -> Void
 
     @LocalState private var didSave = false
     @LocalState private var isBusy = false
@@ -35,6 +36,9 @@ struct SettingsView: View {
 
     private var footer: some View {
         HStack {
+            Button(tr("settings.redo"), action: onRedoSetup)
+                .buttonStyle(.link)
+                .help(tr("settings.redo.help"))
             if didSave { Label(tr("settings.saved"), systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
             Spacer()
             if isBusy { ProgressView().controlSize(.small) }

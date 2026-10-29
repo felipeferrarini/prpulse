@@ -77,23 +77,30 @@ struct OrganizationSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(model.organizations, id: \.self) { org in
-                let selected = model.draft.org == org
-                Button { model.draft.org = org } label: {
-                    HStack {
-                        Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(selected ? Color.accentColor : .secondary)
-                        Text(org).fontWeight(.medium)
-                        if model.isPersonal(org) { Text(tr("setup.org.personal")).font(.caption).foregroundStyle(.secondary) }
-                        Spacer()
-                    }
-                    .padding(10)
-                    .background(selected ? Color.accentColor.opacity(0.12) : Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
-                    .contentShape(Rectangle())
+            Text(tr("setup.org.caption")).font(.caption).foregroundStyle(.secondary)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(model.organizations, id: \.self) { org in row(org) }
                 }
-                .buttonStyle(.plain)
             }
         }
+    }
+
+    private func row(_ org: String) -> some View {
+        let selected = model.draft.org == org
+        return Button { model.draft.org = org } label: {
+            HStack {
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(selected ? Color.accentColor : .secondary)
+                Text(org).fontWeight(.medium)
+                if model.isPersonal(org) { Text(tr("setup.org.personal")).font(.caption).foregroundStyle(.secondary) }
+                Spacer()
+            }
+            .padding(10)
+            .background(selected ? Color.accentColor.opacity(0.12) : Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -103,10 +110,63 @@ struct ExceptionsSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             ChipEditor(title: tr("setup.exceptions.repos"), caption: tr("setup.exceptions.repos.caption"),
-                       kind: .repository, items: $model.draft.ignoredRepos)
+                       kind: .repository, items: $model.draft.ignoredRepos, allowsInput: model.repositories == .failed)
+            RepositoryPicker(repositories: model.repositories, ignored: $model.draft.ignoredRepos)
             ChipEditor(title: tr("setup.exceptions.bots"), caption: tr("setup.exceptions.bots.caption"),
                        kind: .account, items: $model.draft.ignoredBots)
         }
+        .task(id: model.draft.org) { await model.loadRepositories() }
+    }
+}
+
+struct RepositoryPicker: View {
+    let repositories: SetupModel.RepositoryList
+    @Binding var ignored: [String]
+    @LocalState private var filter = ""
+
+    var body: some View {
+        switch repositories {
+        case .idle: EmptyView()
+        case .loading:
+            HStack(spacing: 6) { ProgressView().controlSize(.small); Text(tr("setup.exceptions.repos.loading")).font(.caption) }
+        case .failed:
+            Text(tr("setup.exceptions.repos.failed")).font(.caption).foregroundStyle(.secondary)
+        case .loaded(let names):
+            if !names.isEmpty { list(names) }
+        }
+    }
+
+    private func list(_ names: [String]) -> some View {
+        let shown = filter.isEmpty ? names : names.filter { $0.localizedCaseInsensitiveContains(filter) }
+        return VStack(alignment: .leading, spacing: 4) {
+            TextField(tr("setup.exceptions.repos.search", names.count), text: $filter)
+                .textFieldStyle(.roundedBorder)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(shown, id: \.self) { name in row(name) }
+                }
+            }
+            .frame(height: 96)
+            .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
+        }
+    }
+
+    private func row(_ name: String) -> some View {
+        let isIgnored = ignored.contains(name)
+        return Button {
+            ignored = isIgnored ? ListEditing.removing(name, from: ignored) : ListEditing.adding(name, to: ignored, kind: .repository)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: isIgnored ? "checkmark.square.fill" : "square")
+                    .foregroundStyle(isIgnored ? Color.accentColor : .secondary)
+                Text(name).font(.callout)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -115,6 +175,7 @@ struct ChipEditor: View {
     let caption: String
     let kind: ListEditing.Kind
     @Binding var items: [String]
+    var allowsInput = true
     @LocalState private var input = ""
 
     var body: some View {
@@ -123,11 +184,13 @@ struct ChipEditor: View {
             Text(caption).font(.caption).foregroundStyle(.secondary)
             FlowLayout(spacing: 6) {
                 ForEach(items, id: \.self) { item in chip(item) }
-                TextField(tr("setup.exceptions.add"), text: $input)
-                    .textFieldStyle(.plain)
-                    .frame(width: 110)
-                    .padding(.vertical, 3)
-                    .onSubmit(commit)
+                if allowsInput {
+                    TextField(tr("setup.exceptions.add"), text: $input)
+                        .textFieldStyle(.plain)
+                        .frame(width: 110)
+                        .padding(.vertical, 3)
+                        .onSubmit(commit)
+                }
             }
         }
     }

@@ -11,6 +11,8 @@ final class AppRuntime: ObservableObject {
     @Published private(set) var data = ViewData()
     @Published private(set) var iconState = IconState.upToDate
     @Published private(set) var pulsePhase = 0.0
+    @Published private(set) var popoverLayout = PopoverLayout.single
+    @Published private(set) var openCount = 0
 
     let settings = SettingsStore()
     private let model: AppModel?
@@ -20,6 +22,7 @@ final class AppRuntime: ObservableObject {
     private var ticker: Timer?
 
     init() {
+        popoverLayout = settings.settings.popoverLayout
         if let demo = DemoMode.current {
             model = nil
             data = demo.viewData
@@ -47,6 +50,15 @@ final class AppRuntime: ObservableObject {
         }
     }
 
+    func popoverOpened() {
+        openCount += 1
+    }
+
+    func setPopoverLayout(_ layout: PopoverLayout) {
+        popoverLayout = layout
+        settings.settings.popoverLayout = layout
+    }
+
     func refresh() {
         guard let model else { return }
         Task { await model.refresh() }
@@ -56,12 +68,22 @@ final class AppRuntime: ObservableObject {
         guard settings.settings.hasCompletedSetup else { return showSetup() }
         let setup = SetupModel(settings: settings.settings, isSetup: false)
         windows.show(id: Self.settingsWindow, title: tr("settings.title")) {
-            SettingsView(model: setup) { [weak self] draft in self?.save(draft) }
+            SettingsView(model: setup, onSave: { [weak self] draft in self?.save(draft) }, onRedoSetup: { [weak self] in self?.redoSetup() })
         }
     }
 
+    /// Opens the wizard from scratch. Nothing is replaced until the user finishes it.
+    private func redoSetup() {
+        windows.close(id: Self.settingsWindow)
+        showSetup(settings: .defaults)
+    }
+
     private func showSetup() {
-        let setup = SetupModel(settings: settings.settings)
+        showSetup(settings: settings.settings)
+    }
+
+    private func showSetup(settings initial: AppSettings) {
+        let setup = SetupModel(settings: initial)
         windows.show(id: Self.setupWindow, title: "PRPulse") {
             WizardView(model: setup) { [weak self] in await self?.finishSetup(setup.draft) }
         }
@@ -70,6 +92,7 @@ final class AppRuntime: ObservableObject {
     private func finishSetup(_ draft: AppSettings) async -> String? {
         guard let model else { return nil }
         var chosen = draft
+        chosen.popoverLayout = popoverLayout
         chosen.hasCompletedSetup = false
         settings.settings = chosen
         LaunchAtLogin.apply(chosen.launchAtLogin)
@@ -92,6 +115,7 @@ final class AppRuntime: ObservableObject {
 
     private func save(_ draft: AppSettings) {
         var chosen = draft
+        chosen.popoverLayout = popoverLayout
         chosen.hasCompletedSetup = true
         settings.settings = chosen
         LaunchAtLogin.apply(chosen.launchAtLogin)
@@ -115,7 +139,8 @@ final class AppRuntime: ObservableObject {
             lastUpdated: model.lastUpdated,
             isOffline: model.isOffline,
             freshUntil: model.freshUntil,
-            isSetupComplete: settings.settings.hasCompletedSetup
+            isSetupComplete: settings.settings.hasCompletedSetup,
+            org: settings.settings.org
         )
         refreshIcon()
     }

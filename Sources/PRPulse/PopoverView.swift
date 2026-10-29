@@ -3,203 +3,209 @@ import SwiftUI
 
 struct PopoverView: View {
     let data: ViewData
+    @Binding var layout: PopoverLayout
+    var openToken = 0
     let onRefresh: () -> Void
     let onSettings: () -> Void
 
-    @LocalState private var contentHeight: CGFloat = 0
+    @LocalState private var tab: PopoverTab
+    @LocalState private var filter: ActionLane?
+    @LocalState private var entered = true
 
-    private static let maxListHeight: CGFloat = 460
-    private static let minListHeight: CGFloat = 120
+    init(
+        data: ViewData,
+        layout: Binding<PopoverLayout>,
+        openToken: Int = 0,
+        initialTab: PopoverTab = .review,
+        initialFilter: ActionLane? = nil,
+        onRefresh: @escaping () -> Void,
+        onSettings: @escaping () -> Void
+    ) {
+        self.data = data
+        _layout = layout
+        self.openToken = openToken
+        self.onRefresh = onRefresh
+        self.onSettings = onSettings
+        _tab = LocalState(initialValue: initialTab)
+        _filter = LocalState(initialValue: initialFilter)
+    }
+
+    private static let singleWidth: CGFloat = 560
+    private static let splitWidth: CGFloat = 920
 
     var body: some View {
         VStack(spacing: 0) {
-            if data.isOffline { banner(data.summary == nil ? tr("popover.offline.noData") : tr("popover.offline")) }
+            if data.isOffline { OfflineBanner(text: data.summary == nil ? tr("popover.offline.noData") : tr("popover.offline")) }
             content
             Divider()
-            footer
+            PopoverFooter(lastUpdated: data.lastUpdated, onRefresh: onRefresh, onSettings: onSettings)
         }
-        .frame(width: 420)
+        .frame(width: width)
+        .clipShape(RoundedRectangle(cornerRadius: PopoverChrome.cornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: PopoverChrome.cornerRadius, style: .continuous).strokeBorder(Palette.line))
+        .focusEffectDisabled()
+        .onChange(of: openToken) { _, _ in popoverOpened() }
+    }
+
+    private var width: CGFloat {
+        showsSummary && layout == .split ? Self.splitWidth : Self.singleWidth
+    }
+
+    private var showsSummary: Bool {
+        data.isSetupComplete && data.summary != nil && !isFailed
+    }
+
+    private var isFailed: Bool {
+        if case .failed = data.state { true } else { false }
     }
 
     @ViewBuilder private var content: some View {
         if !data.isSetupComplete {
             FailureView(failure: .notConfigured, onSettings: onSettings)
+        } else if case .failed(let failure) = data.state {
+            FailureView(failure: failure, onSettings: onSettings)
+        } else if let summary = data.summary {
+            summaryContent(summary)
         } else {
-            stateContent
+            LoadingStateView()
         }
     }
 
-    @ViewBuilder private var stateContent: some View {
-        switch data.state {
-        case .failed(let failure):
-            FailureView(failure: failure, onSettings: onSettings)
-        default:
-            if let summary = data.summary {
-                summaryContent(summary)
+    private func summaryContent(_ summary: Summary) -> some View {
+        let isSingle = layout == .single
+        return VStack(spacing: 0) {
+            PopoverHeader(org: data.org, total: summary.total, layout: $layout)
+                .padding(.horizontal, 14)
+                .padding(.top, 14)
+                .padding(.bottom, 12)
+            if summary.total == 0 {
+                EmptyStateView()
             } else {
-                placeholder
+                TabSegment(tab: $tab, reviewCount: summary.review.count, mineCount: summary.mine.count)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 12)
+                    .folded(!isSingle, height: 50)
+                LaneFilterBar(lanes: summary.activeLanes, summary: summary, selection: laneSelection(summary))
+                    .padding(.bottom, 12)
+                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, entered: entered)
             }
         }
     }
 
-    @ViewBuilder private func summaryContent(_ summary: Summary) -> some View {
-        if summary.total == 0 {
-            EmptyStateView()
-        } else {
+    private func laneSelection(_ summary: Summary) -> Binding<ActionLane?> {
+        Binding(
+            get: { filter },
+            set: { lane in
+                filter = lane
+                guard let lane, layout == .single else { return }
+                withAnimation(PopoverMotion.spring) { tab = lane == .review ? .review : .mine }
+            }
+        )
+    }
+
+    private func popoverOpened() {
+        var instant = Transaction()
+        instant.disablesAnimations = true
+        withTransaction(instant) {
+            entered = false
+            filter = nil
+            tab = (data.summary?.review.isEmpty ?? true) && !(data.summary?.mine.isEmpty ?? true) ? .mine : .review
+        }
+        DispatchQueue.main.async { entered = true }
+    }
+}
+
+private struct PaneHeightKey: PreferenceKey {
+    static let defaultValue: [PopoverTab: CGFloat] = [:]
+
+    static func reduce(value: inout [PopoverTab: CGFloat], nextValue: () -> [PopoverTab: CGFloat]) {
+        value.merge(nextValue()) { max($0, $1) }
+    }
+}
+
+private struct SummaryPanes: View {
+    let summary: Summary
+    let layout: PopoverLayout
+    let tab: PopoverTab
+    let filter: ActionLane?
+    let entered: Bool
+
+    @LocalState private var heights: [PopoverTab: CGFloat] = [:]
+
+    private static let minListHeight: CGFloat = 120
+    private static let maxListHeight: CGFloat = 410
+    private static let singleWidth: CGFloat = 560
+    private static let splitWidth: CGFloat = 920
+    private static let paneHeaderHeight: CGFloat = 36
+
+    private var isSingle: Bool { layout == .single }
+    private var paneWidth: CGFloat { isSingle ? Self.singleWidth : Self.splitWidth / 2 }
+
+    private var listHeight: CGFloat {
+        let tallest = max(heights[.review] ?? 0, heights[.mine] ?? 0)
+        return min(max(tallest, Self.minListHeight), Self.maxListHeight)
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            pane(.review).frame(width: paneWidth)
+            pane(.mine).frame(width: paneWidth).background(alignment: .leading) {
+                if !isSingle { Rectangle().fill(Palette.line).frame(width: 1) }
+            }
+        }
+        .offset(x: isSingle && tab == .mine ? -paneWidth : 0)
+        .frame(width: isSingle ? Self.singleWidth : Self.splitWidth, alignment: .leading)
+        .clipped()
+        .onPreferenceChange(PaneHeightKey.self) { heights = $0 }
+        .animation(PopoverMotion.glide, value: layout)
+        .animation(PopoverMotion.spring, value: tab)
+    }
+
+    private func pane(_ kind: PopoverTab) -> some View {
+        let rows = rows(for: kind)
+        let hidden = isSingle && tab != kind
+        return VStack(spacing: 0) {
+            paneHeader(kind).folded(isSingle, height: Self.paneHeaderHeight)
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    if !summary.mine.isEmpty { mineSection(summary.mine) }
-                    if !summary.review.isEmpty { reviewSection(summary.review) }
+                VStack(spacing: 0) {
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                        PullRequestRow(model: row, isDimmed: isDimmed(row), entranceIndex: index, entered: entered)
+                    }
                 }
                 .padding(.vertical, 4)
                 .background(GeometryReader { proxy in
-                    Color.clear.preference(key: ListHeightKey.self, value: proxy.size.height)
+                    Color.clear.preference(key: PaneHeightKey.self, value: [kind: proxy.size.height])
                 })
             }
-            .frame(height: min(max(contentHeight, Self.minListHeight), Self.maxListHeight))
-            .onPreferenceChange(ListHeightKey.self) { contentHeight = $0 }
+            .frame(height: listHeight)
         }
+        .accessibilityHidden(hidden)
+        .allowsHitTesting(!hidden)
     }
 
-    private func mineSection(_ items: [MineItem]) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(title: tr("popover.mine"), count: items.count)
-            ForEach(items, id: \.pr.ref) { item in
-                PullRequestRow(pr: item.pr, chips: item.reasons.map(ReasonChip.make), detail: nil)
-            }
-        }
-    }
-
-    private func reviewSection(_ items: [ReviewItem]) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SectionHeader(title: tr("popover.review"), count: items.count)
-            ForEach(items, id: \.pr.ref) { item in
-                PullRequestRow(pr: item.pr, chips: reviewChips(item.pr), detail: reviewDetail(item.pr))
-            }
-        }
-    }
-
-    private func reviewChips(_ pr: PullRequestSnapshot) -> [ReasonChip] {
-        pr.isDraft ? [.needsReview, .draft] : [.needsReview]
-    }
-
-    private func reviewDetail(_ pr: PullRequestSnapshot) -> String {
-        let age = RelativeDateTimeFormatter().localizedString(for: pr.createdAt, relativeTo: Date())
-        return "\(pr.author.login) · \(age)"
-    }
-
-    private var placeholder: some View {
-        HStack(spacing: 8) {
-            ProgressView().controlSize(.small)
-            Text(tr("popover.loading")).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, minHeight: 90)
-    }
-
-    private func banner(_ text: String) -> some View {
-        Text(text)
-            .font(.caption)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color.yellow.opacity(0.18))
-    }
-
-    private var footer: some View {
-        HStack(spacing: 10) {
-            if let updated = data.lastUpdated {
-                Text(tr("popover.updated", updated.formatted(date: .omitted, time: .shortened)))
-                    .font(.caption).foregroundStyle(.secondary)
-            }
+    private func paneHeader(_ kind: PopoverTab) -> some View {
+        let isReview = kind == .review
+        return HStack {
+            Label(isReview ? tr("popover.review") : tr("popover.mine"), systemImage: isReview ? "eye" : "arrow.triangle.branch")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isReview ? Palette.review : Color.primary)
             Spacer()
-            FooterButton(symbol: "arrow.clockwise", help: tr("popover.refresh"), action: onRefresh)
-                .keyboardShortcut("r")
-            FooterButton(symbol: "gearshape", help: tr("popover.settings"), action: onSettings)
-            FooterButton(symbol: "power", help: tr("popover.quit")) { NSApplication.shared.terminate(nil) }
+            Text(isReview ? tr("popover.pane.review.count", summary.review.count) : tr("popover.pane.mine.count", summary.mine.count))
+                .font(.system(size: 12)).foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-    }
-}
-
-/// A window-style menu bar popover sizes itself from its content, and a bare ScrollView
-/// has no intrinsic height, so the list is measured and given an explicit height.
-private struct ListHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
-private struct SectionHeader: View {
-    let title: String
-    let count: Int
-
-    var body: some View {
-        Text("\(title) · \(count)")
-            .font(.caption.weight(.semibold))
-            .textCase(.uppercase)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
-            .padding(.bottom, 2)
-    }
-}
-
-private struct FooterButton: View {
-    let symbol: String
-    let help: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) { Image(systemName: symbol) }
-            .buttonStyle(.borderless)
-            .help(help)
-    }
-}
-
-private struct EmptyStateView: View {
-    var body: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "checkmark.circle").font(.largeTitle).foregroundStyle(.green)
-            Text(tr("popover.empty.title")).font(.headline)
-            Text(tr("popover.empty.body")).font(.callout).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, minHeight: 130)
-    }
-}
-
-private struct FailureView: View {
-    let failure: AppFailure
-    let onSettings: () -> Void
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill").font(.title).foregroundStyle(.red)
-            Text(title).font(.headline)
-            Text(message).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            Button(tr("error.openSettings"), action: onSettings)
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 14)
+        .frame(height: Self.paneHeaderHeight, alignment: .center)
     }
 
-    private var title: String {
-        switch failure {
-        case .unauthenticated: tr("error.unauthenticated.title")
-        case .ssoRequired: tr("error.sso.title")
-        case .notConfigured: tr("error.notConfigured.title")
-        case .organizationNotAccessible: tr("error.org.title")
+    private func rows(for kind: PopoverTab) -> [RowModel] {
+        switch kind {
+        case .review: summary.review.map(RowModel.review)
+        case .mine: summary.mine.map(RowModel.mine)
         }
     }
 
-    private var message: String {
-        switch failure {
-        case .unauthenticated: tr("error.unauthenticated.body")
-        case .ssoRequired: tr("error.sso.body")
-        case .notConfigured: tr("error.notConfigured.body")
-        case .organizationNotAccessible(let org): tr("error.org.body", org)
-        }
+    private func isDimmed(_ row: RowModel) -> Bool {
+        guard let filter else { return false }
+        return !row.lanes.contains(filter)
     }
 }
