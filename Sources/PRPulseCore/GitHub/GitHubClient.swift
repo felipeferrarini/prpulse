@@ -60,7 +60,14 @@ public struct GitHubClient: Sendable {
 
         let requestedQuery = "org:\(org) is:pr is:open archived:false -author:\(viewer) review-requested:\(viewer)"
         let requested = try await collect(requestedQuery, .review, size: 50)
-        return unique(listed + requested)
+        return unique(requested.map { markingRequested($0, viewer: viewer) } + listed)
+    }
+
+    /// GitHub's `review-requested:` search also matches PRs where a team of the viewer was requested
+    /// (for example through CODEOWNERS), so everything it returns is a request to the viewer.
+    private func markingRequested(_ pr: PullRequestSnapshot, viewer: String) -> PullRequestSnapshot {
+        let alreadyListed = pr.requestedReviewers.contains { $0.caseInsensitiveCompare(viewer) == .orderedSame }
+        return alreadyListed ? pr : pr.with(requestedReviewers: pr.requestedReviewers + [viewer])
     }
 
     private func fetchWindow(base: String, window: DateWindow) async throws -> [PullRequestSnapshot] {

@@ -26,7 +26,7 @@ Left to right: all clear, something pending, something new (the halo pulses for 
 - **My PRs:** open PRs you authored that need an action from you.
 - **To review:** every open PR in the organization you haven't reviewed yet, even if nobody requested you.
 - **Quiet by design:** bots are ignored, a first run never floods you with old backlog, and an item notifies once.
-- **One org at a time**, with a list of repositories to ignore (PRs where you are a requested reviewer still show).
+- **One org at a time**, with a list of repositories to ignore (PRs where you are a requested reviewer, directly or through a team such as CODEOWNERS, still show).
 - **Private:** talks only to GitHub with your own token, kept in the macOS Keychain. No server, no analytics.
 - English and Portuguese (follows the system language).
 
@@ -82,7 +82,6 @@ Open PRs from other people in the organization where you have no submitted revie
 ## Known limits
 
 - One organization at a time.
-- A review requested from a *team* (for example through CODEOWNERS) isn't detected, only direct requests.
 - Sign-in through the browser is not available yet; use `gh` or a token.
 - The app is signed ad hoc, so after each update macOS may ask again whether PRPulse can read its Keychain item. Choose **Always Allow**; if you deny it, the icon shows the sign-in error.
 

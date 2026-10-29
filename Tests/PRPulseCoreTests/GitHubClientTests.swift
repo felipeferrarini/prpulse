@@ -175,3 +175,42 @@ private func emptySearch() -> Data {
         try await client(transport).verifyOrganization("acme")
     }
 }
+
+@Test func pullRequestsFoundByTheReviewRequestedSearchCountAsRequestedEvenForTeamRequests() async throws {
+    var teamOnly = minimalPR(number: 7, repo: "docs")
+    teamOnly["reviewRequests"] = ["nodes": [["requestedReviewer": [:]]]]
+    let transport = FakeTransport { _, variables in
+        let q = variables["q"] as? String ?? ""
+        return searchResponse(nodes: q.contains("review-requested:me") ? [teamOnly] : [])
+    }
+
+    let prs = try await client(transport).reviewPullRequests(org: "org", viewer: "me", ignoredRepos: ["docs"])
+
+    #expect(prs.first?.requestedReviewers.contains("me") == true)
+    let shown = ReviewClassifier.items(from: prs, viewer: "me", ignoredRepos: ["docs"])
+    #expect(shown.map(\.pr.ref.number) == [7])
+}
+
+@Test func theRequestedCopyWinsWhenAPullRequestIsInBothSearches() async throws {
+    let transport = FakeTransport { _, variables in
+        searchResponse(nodes: [minimalPR(number: 8)])
+    }
+
+    let prs = try await client(transport).reviewPullRequests(org: "org", viewer: "me", ignoredRepos: [])
+
+    #expect(prs.count == 1)
+    #expect(prs[0].requestedReviewers == ["me"])
+}
+
+@Test func viewerIsNotAddedTwiceWhenAlreadyRequestedDirectly() async throws {
+    var direct = minimalPR(number: 9)
+    direct["reviewRequests"] = ["nodes": [["requestedReviewer": ["login": "Me"]]]]
+    let transport = FakeTransport { _, variables in
+        let q = variables["q"] as? String ?? ""
+        return searchResponse(nodes: q.contains("review-requested:me") ? [direct] : [])
+    }
+
+    let prs = try await client(transport).reviewPullRequests(org: "org", viewer: "me", ignoredRepos: [])
+
+    #expect(prs[0].requestedReviewers == ["Me"])
+}

@@ -51,6 +51,15 @@ public struct PullRequestSnapshot: Equatable, Sendable {
         self.requestedReviewers = requestedReviewers
     }
 
+    public func with(requestedReviewers: [String]) -> PullRequestSnapshot {
+        PullRequestSnapshot(
+            ref: ref, title: title, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
+            reviewDecision: reviewDecision, mergeable: mergeable, mergeState: mergeState, checks: checks,
+            threads: threads, comments: comments, commits: commits, reviews: reviews,
+            requestedReviewers: requestedReviewers
+        )
+    }
+
     public func with(threads: [ThreadSnapshot]) -> PullRequestSnapshot {
         PullRequestSnapshot(
             ref: ref, title: title, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
