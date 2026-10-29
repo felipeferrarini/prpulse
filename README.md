@@ -36,8 +36,11 @@ With [Homebrew](https://brew.sh):
 
 ```bash
 brew tap felipeferrarini/tap
+brew trust felipeferrarini/tap
 brew install --cask prpulse
 ```
+
+Recent Homebrew versions refuse to load casks from a third-party tap until you trust it, which is what the `brew trust` line does. Older versions don't have that command; skip it there.
 
 Or download `PRPulse-<version>.dmg` from the [releases page](../../releases), drag **PRPulse** to Applications and open it.
 
