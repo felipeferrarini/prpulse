@@ -2,7 +2,7 @@ import PRPulseCore
 import SwiftUI
 
 enum SettingsPage: CaseIterable, Hashable {
-    case connection, organization, exceptions, general
+    case connection, organization, exceptions, general, diagnostics
 
     var symbol: String {
         switch self {
@@ -10,6 +10,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .organization: "arrow.triangle.branch"
         case .exceptions: "eye"
         case .general: "slider.horizontal.3"
+        case .diagnostics: "stethoscope"
         }
     }
 
@@ -19,6 +20,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .organization: tr("settings.section.organization")
         case .exceptions: tr("settings.section.exceptions")
         case .general: tr("settings.section.general")
+        case .diagnostics: tr("settings.section.diagnostics")
         }
     }
 
@@ -28,6 +30,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .organization: tr("settings.lead.organization")
         case .exceptions: tr("settings.lead.exceptions")
         case .general: tr("settings.lead.general")
+        case .diagnostics: tr("settings.lead.diagnostics")
         }
     }
 }
@@ -40,7 +43,7 @@ struct SettingsChanges {
         var pages: [SettingsPage] = []
         if draft.authSource != saved.authSource { pages.append(.connection) }
         if hasNewToken { pages.append(.connection) }
-        if draft.org != saved.org { pages.append(.organization) }
+        if draft.orgs != saved.orgs { pages.append(.organization) }
         if draft.ignoredRepos.sorted() != saved.ignoredRepos.sorted() { pages.append(.exceptions) }
         if draft.ignoredBots != saved.ignoredBots { pages.append(.exceptions) }
         if draft.refreshMinutes != saved.refreshMinutes { pages.append(.general) }
@@ -48,6 +51,8 @@ struct SettingsChanges {
         if draft.notificationsEnabled != saved.notificationsEnabled { pages.append(.general) }
         if draft.launchAtLogin != saved.launchAtLogin { pages.append(.general) }
         if draft.automaticUpdates != saved.automaticUpdates { pages.append(.general) }
+        if draft.globalShortcut != saved.globalShortcut { pages.append(.general) }
+        if draft.waitingReviewDays != saved.waitingReviewDays { pages.append(.general) }
         self.pages = pages
     }
 
@@ -61,6 +66,7 @@ struct SettingsView: View {
     let onSave: (AppSettings) -> Void
     let onRedoSetup: () -> Void
     let onCheckForUpdates: () -> Void
+    let diagnostics: () -> DiagnosticsReport
     let onClose: () -> Void
 
     @LocalState private var page: SettingsPage
@@ -69,7 +75,7 @@ struct SettingsView: View {
     @LocalState private var didSave = false
     @Namespace private var navigation
 
-    static let size = CGSize(width: 900, height: 680)
+    static let size = CGSize(width: 900, height: 730)
     private static let sidebarWidth: CGFloat = 250
 
     init(
@@ -78,12 +84,14 @@ struct SettingsView: View {
         onSave: @escaping (AppSettings) -> Void,
         onRedoSetup: @escaping () -> Void,
         onCheckForUpdates: @escaping () -> Void = {},
+        diagnostics: @escaping () -> DiagnosticsReport = { .sample },
         onClose: @escaping () -> Void = {}
     ) {
         self.model = model
         self.onSave = onSave
         self.onRedoSetup = onRedoSetup
         self.onCheckForUpdates = onCheckForUpdates
+        self.diagnostics = diagnostics
         self.onClose = onClose
         _page = LocalState(initialValue: initialPage)
         _saved = LocalState(initialValue: model.draft)
@@ -189,6 +197,7 @@ struct SettingsView: View {
                 case .organization: OrganizationContent(model: model)
                 case .exceptions: ExceptionsContent(model: model)
                 case .general: GeneralContent(model: model, onRedoSetup: onRedoSetup, onCheckForUpdates: onCheckForUpdates)
+                case .diagnostics: DiagnosticsContent(report: diagnostics)
                 }
             }
             .padding(.top, 26)
@@ -286,7 +295,7 @@ struct SettingsView: View {
         let valid = await model.validateConnection()
         isSaving = false
         guard valid else { return }
-        guard !model.draft.org.isEmpty else { return model.reportFailure(tr("setup.org.required")) }
+        guard !model.draft.orgs.isEmpty else { return model.reportFailure(tr("setup.org.required")) }
         onSave(model.draft)
         saved = model.draft
         didSave = true

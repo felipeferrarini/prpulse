@@ -26,7 +26,8 @@ public enum ReviewClassifier {
     }
 
     private static func isHiddenByRepo(_ pr: PullRequestSnapshot, viewer: String, ignored: Set<String>) -> Bool {
-        guard ignored.contains(pr.ref.repo.lowercased()) else { return false }
+        let repo = pr.ref.repo.lowercased()
+        guard ignored.contains(repo) || ignored.contains("\(pr.ref.owner.lowercased())/\(repo)") else { return false }
         return !isRequested(pr, viewer: viewer)
     }
 

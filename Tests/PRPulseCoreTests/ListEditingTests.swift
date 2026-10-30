@@ -10,8 +10,9 @@ import Testing
     #expect(ListEditing.adding("APP", to: ["app"], kind: .repository) == ["app"])
 }
 
-@Test func repositoryNameDropsTheOwnerPrefix() {
-    #expect(ListEditing.adding("acme/docs", to: [], kind: .repository) == ["docs"])
+@Test func repositoryKeepsItsOwnerAndABareNameBelongsToTheGivenOne() {
+    #expect(ListEditing.adding("acme/docs", to: [], kind: .repository, owner: "other") == ["acme/docs"])
+    #expect(ListEditing.adding("docs", to: [], kind: .repository, owner: "acme") == ["acme/docs"])
 }
 
 @Test func botNameDropsAtSignAndBotSuffix() {

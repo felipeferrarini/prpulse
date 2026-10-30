@@ -18,5 +18,14 @@ rm -rf "$feed"
 mkdir -p "$feed"
 cp "$dmg" "$feed/"
 
-"$tool" --download-url-prefix "https://github.com/felipeferrarini/prpulse/releases/download/v$version/" "$feed"
+# The update window shows this version's section of the changelog as its release notes.
+notes="$feed/$APP_NAME-$version.md"
+awk -v header="## [$version]" '
+    index($0, header) == 1 { printing = 1; next }
+    /^## \[/ { printing = 0 }
+    printing
+' "$root/CHANGELOG.md" | sed -e '/./,$!d' > "$notes"
+[ -s "$notes" ] || { echo "no CHANGELOG.md section for $version" >&2; exit 1; }
+
+"$tool" --embed-release-notes --download-url-prefix "https://github.com/felipeferrarini/prpulse/releases/download/v$version/" "$feed"
 echo "built: $feed/appcast.xml"

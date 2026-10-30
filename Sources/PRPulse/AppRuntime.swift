@@ -18,6 +18,9 @@ final class AppRuntime: ObservableObject {
     private let model: AppModel?
     private let notifier = Notifier()
     private let updater: SoftwareUpdater
+    private var shortcut: GlobalShortcut?
+    /// Set by the popover controller, which owns the panel.
+    var onShortcut: () -> Void = {}
     private let windows = WindowManager()
     private var observation: AnyCancellable?
     private var ticker: Timer?
@@ -51,17 +54,62 @@ final class AppRuntime: ObservableObject {
                 DispatchQueue.main.async { [weak self] in self?.showSetup() }
             }
         }
+        if DemoSnapshot.directory == nil {
+            shortcut = GlobalShortcut { [weak self] in self?.onShortcut() }
+            shortcut?.setEnabled(settings.settings.globalShortcut)
+        }
     }
 
-    var organization: String { settings.settings.org }
+    var organizations: [String] { settings.settings.orgs }
     var notificationsEnabled: Bool { settings.settings.notificationsEnabled }
 
     func toggleNotifications() {
         settings.settings.notificationsEnabled.toggle()
     }
 
+    /// Adds the repository to the ones left out of the review list and refreshes right away.
+    func muteRepository(of ref: PullRequestRef) {
+        let entry = "\(ref.owner)/\(ref.repo)"
+        settings.settings.ignoredRepos = ListEditing.adding(entry, to: settings.settings.ignoredRepos, kind: .repository)
+        refresh()
+    }
+
     func checkForUpdates() {
         updater.checkForUpdates()
+    }
+
+    func diagnosticsReport() -> DiagnosticsReport {
+        guard let model else { return .sample }
+        let current = settings.settings
+        return DiagnosticsReport(
+            appVersion: SoftwareUpdater.version,
+            systemVersion: ProcessInfo.processInfo.operatingSystemVersionString.replacingOccurrences(of: "Version ", with: ""),
+            authSource: current.authSource,
+            organizationCount: current.orgs.count,
+            refreshMinutes: current.refreshMinutes,
+            lastSync: model.lastUpdated,
+            status: Self.syncStatus(model),
+            reviewCount: model.lastSummary?.review.count ?? 0,
+            mineCount: model.lastSummary?.mine.count ?? 0,
+            rateLimit: ClientFactory.rateLimits.latest,
+            shortcutActive: shortcut?.isRegistered ?? false,
+            automaticUpdates: current.automaticUpdates
+        )
+    }
+
+    private static func syncStatus(_ model: AppModel) -> SyncStatus {
+        if model.isOffline { return .offline }
+        switch model.state {
+        case .idle, .loading: return model.lastUpdated == nil ? .neverSynced : .ok
+        case .ready: return .ok
+        case .failed(let failure):
+            switch failure {
+            case .unauthenticated: return .failed("unauthenticated")
+            case .ssoRequired: return .failed("sso required")
+            case .notConfigured: return .failed("not configured")
+            case .organizationNotAccessible: return .failed("organization not accessible")
+            }
+        }
     }
 
     func popoverOpened() {
@@ -87,6 +135,7 @@ final class AppRuntime: ObservableObject {
                 onSave: { [weak self] draft in self?.save(draft) },
                 onRedoSetup: { [weak self] in self?.redoSetup() },
                 onCheckForUpdates: { [weak self] in self?.checkForUpdates() },
+                diagnostics: { [weak self] in self?.diagnosticsReport() ?? .sample },
                 onClose: { [weak self] in self?.windows.close(id: Self.settingsWindow) }
             )
         }
@@ -144,6 +193,7 @@ final class AppRuntime: ObservableObject {
         settings.settings = chosen
         LaunchAtLogin.apply(chosen.launchAtLogin)
         updater.apply(automatic: chosen.automaticUpdates)
+        shortcut?.setEnabled(chosen.globalShortcut)
         guard let model else { return }
         Task { await model.restart() }
     }
@@ -169,7 +219,7 @@ final class AppRuntime: ObservableObject {
             isOffline: model.isOffline,
             freshUntil: model.freshUntil,
             isSetupComplete: settings.settings.hasCompletedSetup,
-            org: settings.settings.org
+            orgs: settings.settings.orgs
         )
         refreshIcon()
     }

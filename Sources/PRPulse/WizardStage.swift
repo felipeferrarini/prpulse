@@ -12,7 +12,7 @@ struct WizardStage: View {
     private var showsToast: Bool { step.rawValue >= SetupStep.general.rawValue && model.draft.notificationsEnabled && isConnected }
 
     private var rows: [StageRow] {
-        StageRow.samples(repositories: model.repositoryNames)
+        StageRow.samples(repositories: model.repositoryShortNames)
             .filter { !model.draft.ignoredRepos.contains($0.repo) || $0.requested }
     }
 
@@ -25,7 +25,7 @@ struct WizardStage: View {
                 .offset(y: showsIcon ? 0 : -10)
                 .frame(maxHeight: .infinity, alignment: .center)
                 .padding(.bottom, 70)
-            MiniPopover(org: model.draft.org, rows: rows, isConnected: isConnected, interval: model.draft.refreshMinutes)
+            MiniPopover(org: OrganizationLabel.text(for: model.draft.orgs), rows: rows, isConnected: isConnected, interval: model.draft.refreshMinutes)
                 .padding(.top, 56)
                 .opacity(showsIcon ? 0 : 1)
                 .offset(y: showsIcon ? 26 : 0)

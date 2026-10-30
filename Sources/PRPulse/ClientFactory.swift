@@ -15,10 +15,13 @@ enum ClientFactory {
         }
     }
 
+    /// Shared by every client the app builds, so the settings can show the latest budget.
+    static let rateLimits = RateLimitMonitor()
+
     static func makeClientFactory(settings: SettingsStore) -> @Sendable () async throws -> GitHubClient {
         {
             let provider = tokenProvider(for: settings.settings.authSource)
-            let transport = URLSessionTransport(token: { try await provider.token() })
+            let transport = URLSessionTransport(token: { try await provider.token() }, rateLimits: rateLimits)
             return GitHubClient(transport: transport, clock: SystemClock())
         }
     }

@@ -12,7 +12,7 @@ private func strings(_ language: String) throws -> [String: String] {
 }
 
 private func keyLiteralsInSources() throws -> Set<String> {
-    let pattern = try NSRegularExpression(pattern: #""((?:popover|error|reason|notification|setup|settings|lane|chip|wait|wizard|menu)\.[A-Za-z0-9.]+)""#)
+    let pattern = try NSRegularExpression(pattern: #""((?:popover|error|reason|notification|setup|settings|lane|chip|wait|wizard|menu|diag|row)\.[A-Za-z0-9.]+)""#)
     var found = Set<String>()
     let files = try #require(FileManager.default.enumerator(at: appSources, includingPropertiesForKeys: nil))
     for case let url as URL in files where url.pathExtension == "swift" {

@@ -2,6 +2,22 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-10-29
+
+### Added
+
+- More than one organization: pick several in the wizard or in Settings. PRs from all of them share the lists, and each row shows `owner/repo` when more than one is watched.
+- A **Waiting for review** section under My PRs: your own PRs that went a number of days (2 by default, 1 to 7 or off in Settings) without a review. It never counts in the icon or in notifications, and each row has a Copy link button.
+- A **⋯** menu on every row: open on GitHub, copy the link, and mute the repository (review rows only).
+- A global shortcut, ⌥⌘P, to open and close the panel. It can be turned off in Settings.
+- A **Diagnostics** page in Settings: version, last sync, GitHub request budget and a button that copies a report for bug reports. The report has no token, organization or PR names.
+- The update window shows the version's changelog section as release notes.
+
+### Changed
+
+- Repositories to ignore are stored as `owner/name`. Settings saved by earlier versions are converted on the first launch.
+- The settings window is taller to fit the new options.
+
 ## [0.3.0] - 2026-10-29
 
 ### Added

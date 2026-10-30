@@ -1,14 +1,27 @@
+import Foundation
+
 public enum SummaryBuilder {
     public static func build(
         minePRs: [PullRequestSnapshot],
         reviewPRs: [PullRequestSnapshot],
         viewer: String,
         ignoredBots: Set<String>,
-        ignoredRepos: Set<String>
+        ignoredRepos: Set<String>,
+        waitingDays: Int = 0,
+        now: Date = Date()
     ) -> Summary {
-        Summary(
-            mine: mineItems(minePRs, viewer: viewer, ignoredBots: ignoredBots),
-            review: ReviewClassifier.items(from: reviewPRs, viewer: viewer, ignoredRepos: ignoredRepos)
+        let mine = mineItems(minePRs, viewer: viewer, ignoredBots: ignoredBots)
+        let actionable = Set(mine.map(\.pr.ref))
+        return Summary(
+            mine: mine,
+            review: ReviewClassifier.items(from: reviewPRs, viewer: viewer, ignoredRepos: ignoredRepos),
+            waiting: WaitingClassifier.items(
+                from: minePRs.filter { !actionable.contains($0.ref) },
+                viewer: viewer,
+                ignoredBots: ignoredBots,
+                minimumDays: waitingDays,
+                now: now
+            )
         )
     }
 

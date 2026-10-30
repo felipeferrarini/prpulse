@@ -39,7 +39,7 @@ enum DemoSnapshot {
 
     static func settings(_ page: SettingsPage, login: String = "felipeferrarini") -> some View {
         var settings = AppSettings.defaults
-        settings.org = "acme"
+        settings.orgs = ["acme", "orbit"]
         settings.ignoredRepos = ["docs", "infra-legacy"]
         let model = SetupModel(settings: settings, isSetup: false)
         model.loadPreview(
@@ -55,7 +55,7 @@ enum DemoSnapshot {
 
     static func wizard(_ step: SetupStep, slide: Int = 0) -> some View {
         var settings = AppSettings.defaults
-        settings.org = step == .organization ? "" : "acme"
+        settings.orgs = step == .organization ? [] : ["acme"]
         settings.ignoredRepos = ["docs", "infra-legacy"]
         let model = SetupModel(settings: settings)
         model.loadPreview(
@@ -99,7 +99,8 @@ enum DemoSnapshot {
         window.contentView = host
         host.frame = NSRect(origin: .zero, size: size)
         host.layoutSubtreeIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+        let settle = ProcessInfo.processInfo.environment["PRPULSE_SNAPSHOT_SETTLE"].flatMap(TimeInterval.init) ?? 0.3
+        RunLoop.current.run(until: Date().addingTimeInterval(settle))
         guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds),
               (host.cacheDisplay(in: host.bounds, to: rep), true).1,
               let png = rep.representation(using: .png, properties: [:])

@@ -5,7 +5,7 @@ import Sparkle
 /// the demo modes never reach the network.
 @MainActor
 final class SoftwareUpdater {
-    static var version: String {
+    nonisolated static var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
     }
 

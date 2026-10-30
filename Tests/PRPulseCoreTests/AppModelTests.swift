@@ -72,7 +72,7 @@ private struct Harness {
     init(org: String = "org", makeClientError: Error? = nil) {
         let suite = UserDefaults(suiteName: "prpulse-model-\(UUID().uuidString)")!
         let store = SettingsStore(defaults: suite)
-        store.settings.org = org
+        store.settings.orgs = org.isEmpty ? [] : [org]
         settings = store
         notified = NotifiedStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("prpulse-\(UUID().uuidString)/n.json"))
 
@@ -310,7 +310,7 @@ private struct Harness {
     await h.model.refresh()
     #expect(h.world.seenQueries.contains { $0.contains("org:org ") })
 
-    h.settings.settings.org = "other"
+    h.settings.settings.orgs = ["other"]
     await h.model.restart()
 
     for _ in 0 ..< 200 where !h.world.seenQueries.contains(where: { $0.contains("org:other ") }) {
@@ -318,4 +318,21 @@ private struct Harness {
     }
     h.model.stop()
     #expect(h.world.seenQueries.contains { $0.contains("org:other ") })
+}
+
+@MainActor @Test func everyChosenOrganizationIsSearchedAndEachOneGetsItsOwnIgnoredRepositories() async {
+    let h = Harness()
+    h.settings.settings.orgs = ["org", "other"]
+    h.settings.settings.ignoredRepos = ["other/docs", "org/infra"]
+
+    await h.model.refresh()
+
+    let queries = h.world.seenQueries
+    #expect(queries.contains { $0.contains("org:org ") && $0.contains("author:me") })
+    #expect(queries.contains { $0.contains("org:other ") && $0.contains("author:me") })
+    let reviewOther = queries.first { $0.contains("org:other ") && $0.contains("-reviewed-by:me") }
+    let reviewOrg = queries.first { $0.contains("org:org ") && $0.contains("-reviewed-by:me") }
+    #expect(reviewOther?.contains("-repo:other/docs") == true)
+    #expect(reviewOther?.contains("infra") == false)
+    #expect(reviewOrg?.contains("-repo:org/infra") == true)
 }

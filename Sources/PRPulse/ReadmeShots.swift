@@ -17,7 +17,7 @@ enum ReadmeShots {
             render(floating(popover(data, scheme, layout: .single), radius: 12, scheme: scheme), named: "popover-\(tag)", scheme: scheme, to: directory)
             render(floating(popover(data, scheme, layout: .split), radius: 12, scheme: scheme), named: "popover-split-\(tag)", scheme: scheme, to: directory)
             render(floating(DemoSnapshot.wizard(.exceptions), radius: 16, scheme: scheme), named: "wizard-\(tag)", scheme: scheme, to: directory)
-            render(floating(DemoSnapshot.settings(.general, login: "octocat"), radius: 16, scheme: scheme), named: "settings-\(tag)", scheme: scheme, to: directory)
+            render(floating(DemoSnapshot.settings(.organization, login: "octocat"), radius: 16, scheme: scheme), named: "settings-\(tag)", scheme: scheme, to: directory)
             render(StatesStrip(scheme: scheme), named: "menubar-\(tag)", scheme: scheme, to: directory)
         }
     }

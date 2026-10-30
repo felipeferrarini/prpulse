@@ -14,10 +14,16 @@ public struct URLSessionTransport: GraphQLTransport, ScopeProbing {
 
     private let token: @Sendable () async throws -> String
     private let session: URLSession
+    private let rateLimits: RateLimitMonitor?
 
-    public init(token: @escaping @Sendable () async throws -> String, session: URLSession = .shared) {
+    public init(
+        token: @escaping @Sendable () async throws -> String,
+        session: URLSession = .shared,
+        rateLimits: RateLimitMonitor? = nil
+    ) {
         self.token = token
         self.session = session
+        self.rateLimits = rateLimits
     }
 
     public func send(query: String, variables: [String: Any]) async throws -> Data {
@@ -61,6 +67,7 @@ public struct URLSessionTransport: GraphQLTransport, ScopeProbing {
 
     private func validate(_ data: Data, _ response: URLResponse) throws -> Data {
         guard let http = response as? HTTPURLResponse else { throw GitHubError.network("invalid response") }
+        if let rateLimit = RateLimit.parse({ http.value(forHTTPHeaderField: $0) }) { rateLimits?.record(rateLimit) }
         switch http.statusCode {
         case 200..<300: return data
         case 401: throw GitHubError.unauthorized

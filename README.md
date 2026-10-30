@@ -47,6 +47,10 @@ PRPulse polls GitHub every few minutes, keeps **two short lists** in your menu b
 
 Tap the action filters to dim everything else, or switch between a single view and a side by side one. The choice is remembered.
 
+Under **My PRs** there is a quieter section, **Waiting for review**: your own PRs that went a couple of days (you choose how many) without a single review. They ask nothing of you and never change the icon, but each one has a *Copy link* button so you can nudge the right person.
+
+Every row has a **⋯** menu: open on GitHub, copy the link and, on the review list, *Mute this repository* so it stops showing without opening Settings.
+
 <table>
   <tr>
     <td width="50%" align="center">
@@ -119,7 +123,8 @@ Everything can be changed later in **Settings**, which counts your unsaved chang
 
 - **Bots are ignored.** Comments from CodeRabbit, SonarQube and any account GitHub marks as a bot never count (the list is yours to edit).
 - **No flood on day one.** The first run learns what is already pending and stays silent. An item notifies once.
-- **One organization at a time**, with a list of repositories to ignore. A PR in an ignored repository still shows if you are a requested reviewer, directly or through a team such as CODEOWNERS.
+- **One organization or several**, with a list of repositories to ignore. A PR in an ignored repository still shows if you are a requested reviewer, directly or through a team such as CODEOWNERS.
+- **A global shortcut**, ⌥⌘P, opens and closes the panel from anywhere.
 - **Updates itself.** It checks for new versions and installs them in the background (you can turn that off in Settings).
 - English and Portuguese, following your system language.
 
@@ -156,7 +161,7 @@ You need macOS 14 or later and the Swift toolchain (Xcode or the Command Line To
 ## First run
 
 1. **Connection:** reuse your [`gh`](https://cli.github.com) login, or paste a personal token with the `repo` and `read:org` scopes.
-2. **Organization:** the ones you worked in most over the last 90 days come first, with a count.
+2. **Organizations:** pick one or more. The ones you worked in most over the last 90 days come first, with a count.
 3. **Exceptions:** tick repositories to ignore (they are listed from the organization) and edit the bot accounts to skip.
 4. **Settings:** refresh interval, notifications, open at login.
 
@@ -199,13 +204,13 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 | Section | What you can change |
 | --- | --- |
 | **Connection** | `gh` login or a personal token |
-| **Organization** | which organization to watch |
+| **Organizations** | which organizations to watch |
 | **Exceptions** | repositories and bot accounts to ignore |
-| **General** | refresh interval (1 to 30 minutes), popover layout, notifications, open at login, automatic updates, run the setup again |
+| **General** | refresh interval (1 to 30 minutes), popover layout, days before a PR counts as waiting for review, notifications, open at login, global shortcut, automatic updates, run the setup again |
+| **Diagnostics** | version, last sync, GitHub request budget, and a button that copies all of it for a bug report (no token, organization or PR names) |
 
 ## Known limits
 
-- One organization at a time.
 - Sign-in through the browser is not available yet; use `gh` or a token.
 - The app is signed ad hoc, so after each update macOS may ask again whether PRPulse can read its Keychain item. Choose **Always Allow**; if you deny it, the icon shows the error state.
 - Versions before 0.3.0 don't update themselves: install the latest once, by hand or with `brew upgrade`.
@@ -240,8 +245,8 @@ Ideas, in no particular order. Open an issue if one matters to you.
 
 - [ ] Developer ID signing and notarization, so there is no "Open Anyway" step
 - [ ] Sign in with GitHub in the browser (device flow)
-- [ ] More than one organization
-- [ ] Snooze a PR, or mute a repository straight from the list
+- [ ] Snooze a PR for a while, not only mute its repository
+- [ ] A shortcut you can change
 
 ## Contributing
 

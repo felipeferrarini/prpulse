@@ -7,6 +7,11 @@ struct RowModel: Identifiable {
     enum Lead {
         case avatar(String)
         case lane(ActionLane)
+        case waiting
+    }
+
+    enum Kind {
+        case review, mine, waiting
     }
 
     struct Chip: Identifiable {
@@ -20,21 +25,46 @@ struct RowModel: Identifiable {
     let subtitle: String
     let chips: [Chip]
     let lanes: Set<ActionLane>
+    let kind: Kind
+    /// A repository can be muted from a review row, unless the viewer was asked: those still show when muted.
+    let canMute: Bool
 
     var id: PullRequestRef { pr.ref }
 
-    static func review(_ item: ReviewItem) -> RowModel {
+    private static func repository(_ pr: PullRequestSnapshot, showsOwner: Bool) -> String {
+        showsOwner ? "\(pr.ref.owner)/\(pr.ref.repo)" : pr.ref.repo
+    }
+
+    static func review(_ item: ReviewItem, showsOwner: Bool = false) -> RowModel {
         let pr = item.pr
         return RowModel(
             pr: pr,
             lead: .avatar(pr.author.login),
-            subtitle: "\(pr.ref.repo) #\(pr.ref.number), \(pr.author.login)",
+            subtitle: "\(repository(pr, showsOwner: showsOwner)) #\(pr.ref.number), \(pr.author.login)",
             chips: reviewChips(item),
-            lanes: [.review]
+            lanes: [.review],
+            kind: .review,
+            canMute: !item.isRequested
         )
     }
 
-    static func mine(_ item: MineItem) -> RowModel {
+    static func waiting(_ item: WaitingItem, showsOwner: Bool = false) -> RowModel {
+        let pr = item.pr
+        let who = pr.requestedReviewers.isEmpty
+            ? tr("reason.waiting.nobody")
+            : tr("reason.waiting.on", pr.requestedReviewers.prefix(2).joined(separator: ", "))
+        return RowModel(
+            pr: pr,
+            lead: .waiting,
+            subtitle: "\(repository(pr, showsOwner: showsOwner)) #\(pr.ref.number), \(who)",
+            chips: [Chip(id: "noreview", text: tr("chip.noReview"), tone: nil)],
+            lanes: [],
+            kind: .waiting,
+            canMute: false
+        )
+    }
+
+    static func mine(_ item: MineItem, showsOwner: Bool = false) -> RowModel {
         let pr = item.pr
         let primary = item.primary
         var chips = [Chip(id: "primary", text: primary.lane.chipTitle, tone: primary.lane.tone)]
@@ -42,9 +72,11 @@ struct RowModel: Identifiable {
         return RowModel(
             pr: pr,
             lead: .lane(primary.lane),
-            subtitle: "\(pr.ref.repo) #\(pr.ref.number), \(reasonText(primary))",
+            subtitle: "\(repository(pr, showsOwner: showsOwner)) #\(pr.ref.number), \(reasonText(primary))",
             chips: chips,
-            lanes: Set(item.reasons.map(\.lane))
+            lanes: Set(item.reasons.map(\.lane)),
+            kind: .mine,
+            canMute: false
         )
     }
 

@@ -30,6 +30,7 @@ struct PopoverRoot: View {
             data: runtime.data,
             layout: Binding(get: { runtime.popoverLayout }, set: { runtime.setPopoverLayout($0) }),
             openToken: runtime.openCount,
+            onMute: { runtime.muteRepository(of: $0) },
             onRefresh: { runtime.refresh() },
             onSettings: onSettings
         )
@@ -61,6 +62,11 @@ final class PopoverController: NSObject, NSWindowDelegate {
         buildStatusItem()
         observeIcon()
         observeContent()
+        runtime.onShortcut = { [weak self] in
+            guard let self else { return }
+            if !panel.isVisible { NSApp.activate(ignoringOtherApps: true) }
+            togglePanel()
+        }
     }
 
     private func buildPanel() {
@@ -153,6 +159,10 @@ final class PopoverController: NSObject, NSWindowDelegate {
             showMenu()
             return
         }
+        togglePanel()
+    }
+
+    private func togglePanel() {
         if panel.isVisible {
             hide()
         } else if Date().timeIntervalSince(lastHide) > 0.2 {
@@ -265,13 +275,14 @@ extension PopoverController {
     private func githubItem() -> NSMenuItem {
         let parent = NSMenuItem(title: tr("menu.github"), action: nil, keyEquivalent: "")
         parent.image = NSImage(systemSymbolName: "arrow.up.right.square", accessibilityDescription: nil)
-        let org = runtime.organization
-        parent.isEnabled = !org.isEmpty
+        let orgs = runtime.organizations
+        let qualifiers = orgs.map { "org:\($0)" }.joined(separator: " ")
+        parent.isEnabled = !orgs.isEmpty
         let submenu = NSMenu()
         for (title, query) in [(tr("popover.review"), "review-requested:@me"), (tr("popover.mine"), "author:@me")] {
             let entry = NSMenuItem(title: title, action: #selector(openGitHub(_:)), keyEquivalent: "")
             entry.target = self
-            entry.representedObject = "https://github.com/pulls?q=\("is:open is:pr archived:false org:\(org) \(query)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+            entry.representedObject = "https://github.com/pulls?q=\("is:open is:pr archived:false \(qualifiers) \(query)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
             submenu.addItem(entry)
         }
         parent.submenu = submenu
@@ -279,7 +290,8 @@ extension PopoverController {
     }
 
     private func statusText() -> String {
-        let name = runtime.organization.isEmpty ? "PRPulse" : runtime.organization
+        let label = OrganizationLabel.text(for: runtime.organizations)
+        let name = label.isEmpty ? "PRPulse" : label
         switch runtime.iconState {
         case .upToDate: return "\(name): \(tr("popover.empty.title"))"
         case .pending(let count), .fresh(let count): return "\(name): \(tr("notification.title.other", count))"

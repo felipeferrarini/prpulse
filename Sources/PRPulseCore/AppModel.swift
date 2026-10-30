@@ -103,7 +103,7 @@ public final class AppModel: ObservableObject {
 
     private func loadSummary() async -> Summary? {
         let current = settings.settings
-        guard !current.org.isEmpty else {
+        guard !current.orgs.isEmpty else {
             state = .failed(.notConfigured)
             return nil
         }
@@ -118,16 +118,24 @@ public final class AppModel: ObservableObject {
 
     private func fetchSummary(_ current: AppSettings) async throws -> Summary {
         let client = try await makeClient()
-        try await client.verifyOrganization(current.org)
+        for org in current.orgs { try await client.verifyOrganization(org) }
         let login = try await client.viewer().login
-        async let mine = client.minePullRequests(org: current.org, viewer: login)
-        async let review = client.reviewPullRequests(org: current.org, viewer: login, ignoredRepos: Set(current.ignoredRepos))
+        var minePRs: [PullRequestSnapshot] = []
+        var reviewPRs: [PullRequestSnapshot] = []
+        for org in current.orgs {
+            async let mine = client.minePullRequests(org: org, viewer: login)
+            async let review = client.reviewPullRequests(org: org, viewer: login, ignoredRepos: current.ignoredRepositories(in: org))
+            minePRs += try await mine
+            reviewPRs += try await review
+        }
         return SummaryBuilder.build(
-            minePRs: try await mine,
-            reviewPRs: try await review,
+            minePRs: minePRs,
+            reviewPRs: reviewPRs,
             viewer: login,
             ignoredBots: Set(current.ignoredBots),
-            ignoredRepos: Set(current.ignoredRepos)
+            ignoredRepos: Set(current.ignoredRepos),
+            waitingDays: current.waitingReviewDays,
+            now: clock.now
         )
     }
 

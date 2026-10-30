@@ -73,13 +73,13 @@ final class SetupModel: ObservableObject {
     }
 
     private func resolveOrganization() -> Bool {
-        switch OrganizationChoice.resolve(current: draft.org, available: organizations, isSetup: isSetup) {
+        switch OrganizationChoice.resolve(current: draft.orgs, available: organizations, isSetup: isSetup) {
         case .keep:
             break
-        case .pick(let org):
-            draft.org = org
+        case .pick(let orgs):
+            draft.orgs = orgs
         case .choose:
-            draft.org = ""
+            draft.orgs = []
         case .missing(let org):
             validation = .failed(tr("setup.error.orgMissing", org))
             return false
@@ -88,20 +88,32 @@ final class SetupModel: ObservableObject {
         return true
     }
 
+    func toggleOrganization(_ org: String) {
+        if draft.orgs.contains(org) {
+            draft.orgs.removeAll { $0 == org }
+        } else {
+            draft.orgs.append(org)
+        }
+    }
+
+    /// Loads the repositories of every chosen organization, as `owner/name`.
     func loadRepositories() async {
-        let owner = draft.org
-        guard !isPreview, !owner.isEmpty else { return }
+        let owners = draft.orgs
+        guard !isPreview, !owners.isEmpty else { return }
         repositories = .loading
         do {
             let provider = repositoryTokenProvider()
             let client = GitHubClient(transport: URLSessionTransport(token: { try await provider.token() }), clock: SystemClock())
-            let names = try await client.repositories(owner: owner)
-            guard owner == draft.org else { return }
+            var names: [String] = []
+            for owner in owners {
+                names += try await client.repositories(owner: owner).map { "\(owner)/\($0)" }
+            }
+            guard owners == draft.orgs else { return }
             repositories = .loaded(names)
         } catch is CancellationError {
             return
         } catch {
-            guard owner == draft.org else { return }
+            guard owners == draft.orgs else { return }
             repositories = .failed
         }
     }
@@ -118,8 +130,14 @@ final class SetupModel: ObservableObject {
         validation = .failed(message)
     }
 
+    /// `owner/name` of every repository that could be loaded.
     var repositoryNames: [String] {
         if case .loaded(let names) = repositories { names } else { [] }
+    }
+
+    /// Just the names, for places that have room for nothing else.
+    var repositoryShortNames: [String] {
+        repositoryNames.map { $0.split(separator: "/", maxSplits: 1).last.map(String.init) ?? $0 }
     }
 
     func loadPreview(organizations: [String], gh: GhStatus, repositories: [String] = [], activity: [String: Int] = [:], login: String? = nil) {
@@ -127,7 +145,7 @@ final class SetupModel: ObservableObject {
         self.login = login
         organizationActivity = activity
         ghStatus = gh
-        self.repositories = .loaded(repositories)
+        self.repositories = .loaded(repositories.map { $0.contains("/") ? $0 : "\(draft.orgs.first ?? "acme")/\($0)" })
         isPreview = true
         validation = .ok
     }

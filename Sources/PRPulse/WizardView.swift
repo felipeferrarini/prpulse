@@ -97,7 +97,7 @@ struct WizardView: View {
             Button(primaryTitle) { Task { await advance() } }
                 .buttonStyle(WizardPrimaryButtonStyle())
                 .keyboardShortcut(step == .exceptions ? nil : .defaultAction)
-                .disabled(isBusy || (step == .organization && model.draft.org.isEmpty))
+                .disabled(isBusy || (step == .organization && model.draft.orgs.isEmpty))
         }
         .padding(.horizontal, 32)
         .padding(.top, 16)

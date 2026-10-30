@@ -5,6 +5,7 @@ struct PopoverView: View {
     let data: ViewData
     @Binding var layout: PopoverLayout
     var openToken = 0
+    var onMute: (PullRequestRef) -> Void = { _ in }
     let onRefresh: () -> Void
     let onSettings: () -> Void
 
@@ -16,6 +17,7 @@ struct PopoverView: View {
         data: ViewData,
         layout: Binding<PopoverLayout>,
         openToken: Int = 0,
+        onMute: @escaping (PullRequestRef) -> Void = { _ in },
         initialTab: PopoverTab = .review,
         initialFilter: ActionLane? = nil,
         onRefresh: @escaping () -> Void,
@@ -24,6 +26,7 @@ struct PopoverView: View {
         self.data = data
         _layout = layout
         self.openToken = openToken
+        self.onMute = onMute
         self.onRefresh = onRefresh
         self.onSettings = onSettings
         _tab = LocalState(initialValue: initialTab)
@@ -74,11 +77,11 @@ struct PopoverView: View {
     private func summaryContent(_ summary: Summary) -> some View {
         let isSingle = layout == .single
         return VStack(spacing: 0) {
-            PopoverHeader(org: data.org, total: summary.total, layout: $layout)
+            PopoverHeader(org: data.orgLabel, total: summary.total, layout: $layout)
                 .padding(.horizontal, 14)
                 .padding(.top, 14)
                 .padding(.bottom, 12)
-            if summary.total == 0 {
+            if summary.total == 0 && summary.waiting.isEmpty {
                 EmptyStateView()
             } else {
                 TabSegment(tab: $tab, reviewCount: summary.review.count, mineCount: summary.mine.count)
@@ -87,7 +90,7 @@ struct PopoverView: View {
                     .folded(!isSingle, height: 50)
                 LaneFilterBar(lanes: summary.activeLanes, summary: summary, selection: laneSelection(summary))
                     .padding(.bottom, 12)
-                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, entered: entered)
+                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, entered: entered, showsOwner: data.showsOwner, onMute: onMute)
             }
         }
     }
@@ -103,13 +106,18 @@ struct PopoverView: View {
         )
     }
 
+    private var hasMineContent: Bool {
+        guard let summary = data.summary else { return false }
+        return !summary.mine.isEmpty || !summary.waiting.isEmpty
+    }
+
     private func popoverOpened() {
         var instant = Transaction()
         instant.disablesAnimations = true
         withTransaction(instant) {
             entered = false
             filter = nil
-            tab = (data.summary?.review.isEmpty ?? true) && !(data.summary?.mine.isEmpty ?? true) ? .mine : .review
+            tab = (data.summary?.review.isEmpty ?? true) && hasMineContent ? .mine : .review
         }
         DispatchQueue.main.async { entered = true }
     }
@@ -129,6 +137,8 @@ private struct SummaryPanes: View {
     let tab: PopoverTab
     let filter: ActionLane?
     let entered: Bool
+    let showsOwner: Bool
+    let onMute: (PullRequestRef) -> Void
 
     @LocalState private var heights: [PopoverTab: CGFloat] = [:]
 
@@ -169,8 +179,10 @@ private struct SummaryPanes: View {
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                        PullRequestRow(model: row, isDimmed: isDimmed(row), entranceIndex: index, entered: entered)
+                        PullRequestRow(model: row, isDimmed: isDimmed(row), entranceIndex: index, entered: entered, onMute: { onMute(row.pr.ref) })
                     }
+                    if kind == .mine && !summary.waiting.isEmpty { waitingSection(startIndex: rows.count) }
+                    if rows.isEmpty && !(kind == .mine && !summary.waiting.isEmpty) { PaneEmptyText() }
                 }
                 .padding(.vertical, 4)
                 .background(GeometryReader { proxy in
@@ -181,6 +193,25 @@ private struct SummaryPanes: View {
         }
         .accessibilityHidden(hidden)
         .allowsHitTesting(!hidden)
+    }
+
+    private func waitingSection(startIndex: Int) -> some View {
+        let rows = summary.waiting.map { RowModel.waiting($0, showsOwner: showsOwner) }
+        return VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: "hourglass").font(.system(size: 11, weight: .semibold))
+                Text(tr("popover.waiting.title")).font(.system(size: 12, weight: .semibold))
+                Text("\(rows.count)").font(.system(size: 12)).foregroundStyle(.tertiary)
+                Spacer()
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14)
+            .padding(.top, startIndex == 0 ? 6 : 14)
+            .padding(.bottom, 4)
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                PullRequestRow(model: row, isDimmed: isDimmed(row), entranceIndex: startIndex + index, entered: entered)
+            }
+        }
     }
 
     private func paneHeader(_ kind: PopoverTab) -> some View {
@@ -199,13 +230,22 @@ private struct SummaryPanes: View {
 
     private func rows(for kind: PopoverTab) -> [RowModel] {
         switch kind {
-        case .review: summary.review.map(RowModel.review)
-        case .mine: summary.mine.map(RowModel.mine)
+        case .review: summary.review.map { RowModel.review($0, showsOwner: showsOwner) }
+        case .mine: summary.mine.map { RowModel.mine($0, showsOwner: showsOwner) }
         }
     }
 
     private func isDimmed(_ row: RowModel) -> Bool {
         guard let filter else { return false }
         return !row.lanes.contains(filter)
+    }
+}
+
+private struct PaneEmptyText: View {
+    var body: some View {
+        Text(tr("popover.pane.empty"))
+            .font(.system(size: 12.5))
+            .foregroundStyle(.tertiary)
+            .frame(maxWidth: .infinity, minHeight: 100)
     }
 }
