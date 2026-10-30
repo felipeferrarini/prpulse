@@ -53,6 +53,8 @@ final class WindowManager {
             window.isOpaque = false
             window.backgroundColor = .clear
             window.hasShadow = true
+            // Drags by the whole background where the system lets SwiftUI content do that; macOS 27 does not,
+            // so `WindowTitleBarDrag` covers the top strip.
             window.isMovableByWindowBackground = true
             return window
         }
