@@ -287,7 +287,7 @@ struct ExceptionsBody: View {
     var body: some View {
         StepFrame {
             StepTitle(title: tr("setup.exceptions.title"))
-            ExceptionsContent(model: model).padding(.top, 14)
+            ExceptionsContent(model: model, isCompact: true).padding(.top, 14)
             Spacer(minLength: 0)
         }
     }
@@ -295,6 +295,8 @@ struct ExceptionsBody: View {
 
 struct ExceptionsContent: View {
     @ObservedObject var model: SetupModel
+    /// The wizard has less room than Settings, so its list of repositories is shorter.
+    var isCompact = false
     @LocalState private var filter = ""
     @LocalState private var botInput = ""
     @LocalState private var repoInput = ""
@@ -308,6 +310,12 @@ struct ExceptionsContent: View {
             }
             .padding(.top, 18)
             .staggered(2)
+            VStack(spacing: 0) {
+                botSwitch(tr("setup.exceptions.botComments"), detail: tr("setup.exceptions.botComments.detail"), isOn: $model.draft.ignoreBotComments)
+                botSwitch(tr("setup.exceptions.botPRs"), detail: tr("setup.exceptions.botPRs.detail"), isOn: $model.draft.ignoreBotPullRequests)
+            }
+            .padding(.top, 12)
+            .staggered(3)
         }
         .task(id: model.draft.orgs) { await model.loadRepositories() }
     }
@@ -318,6 +326,19 @@ struct ExceptionsContent: View {
             Text(caption).font(.system(size: 12.5)).foregroundStyle(WizardPalette.ink2).padding(.bottom, 6)
             content()
         }
+    }
+
+    private func botSwitch(_ title: String, detail: String, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(WizardPalette.ink)
+                Text(detail).font(.system(size: 12.5)).foregroundStyle(WizardPalette.ink2).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            Toggle(title, isOn: isOn).toggleStyle(WizardSwitchStyle()).labelsHidden()
+        }
+        .padding(.vertical, 12)
+        .overlay(alignment: .top) { Rectangle().fill(WizardPalette.line).frame(height: 1) }
     }
 
     @ViewBuilder private var repositories: some View {
@@ -352,7 +373,7 @@ struct ExceptionsContent: View {
                     ForEach(shown, id: \.self) { name in repositoryRow(name, showsOwner: showsOwner) }
                 }
             }
-            .frame(height: 138)
+            .frame(height: isCompact ? 92 : 138)
             .background(WizardPalette.card, in: RoundedRectangle(cornerRadius: 11))
             .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(WizardPalette.line))
         }

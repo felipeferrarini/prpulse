@@ -92,8 +92,8 @@
 "setup.exceptions.title" = "O que ignorar?";
 "setup.exceptions.repos" = "Repositórios ignorados";
 "setup.exceptions.repos.caption" = "PRs desses repos ficam ocultas, a menos que você seja reviewer pedido.";
-"setup.exceptions.bots" = "Contas de bot ignoradas";
-"setup.exceptions.bots.caption" = "Comentários dessas contas (e de qualquer conta que o GitHub marque como bot) não contam.";
+"setup.exceptions.bots" = "Contas de bot";
+"setup.exceptions.bots.caption" = "Inclua os bots que o GitHub não marca, como o renovate-bot.";
 "setup.exceptions.repos.loading" = "Carregando repositórios…";
 "setup.exceptions.repos.failed" = "Não foi possível carregar os repositórios. Você ainda pode digitar os nomes acima.";
 "setup.exceptions.repos.search" = "Buscar entre %d repositórios";
@@ -254,3 +254,7 @@
 "wizard.cap.mascot.title" = "Um amigo para o canto";
 "wizard.cap.mascot.body" = "Ele comemora quando algo chega e se preocupa com PRs antigas.";
 "menu.mascot" = "Mostrar mascote";
+"setup.exceptions.botPRs" = "Ignorar PRs abertas por bots";
+"setup.exceptions.botPRs.detail" = "Como as do Dependabot. Ficam fora da lista de revisão, mesmo quando pedem o seu review.";
+"setup.exceptions.botComments" = "Ignorar comentários de bots";
+"setup.exceptions.botComments.detail" = "Comentários e threads abertas por bots não pedem resposta sua.";

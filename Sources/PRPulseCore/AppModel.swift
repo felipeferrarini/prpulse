@@ -135,6 +135,8 @@ public final class AppModel: ObservableObject {
             viewer: login,
             ignoredBots: Set(current.ignoredBots),
             ignoredRepos: Set(current.ignoredRepos),
+            ignoresBotComments: current.ignoreBotComments,
+            skipsBotPullRequests: current.ignoreBotPullRequests,
             waitingDays: current.waitingReviewDays,
             now: clock.now
         )

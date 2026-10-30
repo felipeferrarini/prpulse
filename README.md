@@ -158,7 +158,7 @@ The moods are `calm`, `sleep`, `alert`, `joy`, `worried`, `think` and `sad`. Onl
 
 ### Quiet by design
 
-- **Bots are ignored.** Comments from CodeRabbit, SonarQube and any account GitHub marks as a bot never count (the list is yours to edit).
+- **Bots stay out of the way.** Comments from CodeRabbit, SonarQube and any account GitHub marks as a bot don't ask you to reply, and you can add the accounts GitHub does not mark. Two switches decide what to ignore: their comments (on by default) and the PRs they open, like Dependabot's, which stay out of the review list (both on by default).
 - **No flood on day one.** The first run learns what is already pending and stays silent. An item notifies once.
 - **One organization or several**, with a list of repositories to ignore. A PR in an ignored repository still shows if you are a requested reviewer, directly or through a team such as CODEOWNERS.
 - **A global shortcut**, ⌥⌘P, opens and closes the panel from anywhere.
@@ -250,7 +250,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 | --- | --- |
 | **Connection** | `gh` login or a personal token |
 | **Organizations** | which organizations to watch |
-| **Exceptions** | repositories and bot accounts to ignore |
+| **Exceptions** | repositories to ignore, your list of bot accounts, and two switches: ignore comments from bots, ignore PRs opened by bots |
 | **Mascot** | show it or not, which character, its size, where it sits, and your own characters |
 | **General** | refresh interval (1 to 30 minutes), popover layout, days before a PR counts as waiting for review, notifications, open at login, global shortcut, automatic updates, run the setup again |
 | **Diagnostics** | version, last sync, GitHub request budget, and a button that copies all of it for a bug report (no token, organization or PR names) |

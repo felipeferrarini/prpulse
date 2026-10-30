@@ -7,14 +7,22 @@ public enum SummaryBuilder {
         viewer: String,
         ignoredBots: Set<String>,
         ignoredRepos: Set<String>,
+        ignoresBotComments: Bool = true,
+        skipsBotPullRequests: Bool = false,
         waitingDays: Int = 0,
         now: Date = Date()
     ) -> Summary {
-        let mine = mineItems(minePRs, viewer: viewer, ignoredBots: ignoredBots)
+        let mine = mineItems(minePRs, viewer: viewer, ignoredBots: ignoredBots, ignoresBotComments: ignoresBotComments)
         let actionable = Set(mine.map(\.pr.ref))
         return Summary(
             mine: mine,
-            review: ReviewClassifier.items(from: reviewPRs, viewer: viewer, ignoredRepos: ignoredRepos),
+            review: ReviewClassifier.items(
+                from: reviewPRs,
+                viewer: viewer,
+                ignoredRepos: ignoredRepos,
+                ignoredBots: ignoredBots,
+                skipsBotAuthors: skipsBotPullRequests
+            ),
             waiting: WaitingClassifier.items(
                 from: minePRs.filter { !actionable.contains($0.ref) },
                 viewer: viewer,
@@ -28,10 +36,16 @@ public enum SummaryBuilder {
     private static func mineItems(
         _ prs: [PullRequestSnapshot],
         viewer: String,
-        ignoredBots: Set<String>
+        ignoredBots: Set<String>,
+        ignoresBotComments: Bool
     ) -> [MineItem] {
         prs
-            .map { MineItem(pr: $0, reasons: MineClassifier.reasons(for: $0, viewer: viewer, ignoredBots: ignoredBots)) }
+            .map {
+                MineItem(
+                    pr: $0,
+                    reasons: MineClassifier.reasons(for: $0, viewer: viewer, ignoredBots: ignoredBots, ignoresBotComments: ignoresBotComments)
+                )
+            }
             .filter { !$0.reasons.isEmpty }
             .sorted { a, b in
                 if a.primary.urgencyRank != b.primary.urgencyRank { return a.primary.urgencyRank < b.primary.urgencyRank }

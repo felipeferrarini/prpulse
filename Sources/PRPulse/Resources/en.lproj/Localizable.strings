@@ -92,8 +92,8 @@
 "setup.exceptions.title" = "What should it ignore?";
 "setup.exceptions.repos" = "Ignored repositories";
 "setup.exceptions.repos.caption" = "PRs in these repos stay hidden, unless you are a requested reviewer.";
-"setup.exceptions.bots" = "Ignored bot accounts";
-"setup.exceptions.bots.caption" = "Comments from these accounts (and any account GitHub marks as a bot) don't count.";
+"setup.exceptions.bots" = "Bot accounts";
+"setup.exceptions.bots.caption" = "Add bots GitHub doesn't mark as such, like renovate-bot.";
 "setup.exceptions.repos.loading" = "Loading repositories…";
 "setup.exceptions.repos.failed" = "Couldn't load the repositories. You can still type their names above.";
 "setup.exceptions.repos.search" = "Search %d repositories";
@@ -254,3 +254,7 @@
 "wizard.cap.mascot.title" = "A friend for the corner";
 "wizard.cap.mascot.body" = "It cheers when something arrives and worries about old PRs.";
 "menu.mascot" = "Show mascot";
+"setup.exceptions.botPRs" = "Ignore pull requests opened by bots";
+"setup.exceptions.botPRs.detail" = "Like Dependabot's. They stay out of the review list, even when they ask for your review.";
+"setup.exceptions.botComments" = "Ignore comments from bots";
+"setup.exceptions.botComments.detail" = "Comments and open threads from bots do not ask you to reply.";

@@ -28,6 +28,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
     /// Repositories to leave out, as `owner/name`.
     public var ignoredRepos: [String]
     public var ignoredBots: [String]
+    /// Comments and threads from bots do not ask the viewer to reply.
+    public var ignoreBotComments: Bool
+    /// Leaves the pull requests opened by bots out of the review list.
+    public var ignoreBotPullRequests: Bool
     public var notificationsEnabled: Bool
     public var launchAtLogin: Bool
     public var automaticUpdates: Bool
@@ -49,6 +53,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         refreshMinutes: 5,
         ignoredRepos: [],
         ignoredBots: defaultIgnoredBots,
+        ignoreBotComments: true,
+        ignoreBotPullRequests: true,
         notificationsEnabled: true,
         launchAtLogin: false,
         automaticUpdates: true,
@@ -69,6 +75,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         refreshMinutes: Int,
         ignoredRepos: [String],
         ignoredBots: [String],
+        ignoreBotComments: Bool = true,
+        ignoreBotPullRequests: Bool = true,
         notificationsEnabled: Bool,
         launchAtLogin: Bool,
         automaticUpdates: Bool = true,
@@ -87,6 +95,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.refreshMinutes = refreshMinutes
         self.ignoredRepos = ignoredRepos
         self.ignoredBots = ignoredBots
+        self.ignoreBotComments = ignoreBotComments
+        self.ignoreBotPullRequests = ignoreBotPullRequests
         self.notificationsEnabled = notificationsEnabled
         self.launchAtLogin = launchAtLogin
         self.automaticUpdates = automaticUpdates
@@ -110,6 +120,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         let repos = try values.decodeIfPresent([String].self, forKey: .ignoredRepos) ?? base.ignoredRepos
         ignoredRepos = Self.qualified(repos, defaultOwner: orgs.first)
         ignoredBots = try values.decodeIfPresent([String].self, forKey: .ignoredBots) ?? base.ignoredBots
+        ignoreBotComments = try values.decodeIfPresent(Bool.self, forKey: .ignoreBotComments) ?? base.ignoreBotComments
+        ignoreBotPullRequests = try values.decodeIfPresent(Bool.self, forKey: .ignoreBotPullRequests) ?? base.ignoreBotPullRequests
         notificationsEnabled = try values.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? base.notificationsEnabled
         launchAtLogin = try values.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? base.launchAtLogin
         automaticUpdates = try values.decodeIfPresent(Bool.self, forKey: .automaticUpdates) ?? base.automaticUpdates
@@ -125,7 +137,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case orgs, org, authSource, refreshMinutes, ignoredRepos, ignoredBots, notificationsEnabled
+        case orgs, org, authSource, refreshMinutes, ignoredRepos, ignoredBots, ignoreBotComments, ignoreBotPullRequests, notificationsEnabled
         case launchAtLogin, automaticUpdates, globalShortcut, waitingReviewDays, hasCompletedSetup, popoverLayout
         case mascotEnabled, mascotPack, mascotScale, mascotIntroduced, mascotAnchor
     }
@@ -137,6 +149,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try values.encode(refreshMinutes, forKey: .refreshMinutes)
         try values.encode(ignoredRepos, forKey: .ignoredRepos)
         try values.encode(ignoredBots, forKey: .ignoredBots)
+        try values.encode(ignoreBotComments, forKey: .ignoreBotComments)
+        try values.encode(ignoreBotPullRequests, forKey: .ignoreBotPullRequests)
         try values.encode(notificationsEnabled, forKey: .notificationsEnabled)
         try values.encode(launchAtLogin, forKey: .launchAtLogin)
         try values.encode(automaticUpdates, forKey: .automaticUpdates)

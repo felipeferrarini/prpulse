@@ -2,6 +2,12 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.1] - 2026-10-30
+
+### Added
+
+- Two separate switches for bots, in the Exceptions step of the wizard and in Settings, both working on the same list of bot accounts (the ones GitHub marks as bots, plus yours): *Ignore comments from bots* (on, as before) and *Ignore pull requests opened by bots*, which keeps Dependabot, Renovate and the like out of the review list even when they ask for your review. Both are on by default, also after updating: turn the second one off in Settings → Exceptions to see those PRs again.
+
 ## [0.5.0] - 2026-10-30
 
 ### Added

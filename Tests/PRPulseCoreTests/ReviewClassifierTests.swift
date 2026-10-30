@@ -67,3 +67,40 @@ private func review(_ state: ReviewState, by login: String = viewer) -> ReviewSn
     #expect(result.map(\.pr.ref.number) == [2, 3, 1])
     #expect(result.map(\.isRequested) == [true, true, false])
 }
+
+// MARK: Pull requests opened by bots
+
+private let dependabot = Actor(login: "dependabot", isBot: true)
+private let renovateUser = Actor(login: "renovate-bot", isBot: false)
+
+private func bots(_ prs: [PullRequestSnapshot], skip: Bool, listed: Set<String> = []) -> [Int] {
+    ReviewClassifier.items(from: prs, viewer: viewer, ignoredRepos: [], ignoredBots: listed, skipsBotAuthors: skip).map(\.pr.ref.number)
+}
+
+@Test func botPullRequestsShowUnlessTheViewerAsksToSkipThem() {
+    let human = PullRequestSnapshot.fixture(number: 1, author: otherHuman)
+    let bot = PullRequestSnapshot.fixture(number: 2, author: dependabot)
+    #expect(bots([human, bot], skip: false) == [1, 2])
+    #expect(bots([human, bot], skip: true) == [1])
+}
+
+@Test func anAccountTheViewerListedAsABotIsSkippedToo() {
+    let human = PullRequestSnapshot.fixture(number: 1, author: otherHuman)
+    let renovate = PullRequestSnapshot.fixture(number: 2, author: renovateUser)
+    #expect(bots([human, renovate], skip: true) == [1, 2])
+    #expect(bots([human, renovate], skip: true, listed: ["Renovate-Bot"]) == [1])
+}
+
+@Test func skippingBotsHidesThemEvenWhenTheViewerWasAskedToReview() {
+    let asked = PullRequestSnapshot.fixture(number: 1, author: dependabot, requestedReviewers: [viewer])
+    #expect(bots([asked], skip: true).isEmpty)
+}
+
+@Test func theSummaryHonorsTheBotSetting() {
+    let bot = PullRequestSnapshot.fixture(number: 2, author: dependabot)
+    let shown = SummaryBuilder.build(minePRs: [], reviewPRs: [bot], viewer: viewer, ignoredBots: [], ignoredRepos: [])
+    let hidden = SummaryBuilder.build(minePRs: [], reviewPRs: [bot], viewer: viewer, ignoredBots: [], ignoredRepos: [], skipsBotPullRequests: true)
+    #expect(shown.review.count == 1)
+    #expect(hidden.review.isEmpty)
+    #expect(hidden.total == 0)
+}

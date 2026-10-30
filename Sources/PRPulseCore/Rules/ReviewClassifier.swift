@@ -4,13 +4,22 @@ public enum ReviewClassifier {
     public static func items(
         from prs: [PullRequestSnapshot],
         viewer: String,
-        ignoredRepos: Set<String>
+        ignoredRepos: Set<String>,
+        ignoredBots: Set<String> = [],
+        skipsBotAuthors: Bool = false
     ) -> [ReviewItem] {
         let ignored = Set(ignoredRepos.map { $0.lowercased() })
+        let bots = Set(ignoredBots.map { $0.lowercased() })
         return prs
+            .filter { !skipsBotAuthors || !isBotAuthored($0, bots: bots) }
             .filter { needsViewerReview($0, viewer: viewer, ignored: ignored) }
             .map { ReviewItem(pr: $0, isRequested: isRequested($0, viewer: viewer)) }
             .sorted(by: listOrder)
+    }
+
+    /// An account GitHub marks as a bot, or one the viewer listed as such.
+    private static func isBotAuthored(_ pr: PullRequestSnapshot, bots: Set<String>) -> Bool {
+        pr.author.isBot || bots.contains(pr.author.login.lowercased())
     }
 
     private static func needsViewerReview(_ pr: PullRequestSnapshot, viewer: String, ignored: Set<String>) -> Bool {

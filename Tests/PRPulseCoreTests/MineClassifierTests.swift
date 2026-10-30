@@ -94,3 +94,27 @@ private func reasons(_ pr: PullRequestSnapshot) -> [MineReason] {
     let item = MineItem(pr: pr, reasons: reasons(pr))
     #expect(item.primary == .conflict)
 }
+
+// MARK: Bot comments can be counted
+
+@Test func botCommentsCountWhenTheViewerTurnsTheIgnoringOff() {
+    let bot = Actor(login: "dependabot", isBot: true)
+    let pr = PullRequestSnapshot.fixture(
+        threads: [thread(resolved: false, startedBy: bot)],
+        comments: [comment(by: bot, at: 10)],
+        commits: [commit(by: viewer, at: 1)]
+    )
+    let ignored = MineClassifier.reasons(for: pr, viewer: viewer, ignoredBots: [])
+    #expect(ignored.isEmpty)
+
+    let counted = MineClassifier.reasons(for: pr, viewer: viewer, ignoredBots: [], ignoresBotComments: false)
+    #expect(counted.contains(.openThreads(1)))
+    #expect(counted.contains(.unansweredComment))
+}
+
+@Test func theListedAccountsAreCountedToo() {
+    let listed = Actor(login: "coderabbitai", isBot: false)
+    let pr = PullRequestSnapshot.fixture(comments: [comment(by: listed, at: 10)], commits: [commit(by: viewer, at: 1)])
+    #expect(MineClassifier.reasons(for: pr, viewer: viewer, ignoredBots: ["coderabbitai"]).isEmpty)
+    #expect(MineClassifier.reasons(for: pr, viewer: viewer, ignoredBots: ["coderabbitai"], ignoresBotComments: false).contains(.unansweredComment))
+}

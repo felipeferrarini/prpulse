@@ -47,7 +47,7 @@ O PRPulse consulta o GitHub a cada poucos minutos, mantém **duas listas curtas*
 - **Assistente de configuração** com prévia ao vivo do popover, e uma tela de **Ajustes** que conta as alterações não salvas (⌘S salva).
 - **Atualiza sozinho:** busca versões novas e instala em segundo plano (dá para desligar em Ajustes).
 - **Um mascote no canto da tela:** um amiguinho no canto inferior direito que reage ao que acontece (alerta, comemora item novo, se preocupa com PR antiga, dorme quando está tudo em dia). Dá para arrastar, trocar de personagem e de tamanho, e adicionar o seu em `~/Library/Application Support/PRPulse/Mascots/`. Vem ligado e dá para desligar em Ajustes ou pelo menu do ícone.
-- **Silencioso por padrão:** bots são ignorados, a primeira execução não despeja o backlog antigo em notificações e cada item avisa uma vez.
+- **Silencioso por padrão:** os comentários de bots não pedem resposta e as PRs que eles abrem, como as do Dependabot, ficam fora da lista de revisão (dois interruptores em Ajustes, ambos ligados por padrão), a primeira execução não despeja o backlog antigo em notificações e cada item avisa uma vez.
 
 <table>
   <tr>
@@ -108,7 +108,7 @@ Você precisa de macOS 14 ou mais novo e do toolchain Swift (Xcode ou as Command
 
 1. **Conexão:** reaproveite o login do [`gh`](https://cli.github.com) ou cole um token pessoal com os escopos `repo` e `read:org`.
 2. **Organizações:** escolha uma ou mais. As que você mais usou nos últimos 90 dias vêm primeiro, com a contagem.
-3. **Exceções:** marque repositórios para ignorar (eles são listados a partir da organização) e edite as contas de bot a pular.
+3. **Exceções:** marque repositórios para ignorar (eles são listados a partir da organização) e edite as contas de bot a pular. Ali também há dois interruptores: ignorar comentários de bots e ignorar as PRs que eles abrem.
 4. **Ajustes:** frequência de atualização, notificações, abrir ao iniciar o Mac e atualizações automáticas. Em Ajustes há também uma aba de **Diagnóstico**, com um botão que copia as informações para um relato de problema (sem token, nem nomes de organização ou de PR).
 
 > [!NOTE]

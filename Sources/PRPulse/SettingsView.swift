@@ -49,6 +49,8 @@ struct SettingsChanges {
         if draft.orgs != saved.orgs { pages.append(.organization) }
         if draft.ignoredRepos.sorted() != saved.ignoredRepos.sorted() { pages.append(.exceptions) }
         if draft.ignoredBots != saved.ignoredBots { pages.append(.exceptions) }
+        if draft.ignoreBotComments != saved.ignoreBotComments { pages.append(.exceptions) }
+        if draft.ignoreBotPullRequests != saved.ignoreBotPullRequests { pages.append(.exceptions) }
         if draft.refreshMinutes != saved.refreshMinutes { pages.append(.general) }
         if draft.popoverLayout != saved.popoverLayout { pages.append(.general) }
         if draft.notificationsEnabled != saved.notificationsEnabled { pages.append(.general) }

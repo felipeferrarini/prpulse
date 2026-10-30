@@ -4,9 +4,10 @@ public enum MineClassifier {
     public static func reasons(
         for pr: PullRequestSnapshot,
         viewer: String,
-        ignoredBots: Set<String>
+        ignoredBots: Set<String>,
+        ignoresBotComments: Bool = true
     ) -> [MineReason] {
-        let ignored = Set(ignoredBots.map { $0.lowercased() })
+        let ignored = BotFilter(names: Set(ignoredBots.map { $0.lowercased() }), isOn: ignoresBotComments)
         var found: [MineReason] = []
 
         if pr.reviewDecision == .changesRequested { found.append(.changesRequested) }
@@ -26,18 +27,28 @@ public enum MineClassifier {
         return found
     }
 
-    private static func isIgnored(_ actor: Actor, ignored: Set<String>) -> Bool {
-        actor.isBot || ignored.contains(actor.login.lowercased())
+    /// Who counts as a bot when comments are read: accounts GitHub marks as bots and the ones the viewer listed.
+    private struct BotFilter {
+        let names: Set<String>
+        let isOn: Bool
+
+        func ignores(_ actor: Actor) -> Bool {
+            isOn && (actor.isBot || names.contains(actor.login.lowercased()))
+        }
     }
 
-    private static func openThreadCount(_ pr: PullRequestSnapshot, ignored: Set<String>) -> Int {
+    private static func isIgnored(_ actor: Actor, ignored: BotFilter) -> Bool {
+        ignored.ignores(actor)
+    }
+
+    private static func openThreadCount(_ pr: PullRequestSnapshot, ignored: BotFilter) -> Int {
         pr.threads.filter { !$0.isResolved && !isIgnored($0.firstAuthor, ignored: ignored) }.count
     }
 
     private static func hasUnansweredComment(
         _ pr: PullRequestSnapshot,
         viewer: String,
-        ignored: Set<String>
+        ignored: BotFilter
     ) -> Bool {
         let fromOthers = pr.comments.filter { !$0.author.isSame(as: viewer) && !isIgnored($0.author, ignored: ignored) }
         guard let lastOther = fromOthers.map(\.createdAt).max() else { return false }

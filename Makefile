@@ -1,7 +1,7 @@
 include scripts/config.sh
 export
 
-VERSION ?= 0.5.0
+VERSION ?= 0.5.1
 
 .PHONY: test app dmg appcast release install screenshots mascots
 

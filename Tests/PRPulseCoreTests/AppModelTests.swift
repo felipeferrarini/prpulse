@@ -336,3 +336,20 @@ private struct Harness {
     #expect(reviewOther?.contains("infra") == false)
     #expect(reviewOrg?.contains("-repo:org/infra") == true)
 }
+
+@MainActor @Test func botPullRequestsStayOutOfTheListWhenTheSettingIsOn() async {
+    let h = Harness()
+    var bot = minimalPR(number: 2, author: "dependabot")
+    bot["author"] = ["login": "dependabot", "__typename": "Bot"]
+    h.world.review = [minimalPR(number: 1), bot]
+    h.settings.settings.ignoreBotPullRequests = false
+
+    await h.model.refresh()
+    guard case .ready(let before) = h.model.state else { Issue.record("expected ready"); return }
+    #expect(before.review.map(\.pr.ref.number) == [1, 2])
+
+    h.settings.settings.ignoreBotPullRequests = true
+    await h.model.refresh()
+    guard case .ready(let after) = h.model.state else { Issue.record("expected ready"); return }
+    #expect(after.review.map(\.pr.ref.number) == [1])
+}

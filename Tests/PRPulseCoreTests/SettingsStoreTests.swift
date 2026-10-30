@@ -111,3 +111,25 @@ private func freshDefaults() -> UserDefaults {
     let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
     #expect(decoded.waitingReviewDays == 0)
 }
+
+@Test func botPullRequestsAreIgnoredByDefaultAlsoForSettingsSavedByEarlierVersions() throws {
+    #expect(AppSettings.defaults.ignoreBotPullRequests)
+    let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"org":"acme","hasCompletedSetup":true}"#.utf8))
+    #expect(old.ignoreBotPullRequests)
+
+    var settings = AppSettings.defaults
+    settings.ignoreBotPullRequests = false
+    let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
+    #expect(!decoded.ignoreBotPullRequests)
+}
+
+@Test func botCommentsAreIgnoredByDefaultAndTheChoiceSurvives() throws {
+    #expect(AppSettings.defaults.ignoreBotComments)
+    let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"org":"acme"}"#.utf8))
+    #expect(old.ignoreBotComments)
+
+    var settings = AppSettings.defaults
+    settings.ignoreBotComments = false
+    let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
+    #expect(!decoded.ignoreBotComments)
+}
