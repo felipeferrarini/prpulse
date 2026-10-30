@@ -82,7 +82,15 @@ Versões recentes do Homebrew não carregam casks de um tap de terceiros até vo
 Baixe o `PRPulse-<versão>.dmg` na [página de releases](https://github.com/felipeferrarini/prpulse/releases/latest), arraste o **PRPulse** para Aplicativos e abra.
 
 > [!IMPORTANT]
-> O app ainda não é assinado com um Apple Developer ID, então o macOS bloqueia a primeira abertura. Abra uma vez, depois vá em **Ajustes do Sistema → Privacidade e Segurança**, role até a seção de Segurança e clique em **Abrir Mesmo Assim** ao lado do PRPulse. Você faz isso uma vez só, e o botão só aparece depois de uma tentativa de abertura bloqueada.
+> O app ainda não é assinado com um Apple Developer ID, então na primeira abertura o macOS avisa que ele "não foi aberto". Clique em **OK** (não em "Mover para o Lixo"), depois vá em **Ajustes do Sistema → Privacidade e Segurança**, role até a seção de Segurança e clique em **Abrir Mesmo Assim** ao lado do PRPulse. O botão só aparece depois de uma tentativa de abertura bloqueada, e por cerca de uma hora.
+>
+> Prefere o terminal? Isto faz o mesmo:
+>
+> ```bash
+> xattr -dr com.apple.quarantine /Applications/PRPulse.app
+> ```
+>
+> Isso é só na primeira instalação: as atualizações automáticas não devem pedir de novo.
 
 ### Compilar você mesmo
 
