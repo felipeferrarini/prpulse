@@ -29,19 +29,29 @@ struct MascotChooser: View {
 struct MascotContent: View {
     @ObservedObject var model: SetupModel
     var onResetPosition: (() -> Void)?
+    /// Keeps the toggle in place and scrolls only the grid, for a window that cannot grow with a long list.
+    var scrollsChooser = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             showRow.staggered(2)
-            MascotChooser(selection: $model.draft.mascotPack)
-                .padding(.vertical, 14)
-                .opacity(model.draft.mascotEnabled ? 1 : 0.45)
-                .allowsHitTesting(model.draft.mascotEnabled)
-                .staggered(3)
+            chooser.staggered(3)
             if let onResetPosition {
                 sizeRow.staggered(4)
                 actionsRow(onResetPosition).staggered(5)
             }
+        }
+    }
+
+    @ViewBuilder private var chooser: some View {
+        let grid = MascotChooser(selection: $model.draft.mascotPack)
+            .padding(.vertical, 14)
+            .opacity(model.draft.mascotEnabled ? 1 : 0.45)
+            .allowsHitTesting(model.draft.mascotEnabled)
+        if scrollsChooser {
+            ScrollView(.vertical, showsIndicators: false) { grid }
+        } else {
+            grid
         }
     }
 
@@ -127,8 +137,7 @@ struct MascotBody: View {
     var body: some View {
         StepFrame {
             StepTitle(title: tr("wizard.mascot.title"), lead: tr("wizard.mascot.lead"))
-            MascotContent(model: model).padding(.top, 10)
-            Spacer(minLength: 0)
+            MascotContent(model: model, scrollsChooser: true).padding(.top, 10)
         }
     }
 }
