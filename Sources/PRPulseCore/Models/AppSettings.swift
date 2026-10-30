@@ -14,6 +14,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var ignoredBots: [String]
     public var notificationsEnabled: Bool
     public var launchAtLogin: Bool
+    public var automaticUpdates: Bool
     public var hasCompletedSetup: Bool
     public var popoverLayout: PopoverLayout
 
@@ -25,6 +26,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         ignoredBots: defaultIgnoredBots,
         notificationsEnabled: true,
         launchAtLogin: false,
+        automaticUpdates: true,
         hasCompletedSetup: false,
         popoverLayout: .single
     )
@@ -37,6 +39,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         ignoredBots: [String],
         notificationsEnabled: Bool,
         launchAtLogin: Bool,
+        automaticUpdates: Bool = true,
         hasCompletedSetup: Bool,
         popoverLayout: PopoverLayout = .single
     ) {
@@ -47,6 +50,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.ignoredBots = ignoredBots
         self.notificationsEnabled = notificationsEnabled
         self.launchAtLogin = launchAtLogin
+        self.automaticUpdates = automaticUpdates
         self.hasCompletedSetup = hasCompletedSetup
         self.popoverLayout = popoverLayout
     }
@@ -61,6 +65,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         ignoredBots = try values.decodeIfPresent([String].self, forKey: .ignoredBots) ?? base.ignoredBots
         notificationsEnabled = try values.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? base.notificationsEnabled
         launchAtLogin = try values.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? base.launchAtLogin
+        automaticUpdates = try values.decodeIfPresent(Bool.self, forKey: .automaticUpdates) ?? base.automaticUpdates
         hasCompletedSetup = try values.decodeIfPresent(Bool.self, forKey: .hasCompletedSetup) ?? base.hasCompletedSetup
         popoverLayout = try values.decodeIfPresent(PopoverLayout.self, forKey: .popoverLayout) ?? base.popoverLayout
     }

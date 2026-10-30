@@ -2,6 +2,13 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] - 2026-10-29
+
+### Added
+
+- Self update with [Sparkle](https://sparkle-project.org): the app checks for new versions and installs them in the background. Turn it off in Settings, or use "Check for Updates…" in the right click menu or in Settings. Updates are verified with an EdDSA signature, so they don't need an Apple Developer ID.
+- `make appcast` signs the DMG and writes the update feed that is attached to each release.
+
 ## [0.2.0] - 2026-10-29
 
 ### Added

@@ -54,3 +54,15 @@ private func freshDefaults() -> UserDefaults {
     let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"org":"acme"}"#.utf8))
     #expect(old.popoverLayout == .single)
 }
+
+@Test func automaticUpdatesAreOnByDefaultAndCanBeTurnedOff() throws {
+    #expect(AppSettings.defaults.automaticUpdates)
+
+    let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"org":"acme"}"#.utf8))
+    #expect(old.automaticUpdates)
+
+    var settings = AppSettings.defaults
+    settings.automaticUpdates = false
+    let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
+    #expect(!decoded.automaticUpdates)
+}

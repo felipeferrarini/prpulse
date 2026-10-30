@@ -398,6 +398,7 @@ struct GeneralBody: View {
 struct GeneralContent: View {
     @ObservedObject var model: SetupModel
     var onRedoSetup: (() -> Void)?
+    var onCheckForUpdates: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -407,7 +408,8 @@ struct GeneralContent: View {
                 .staggered(4)
             switchRow(tr("setup.general.launch"), detail: tr("wizard.general.launch.detail"), isOn: $model.draft.launchAtLogin)
                 .staggered(5)
-            if let onRedoSetup { redoRow(onRedoSetup).staggered(6) }
+            if let onCheckForUpdates { updatesRow(onCheckForUpdates).staggered(6) }
+            if let onRedoSetup { redoRow(onRedoSetup).staggered(7) }
         }
     }
 
@@ -443,6 +445,23 @@ struct GeneralContent: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private func updatesRow(_ checkNow: @escaping () -> Void) -> some View {
+        HStack(spacing: 14) {
+            label(tr("settings.updates.auto.title"), detail: tr("settings.updates.auto.detail", SoftwareUpdater.version))
+            Spacer()
+            Button(action: checkNow) {
+                Text(tr("settings.updates.action"))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(WizardPalette.accent)
+            }
+            .buttonStyle(.plain)
+            Toggle(tr("settings.updates.auto.title"), isOn: $model.draft.automaticUpdates)
+                .toggleStyle(WizardSwitchStyle()).labelsHidden()
+        }
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) { Rectangle().fill(WizardPalette.line).frame(height: 1) }
     }
 
     private func redoRow(_ action: @escaping () -> Void) -> some View {

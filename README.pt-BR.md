@@ -42,6 +42,7 @@ O PRPulse consulta o GitHub a cada poucos minutos, mantém **duas listas curtas*
 - **Um ícone que avisa antes de você olhar:** um glifo de pull request que acompanha o tema da barra quando está tudo em dia, vira uma pílula laranja com o número quando algo precisa de você, faz um anel de pulso quando chega um item novo e fica vermelho se não conseguir atualizar.
 - **Menu do botão direito:** atualizar agora (⌘R), abrir no GitHub (buscas já filtradas pela sua organização), liga/desliga de notificações, Ajustes (⌘,), Sobre e Sair.
 - **Assistente de configuração** com prévia ao vivo do popover, e uma tela de **Ajustes** que conta as alterações não salvas (⌘S salva).
+- **Atualiza sozinho:** busca versões novas e instala em segundo plano (dá para desligar em Ajustes).
 - **Silencioso por padrão:** bots são ignorados, a primeira execução não despeja o backlog antigo em notificações e cada item avisa uma vez.
 
 <table>
@@ -96,7 +97,7 @@ Você precisa de macOS 14 ou mais novo e do toolchain Swift (Xcode ou as Command
 1. **Conexão:** reaproveite o login do [`gh`](https://cli.github.com) ou cole um token pessoal com os escopos `repo` e `read:org`.
 2. **Organização:** as que você mais usou nos últimos 90 dias vêm primeiro, com a contagem.
 3. **Exceções:** marque repositórios para ignorar (eles são listados a partir da organização) e edite as contas de bot a pular.
-4. **Ajustes:** frequência de atualização, notificações e abrir ao iniciar o Mac.
+4. **Ajustes:** frequência de atualização, notificações, abrir ao iniciar o Mac e atualizações automáticas.
 
 > [!NOTE]
 > Se a sua organização exige SAML SSO, autorize o token para ela no GitHub, senão o ícone vai para o estado de erro. O mesmo acontece se a organização for renomeada ou o token não enxergá-la. Tokens clássicos precisam do escopo `repo`, ou os repositórios privados nunca aparecem.
@@ -122,8 +123,10 @@ PRs abertas de outras pessoas na organização em que você não enviou review. 
 
 ## Privacidade
 
-- O PRPulse fala **só com o GitHub** (`api.github.com`), com as suas próprias credenciais. Não há servidor nosso, análise de uso nem telemetria.
+- O PRPulse fala **só com o GitHub** (`api.github.com` e `github.com`), com as suas próprias credenciais. Não há servidor nosso, análise de uso nem telemetria.
 - Um token pessoal fica no **Keychain do macOS**. Com a opção `gh`, o token é lido do `gh` na hora e nunca guardado pelo PRPulse.
+- A checagem de atualização lê um arquivo pequeno da página de releases em `github.com`. Nada sobre você ou o seu Mac é enviado.
+- As atualizações são assinadas com uma chave que só quem mantém o projeto tem, e o app recusa o que não bater.
 - O app é código aberto (MIT), então tudo isso pode ser conferido.
 
 ## Limites conhecidos
@@ -131,6 +134,7 @@ PRs abertas de outras pessoas na organização em que você não enviou review. 
 - Uma organização por vez.
 - Entrar pelo navegador ainda não existe; use o `gh` ou um token.
 - O app é assinado ad hoc, então depois de cada atualização o macOS pode perguntar de novo se o PRPulse pode ler o item do Keychain. Escolha **Sempre Permitir**; se negar, o ícone mostra o estado de erro.
+- Versões anteriores à 0.3.0 não se atualizam sozinhas: instale a mais recente uma vez, à mão ou com `brew upgrade`.
 
 ## Desenvolvimento
 
@@ -140,6 +144,7 @@ make app          # build universal, assinado ad hoc, em build/PRPulse.app
 make dmg          # build/PRPulse-<versão>.dmg
 make install      # compila e copia para /Applications
 make screenshots  # gera de novo as imagens de docs/images com dados fictícios
+make release      # DMG mais o feed de atualização assinado (build/feed/appcast.xml)
 ```
 
 `PRPulseCore` guarda as regras e o cliente do GitHub como código puro e testado; `PRPulse` é a casca do macOS. Rode o app com dados fictícios usando `PRPULSE_DEMO=pending|fresh|empty|error|unconfigured`. Veja a seção [Development](README.md#development) do README em inglês para a estrutura completa.

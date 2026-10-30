@@ -1,9 +1,9 @@
 include scripts/config.sh
 export
 
-VERSION ?= 0.2.0
+VERSION ?= 0.3.0
 
-.PHONY: test app dmg install screenshots
+.PHONY: test app dmg appcast release install screenshots
 
 test:
 	bash scripts/test.sh
@@ -13,6 +13,13 @@ app:
 
 dmg:
 	bash scripts/make-dmg.sh $(VERSION)
+
+# The DMG plus the signed update feed, ready to attach to a GitHub release.
+appcast: dmg
+	bash scripts/make-appcast.sh $(VERSION)
+
+release: appcast
+	@echo "attach build/$(APP_NAME)-$(VERSION).dmg and build/feed/appcast.xml to the v$(VERSION) release"
 
 install: app
 	rm -rf "/Applications/$(APP_NAME).app"

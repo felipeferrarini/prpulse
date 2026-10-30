@@ -249,6 +249,7 @@ extension PopoverController {
         menu.addItem(item(tr("menu.settings"), symbol: "slider.horizontal.3", key: ",", action: #selector(openSettings)))
         menu.addItem(.separator())
 
+        menu.addItem(item(tr("menu.updates"), symbol: "arrow.down.circle", action: #selector(checkForUpdates)))
         menu.addItem(item(tr("menu.about"), symbol: "info.circle", action: #selector(openAbout)))
         menu.addItem(item(tr("menu.quit"), symbol: "power", key: "q", action: #selector(quit)))
         return menu
@@ -291,6 +292,8 @@ extension PopoverController {
     @objc private func toggleNotifications() { runtime.toggleNotifications() }
 
     @objc private func openSettings() { runtime.openSettings() }
+
+    @objc private func checkForUpdates() { runtime.checkForUpdates() }
 
     @objc private func openAbout() {
         if let url = URL(string: "https://github.com/felipeferrarini/prpulse") { NSWorkspace.shared.open(url) }

@@ -47,6 +47,7 @@ struct SettingsChanges {
         if draft.popoverLayout != saved.popoverLayout { pages.append(.general) }
         if draft.notificationsEnabled != saved.notificationsEnabled { pages.append(.general) }
         if draft.launchAtLogin != saved.launchAtLogin { pages.append(.general) }
+        if draft.automaticUpdates != saved.automaticUpdates { pages.append(.general) }
         self.pages = pages
     }
 
@@ -59,6 +60,7 @@ struct SettingsView: View {
     @ObservedObject var model: SetupModel
     let onSave: (AppSettings) -> Void
     let onRedoSetup: () -> Void
+    let onCheckForUpdates: () -> Void
     let onClose: () -> Void
 
     @LocalState private var page: SettingsPage
@@ -67,7 +69,7 @@ struct SettingsView: View {
     @LocalState private var didSave = false
     @Namespace private var navigation
 
-    static let size = CGSize(width: 900, height: 620)
+    static let size = CGSize(width: 900, height: 680)
     private static let sidebarWidth: CGFloat = 250
 
     init(
@@ -75,11 +77,13 @@ struct SettingsView: View {
         initialPage: SettingsPage = .connection,
         onSave: @escaping (AppSettings) -> Void,
         onRedoSetup: @escaping () -> Void,
+        onCheckForUpdates: @escaping () -> Void = {},
         onClose: @escaping () -> Void = {}
     ) {
         self.model = model
         self.onSave = onSave
         self.onRedoSetup = onRedoSetup
+        self.onCheckForUpdates = onCheckForUpdates
         self.onClose = onClose
         _page = LocalState(initialValue: initialPage)
         _saved = LocalState(initialValue: model.draft)
@@ -184,7 +188,7 @@ struct SettingsView: View {
                 case .connection: ConnectionContent(model: model)
                 case .organization: OrganizationContent(model: model)
                 case .exceptions: ExceptionsContent(model: model)
-                case .general: GeneralContent(model: model, onRedoSetup: onRedoSetup)
+                case .general: GeneralContent(model: model, onRedoSetup: onRedoSetup, onCheckForUpdates: onCheckForUpdates)
                 }
             }
             .padding(.top, 26)

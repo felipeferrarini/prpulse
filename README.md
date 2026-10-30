@@ -120,6 +120,7 @@ Everything can be changed later in **Settings**, which counts your unsaved chang
 - **Bots are ignored.** Comments from CodeRabbit, SonarQube and any account GitHub marks as a bot never count (the list is yours to edit).
 - **No flood on day one.** The first run learns what is already pending and stays silent. An item notifies once.
 - **One organization at a time**, with a list of repositories to ignore. A PR in an ignored repository still shows if you are a requested reviewer, directly or through a team such as CODEOWNERS.
+- **Updates itself.** It checks for new versions and installs them in the background (you can turn that off in Settings).
 - English and Portuguese, following your system language.
 
 ## Install
@@ -187,8 +188,10 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 
 ## Privacy
 
-- PRPulse talks **only to GitHub** (`api.github.com`) with your own credentials. There is no server of ours, no analytics and no telemetry.
+- PRPulse talks **only to GitHub** (`api.github.com` and `github.com`) with your own credentials. There is no server of ours, no analytics and no telemetry.
 - A personal token is stored in the **macOS Keychain**. With the `gh` option, the token is read from `gh` on demand and never stored by PRPulse.
+- Update checks read one small feed file from your releases page on `github.com`. Nothing about you or your Mac is sent.
+- Updates are signed with a key only the maintainer holds, and the app refuses anything that doesn't match.
 - The app is open source (MIT), so all of this is checkable.
 
 ## Settings at a glance
@@ -198,13 +201,14 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 | **Connection** | `gh` login or a personal token |
 | **Organization** | which organization to watch |
 | **Exceptions** | repositories and bot accounts to ignore |
-| **General** | refresh interval (1 to 30 minutes), popover layout, notifications, open at login, run the setup again |
+| **General** | refresh interval (1 to 30 minutes), popover layout, notifications, open at login, automatic updates, run the setup again |
 
 ## Known limits
 
 - One organization at a time.
 - Sign-in through the browser is not available yet; use `gh` or a token.
 - The app is signed ad hoc, so after each update macOS may ask again whether PRPulse can read its Keychain item. Choose **Always Allow**; if you deny it, the icon shows the error state.
+- Versions before 0.3.0 don't update themselves: install the latest once, by hand or with `brew upgrade`.
 
 ## Development
 
@@ -222,6 +226,7 @@ make app          # universal, ad-hoc signed build/PRPulse.app
 make dmg          # build/PRPulse-<version>.dmg
 make install      # build and copy to /Applications
 make screenshots  # re-render docs/images with fake data (English UI)
+make release      # DMG plus the signed update feed (build/feed/appcast.xml)
 ```
 
 Run the app with fake data using `PRPULSE_DEMO=pending|fresh|empty|error|unconfigured`. To iterate on the interface without a GitHub account, that is all you need.

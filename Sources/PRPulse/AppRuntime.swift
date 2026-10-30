@@ -17,12 +17,15 @@ final class AppRuntime: ObservableObject {
     let settings = SettingsStore()
     private let model: AppModel?
     private let notifier = Notifier()
+    private let updater: SoftwareUpdater
     private let windows = WindowManager()
     private var observation: AnyCancellable?
     private var ticker: Timer?
 
     init() {
         popoverLayout = settings.settings.popoverLayout
+        updater = SoftwareUpdater(enabled: DemoMode.current == nil)
+        updater.apply(automatic: settings.settings.automaticUpdates)
         if let demo = DemoMode.current {
             model = nil
             data = demo.viewData
@@ -57,6 +60,10 @@ final class AppRuntime: ObservableObject {
         settings.settings.notificationsEnabled.toggle()
     }
 
+    func checkForUpdates() {
+        updater.checkForUpdates()
+    }
+
     func popoverOpened() {
         openCount += 1
     }
@@ -79,6 +86,7 @@ final class AppRuntime: ObservableObject {
                 model: setup,
                 onSave: { [weak self] draft in self?.save(draft) },
                 onRedoSetup: { [weak self] in self?.redoSetup() },
+                onCheckForUpdates: { [weak self] in self?.checkForUpdates() },
                 onClose: { [weak self] in self?.windows.close(id: Self.settingsWindow) }
             )
         }
@@ -135,6 +143,7 @@ final class AppRuntime: ObservableObject {
         chosen.hasCompletedSetup = true
         settings.settings = chosen
         LaunchAtLogin.apply(chosen.launchAtLogin)
+        updater.apply(automatic: chosen.automaticUpdates)
         guard let model else { return }
         Task { await model.restart() }
     }

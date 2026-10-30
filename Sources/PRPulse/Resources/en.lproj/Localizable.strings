@@ -180,3 +180,7 @@
 "menu.about" = "About PRPulse";
 "menu.quit" = "Quit PRPulse";
 "menu.status.error" = "can't update";
+"settings.updates.auto.title" = "Keep PRPulse up to date";
+"settings.updates.auto.detail" = "Version %@. Checks and installs in the background.";
+"settings.updates.action" = "Check now";
+"menu.updates" = "Check for Updates…";
