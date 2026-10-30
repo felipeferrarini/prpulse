@@ -5,15 +5,15 @@ import PRPulseCore
 /// something needs the viewer, rings out when a new item arrives, and turns red when it cannot update.
 enum StatusIconRenderer {
     private static let height: CGFloat = 22
-    private static let pillHeight: CGFloat = 18
-    private static let glyphSize: CGFloat = 12
+    private static let pillHeight = BrandIcon.Pill.height
+    private static let glyphSize = BrandIcon.Pill.glyphSize
     private static let ripplePadding: CGFloat = 4
 
-    private static let orangeTop = NSColor(hex: 0xFFA766)
-    private static let orangeBottom = NSColor(hex: 0xFF7A2C)
+    private static let orangeTop = BrandIcon.orangeTop
+    private static let orangeBottom = BrandIcon.orangeBottom
     private static let redTop = NSColor(hex: 0xFF6B5E)
     private static let redBottom = NSColor(hex: 0xE5382B)
-    private static let ink = NSColor(hex: 0x2A1204)
+    private static let ink = BrandIcon.ink
 
     static func image(for state: IconState, phase: Double) -> NSImage {
         switch state {
@@ -45,11 +45,11 @@ enum StatusIconRenderer {
 
     private static func pill(text: String, colors: (NSColor, NSColor), content: NSColor, ripple: Double?) -> NSImage {
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .bold),
+            .font: NSFont.monospacedDigitSystemFont(ofSize: BrandIcon.Pill.fontSize, weight: .bold),
             .foregroundColor: content,
         ]
         let textSize = (text as NSString).size(withAttributes: attributes)
-        let pillWidth = 6 + glyphSize + 3 + ceil(textSize.width) + 7
+        let pillWidth = BrandIcon.Pill.leading + glyphSize + BrandIcon.Pill.gap + ceil(textSize.width) + BrandIcon.Pill.trailing
         let size = NSSize(width: pillWidth + ripplePadding * 2, height: height)
 
         let image = NSImage(size: size, flipped: false) { _ in
@@ -57,9 +57,9 @@ enum StatusIconRenderer {
             if let ripple { drawRipple(around: pill, color: colors.1, phase: ripple) }
             drawPill(pill, colors: colors)
             content.set()
-            drawGlyph(in: NSRect(x: pill.minX + 6, y: pill.midY - glyphSize / 2, width: glyphSize, height: glyphSize))
+            drawGlyph(in: NSRect(x: pill.minX + BrandIcon.Pill.leading, y: pill.midY - glyphSize / 2, width: glyphSize, height: glyphSize))
             (text as NSString).draw(
-                at: NSPoint(x: pill.minX + 6 + glyphSize + 3, y: pill.midY - textSize.height / 2),
+                at: NSPoint(x: pill.minX + BrandIcon.Pill.leading + glyphSize + BrandIcon.Pill.gap, y: pill.midY - textSize.height / 2),
                 withAttributes: attributes
             )
             return true
@@ -87,24 +87,15 @@ enum StatusIconRenderer {
 
     // MARK: Glyph
 
-    /// The pull request mark: a node at the top left joined to one at the bottom, and a bent line that
-    /// reaches the node at the bottom right. Drawn on a 24 point grid, y down, then fitted into `rect`.
+    /// The shared glyph, fitted into `rect`. Its grid has y pointing down, so it is flipped here.
     private static func drawGlyph(in rect: NSRect) {
         let scale = rect.width / 24
         var transform = AffineTransform(translationByX: rect.minX, byY: rect.maxY)
         transform.scale(x: scale, y: -scale)
 
-        let path = NSBezierPath()
-        path.appendOval(in: NSRect(x: 15, y: 15, width: 6, height: 6))
-        path.appendOval(in: NSRect(x: 3, y: 3, width: 6, height: 6))
-        path.move(to: NSPoint(x: 6, y: 9))
-        path.line(to: NSPoint(x: 6, y: 21))
-        path.move(to: NSPoint(x: 13, y: 6))
-        path.line(to: NSPoint(x: 16, y: 6))
-        path.curve(to: NSPoint(x: 18, y: 8), controlPoint1: NSPoint(x: 17.1, y: 6), controlPoint2: NSPoint(x: 18, y: 6.9))
-        path.line(to: NSPoint(x: 18, y: 15))
+        let path = BrandIcon.glyphPath()
         path.transform(using: transform)
-        path.lineWidth = 2.1 * scale * (rect.width < 14 ? 1.15 : 1)
+        path.lineWidth = BrandIcon.lineWidth(forGlyphSize: rect.width)
         path.lineCapStyle = .round
         path.lineJoinStyle = .round
         path.stroke()

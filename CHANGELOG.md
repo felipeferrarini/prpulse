@@ -2,6 +2,16 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.2] - 2026-10-29
+
+### Changed
+
+- One icon everywhere: the app icon, the big and the small icons in the setup wizard and the logo in the popover header now use the same pull request glyph, orange and ink as the menu bar pill. The wizard shows the pill itself, with its count.
+
+### Fixed
+
+- The rings around the icon in the setup wizard came in from the top left corner instead of leaving the icon. Now a single ring leaves the icon, spreads and fades, slowly, and the animation stops while it is hidden.
+
 ## [0.4.1] - 2026-10-29
 
 ### Changed

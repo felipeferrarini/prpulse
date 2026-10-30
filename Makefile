@@ -1,7 +1,7 @@
 include scripts/config.sh
 export
 
-VERSION ?= 0.4.1
+VERSION ?= 0.4.2
 
 .PHONY: test app dmg appcast release install screenshots
 

@@ -20,7 +20,7 @@ struct WizardStage: View {
         ZStack(alignment: .top) {
             background
             MenuBarStrip(count: isConnected ? rows.count : 3, highlighted: showsIcon)
-            BigIcon(count: isConnected ? rows.count : 3)
+            BigIcon(count: isConnected ? rows.count : 3, isActive: showsIcon)
                 .opacity(showsIcon ? 1 : 0)
                 .offset(y: showsIcon ? 0 : -10)
                 .frame(maxHeight: .infinity, alignment: .center)
@@ -87,33 +87,16 @@ private struct MenuBarStrip: View {
     let count: Int
     let highlighted: Bool
 
-    @LocalState private var pulse = false
-
     var body: some View {
         HStack(spacing: 14) {
             Spacer()
             Text(Date().formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))
             Text(Date().formatted(date: .omitted, time: .shortened))
-            Image(systemName: "arrow.triangle.branch")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color(nsColor: NSColor(hex: 0xFF9F60)))
-                .frame(width: 26, height: 20)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(Color(nsColor: NSColor(hex: 0xFF9F60)), lineWidth: 2)
-                        .padding(-6)
-                        .scaleEffect(pulse ? 1.5 : 0.8)
-                        .opacity(highlighted ? (pulse ? 0 : 0.6) : 0)
-                        .animation(.easeOut(duration: 1.8).repeatForever(autoreverses: false), value: pulse)
-                }
-                .overlay(alignment: .topTrailing) {
-                    Text("\(count)")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 4)
-                        .frame(minWidth: 15, minHeight: 15)
-                        .background(Color(nsColor: NSColor(hex: 0xFF5B4A)), in: Capsule())
-                        .offset(x: 8, y: -6)
+            // The very image the menu bar shows.
+            Image(nsImage: StatusIconRenderer.image(for: .pending(count), phase: 0))
+                .background {
+                    RippleRings(isActive: highlighted, rings: 1, period: 3, growth: 0.45, peakOpacity: 0.6, lineWidth: 2)
+                        .padding(4)
                 }
         }
         .font(.system(size: 12))
@@ -123,46 +106,51 @@ private struct MenuBarStrip: View {
         .frame(maxWidth: .infinity)
         .background(Color.white.opacity(0.06))
         .frame(maxHeight: .infinity, alignment: .top)
-        .onAppear { pulse = true }
     }
 }
 
 private struct BigIcon: View {
     let count: Int
+    let isActive: Bool
 
-    @LocalState private var pulse = false
+    private static let height: CGFloat = 76
 
     var body: some View {
-        ZStack {
-            ForEach(0 ..< 3, id: \.self) { index in
-                Circle()
-                    .strokeBorder(Color(nsColor: NSColor(hex: 0xFF9F60)), lineWidth: 2)
-                    .frame(width: 180, height: 180)
-                    .scaleEffect(pulse ? 1.7 : 0.55)
-                    .opacity(pulse ? 0 : 0.55)
-                    .animation(.easeOut(duration: 3).repeatForever(autoreverses: false).delay(Double(index)), value: pulse)
+        BrandPill(count: count, height: Self.height)
+            .shadow(color: WizardPalette.brandOrange.opacity(0.45), radius: 26)
+            .background {
+                RippleRings(isActive: isActive, rings: 1, period: 4.5, growth: 1.1, peakOpacity: 0.6, lineWidth: 2)
             }
-            Image(systemName: "arrow.triangle.branch")
-                .font(.system(size: 42, weight: .bold))
-                .foregroundStyle(Color(nsColor: NSColor(hex: 0x2A1204)))
-                .frame(width: 88, height: 88)
-                .background(
-                    LinearGradient(colors: [Color(nsColor: NSColor(hex: 0xFFA766)), Color(nsColor: NSColor(hex: 0xFF7A2C))], startPoint: .top, endPoint: .bottom),
-                    in: RoundedRectangle(cornerRadius: 26)
-                )
-                .shadow(color: WizardPalette.brandOrange.opacity(0.45), radius: 24)
-                .overlay(alignment: .topTrailing) {
-                    Text("\(count)")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .frame(minWidth: 28, minHeight: 28)
-                        .background(Color(nsColor: NSColor(hex: 0xFF3B30)), in: Capsule())
-                        .offset(x: 11, y: -9)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Outlines that leave a shape and spread outward while they fade, like the menu bar icon does for a new item.
+/// They follow the clock instead of an implicit animation, so they always start on the shape they surround, and
+/// the clock stops while they are hidden.
+private struct RippleRings: View {
+    let isActive: Bool
+    let rings: Int
+    let period: Double
+    /// How much bigger than the shape a ring gets before it vanishes (1 is twice the size).
+    let growth: Double
+    let peakOpacity: Double
+    let lineWidth: CGFloat
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !isActive)) { context in
+            let time = context.date.timeIntervalSinceReferenceDate
+            ZStack {
+                ForEach(0 ..< rings, id: \.self) { index in
+                    let phase = (time / period + Double(index) / Double(rings)).truncatingRemainder(dividingBy: 1)
+                    let eased = 1 - pow(1 - phase, 2)
+                    Capsule(style: .circular)
+                        .stroke(Color(nsColor: BrandIcon.orangeTop), lineWidth: lineWidth)
+                        .scaleEffect(1 + growth * eased)
+                        .opacity(isActive ? peakOpacity * (1 - phase) : 0)
                 }
+            }
         }
-        .onAppear { pulse = true }
-        .accessibilityHidden(true)
     }
 }
 
@@ -198,9 +186,7 @@ private struct MiniPopover: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: "arrow.triangle.branch")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(Color(nsColor: NSColor(hex: 0x17181F)))
+            BrandGlyph(size: 12, color: Color(nsColor: NSColor(hex: 0x17181F)))
                 .frame(width: 20, height: 20)
                 .background(Color(nsColor: NSColor(hex: 0xF3F4F7)), in: RoundedRectangle(cornerRadius: 6))
             Text(org.isEmpty ? tr("wizard.stage.org") : org)
@@ -287,11 +273,12 @@ private struct Toast: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "arrow.triangle.branch")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(Color(nsColor: NSColor(hex: 0x1B0F05)))
+            BrandGlyph(size: 18)
                 .frame(width: 34, height: 34)
-                .background(WizardPalette.brandOrange, in: RoundedRectangle(cornerRadius: 9))
+                .background(
+                    LinearGradient(colors: [Color(nsColor: BrandIcon.orangeTop), Color(nsColor: BrandIcon.orangeBottom)], startPoint: .top, endPoint: .bottom),
+                    in: RoundedRectangle(cornerRadius: 9)
+                )
             VStack(alignment: .leading, spacing: 1) {
                 Text(tr("notification.title.other", count)).font(.system(size: 12, weight: .semibold)).foregroundStyle(.white)
                 Text(title).font(.system(size: 11.5)).foregroundStyle(Color.white.opacity(0.65)).lineLimit(1)

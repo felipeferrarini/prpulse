@@ -17,9 +17,7 @@ struct PopoverHeader: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "arrow.triangle.branch")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Color(nsColor: .windowBackgroundColor))
+            BrandGlyph(size: 14, color: Color(nsColor: .windowBackgroundColor))
                 .frame(width: 24, height: 24)
                 .background(Color.primary, in: RoundedRectangle(cornerRadius: 7))
                 .accessibilityHidden(true)
