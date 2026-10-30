@@ -64,11 +64,7 @@ final class PopoverController: NSObject, NSWindowDelegate {
         buildStatusItem()
         observeIcon()
         observeContent()
-        runtime.onShortcut = { [weak self] in
-            guard let self else { return }
-            if !panel.isVisible { NSApp.activate(ignoringOtherApps: true) }
-            togglePanel()
-        }
+        runtime.onShortcut = { [weak self] in self?.toggleFromOutside() }
     }
 
     private func buildPanel() {
@@ -170,6 +166,12 @@ final class PopoverController: NSObject, NSWindowDelegate {
         togglePanel()
     }
 
+    /// Opens or closes the panel on behalf of the mascot or the shortcut.
+    func toggleFromOutside() {
+        if !panel.isVisible { NSApp.activate(ignoringOtherApps: true) }
+        togglePanel()
+    }
+
     private func togglePanel() {
         if panel.isVisible {
             hide()
@@ -266,6 +268,9 @@ extension PopoverController {
         let notifications = item(tr("setup.general.notifications"), symbol: "bell", action: #selector(toggleNotifications))
         notifications.state = runtime.notificationsEnabled ? .on : .off
         menu.addItem(notifications)
+        let mascot = item(tr("menu.mascot"), symbol: "face.smiling", action: #selector(toggleMascot))
+        mascot.state = runtime.mascotEnabled ? .on : .off
+        menu.addItem(mascot)
         menu.addItem(item(tr("menu.settings"), symbol: "slider.horizontal.3", key: ",", action: #selector(openSettings)))
         menu.addItem(.separator())
 
@@ -312,6 +317,8 @@ extension PopoverController {
     @objc private func refreshNow() { runtime.refresh() }
 
     @objc private func toggleNotifications() { runtime.toggleNotifications() }
+
+    @objc private func toggleMascot() { runtime.setMascotEnabled(!runtime.mascotEnabled) }
 
     @objc private func openSettings() { runtime.openSettings() }
 

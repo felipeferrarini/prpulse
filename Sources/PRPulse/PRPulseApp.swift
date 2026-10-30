@@ -15,10 +15,13 @@ struct PRPulseApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var runtime: AppRuntime?
     private var popover: PopoverController?
+    private var mascot: MascotController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let runtime = AppRuntime()
         self.runtime = runtime
-        popover = PopoverController(runtime: runtime)
+        let popover = PopoverController(runtime: runtime)
+        self.popover = popover
+        mascot = MascotController(runtime: runtime, onOpen: { popover.toggleFromOutside() })
     }
 }

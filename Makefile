@@ -1,9 +1,9 @@
 include scripts/config.sh
 export
 
-VERSION ?= 0.4.2
+VERSION ?= 0.5.0
 
-.PHONY: test app dmg appcast release install screenshots
+.PHONY: test app dmg appcast release install screenshots mascots
 
 test:
 	bash scripts/test.sh
@@ -13,6 +13,10 @@ app:
 
 dmg:
 	bash scripts/make-dmg.sh $(VERSION)
+
+# Redraws the built-in mascots into Sources/PRPulse/Mascots (needs node).
+mascots:
+	node scripts/make-mascots.mjs
 
 # The DMG plus the signed update feed, ready to attach to a GitHub release.
 appcast: dmg

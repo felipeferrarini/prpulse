@@ -20,7 +20,7 @@ let package = Package(
                 "PRPulseCore",
                 .product(name: "Sparkle", package: "Sparkle"),
             ],
-            resources: [.process("Resources")]
+            resources: [.process("Resources"), .copy("Mascots")]
         ),
         .testTarget(
             name: "PRPulseCoreTests",

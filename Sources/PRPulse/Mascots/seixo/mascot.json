@@ -1,0 +1,39 @@
+{
+  "name": "Seixo",
+  "author": "PRPulse",
+  "frame": {
+    "width": 28,
+    "height": 28
+  },
+  "fps": 8,
+  "states": {
+    "calm": {
+      "row": 0,
+      "frames": 24
+    },
+    "sleep": {
+      "row": 1,
+      "frames": 24
+    },
+    "alert": {
+      "row": 2,
+      "frames": 24
+    },
+    "joy": {
+      "row": 3,
+      "frames": 12
+    },
+    "worried": {
+      "row": 4,
+      "frames": 24
+    },
+    "think": {
+      "row": 5,
+      "frames": 12
+    },
+    "sad": {
+      "row": 6,
+      "frames": 24
+    }
+  }
+}

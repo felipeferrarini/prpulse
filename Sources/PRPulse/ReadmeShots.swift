@@ -19,6 +19,7 @@ enum ReadmeShots {
             render(floating(DemoSnapshot.wizard(.exceptions), radius: 16, scheme: scheme), named: "wizard-\(tag)", scheme: scheme, to: directory)
             render(floating(DemoSnapshot.settings(.organization, login: "octocat"), radius: 16, scheme: scheme), named: "settings-\(tag)", scheme: scheme, to: directory)
             render(StatesStrip(scheme: scheme), named: "menubar-\(tag)", scheme: scheme, to: directory)
+            render(MascotsStrip(scheme: scheme), named: "mascots-\(tag)", scheme: scheme, to: directory)
         }
     }
 
@@ -147,6 +148,31 @@ private struct StatesStrip: View {
                         .background(scheme == .dark ? Color(nsColor: NSColor(hex: 0x2A2B33)) : Color(nsColor: NSColor(hex: 0xE9E9EE)), in: RoundedRectangle(cornerRadius: 14))
                     Text(entry.2).font(.system(size: 13, weight: .medium)).foregroundStyle(scheme == .dark ? Color.white.opacity(0.75) : Color.black.opacity(0.65))
                 }
+            }
+        }
+        .padding(24)
+        .environment(\.colorScheme, scheme)
+    }
+}
+
+/// The built-in mascots, side by side, each in the mood that shows it off.
+private struct MascotsStrip: View {
+    let scheme: ColorScheme
+
+    private let moods: [String: MascotMood] = ["brasa": .joy, "byte": .alert, "gota": .calm, "broto": .joy, "nimbo": .sleep, "seixo": .worried]
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ForEach(MascotLibrary.loadPreviews(), id: \.info.id) { pack in
+                VStack(spacing: 6) {
+                    MascotSprite(pack: pack, mood: moods[pack.info.id] ?? .calm, scale: 4)
+                    Text(pack.info.name)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(scheme == .dark ? Color.white.opacity(0.8) : Color.black.opacity(0.7))
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 6)
+                .background(scheme == .dark ? Color(nsColor: NSColor(hex: 0x2A2B33)) : Color(nsColor: NSColor(hex: 0xE9E9EE)), in: RoundedRectangle(cornerRadius: 14))
             }
         }
         .padding(24)

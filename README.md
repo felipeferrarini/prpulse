@@ -119,6 +119,43 @@ Everything can be changed later in **Settings**, which counts your unsaved chang
   </picture>
 </p>
 
+### A mascot in the corner
+
+A little friend lives in the bottom right corner of your screen and reacts to what is going on. Drag it anywhere, click it to open the panel, right click it to change its character or size. It is on by default (turn it off in Settings or from the menu bar icon) and never takes the focus.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/mascots-dark.png">
+    <img src="docs/images/mascots-light.png" alt="The six built-in mascots: Brasa, Byte, Gota, Broto, Nimbo and Seixo" width="760">
+  </picture>
+</p>
+
+| Situation | The mascot |
+| --- | --- |
+| Nothing to do | calm, and asleep after half an hour of quiet |
+| Something needs you | alert, with the count on its shoulder |
+| A new item arrived | jumps for joy and says it in a bubble, next to the system notification |
+| A request, or one of your PRs, waits for 3 days or more | worried, with a sweat drop |
+| Refreshing | thinking |
+| Can't reach GitHub | sad |
+
+Six characters come with the app. To add your own, drop a folder with a `sprites.png` sheet and a `mascot.json` into `~/Library/Application Support/PRPulse/Mascots/` (Settings → Mascot has a button that opens it). The sheet has one row per mood and one column per frame:
+
+```json
+{
+  "name": "My critter",
+  "frame": { "width": 32, "height": 32 },
+  "fps": 8,
+  "states": {
+    "calm": { "row": 0, "frames": 4 },
+    "alert": { "row": 1, "frames": 4 },
+    "joy": { "row": 2, "frames": 6 }
+  }
+}
+```
+
+The moods are `calm`, `sleep`, `alert`, `joy`, `worried`, `think` and `sad`. Only `calm` is required; a mood you leave out plays `calm`. `make mascots` redraws the built-in ones.
+
 ### Quiet by design
 
 - **Bots are ignored.** Comments from CodeRabbit, SonarQube and any account GitHub marks as a bot never count (the list is yours to edit).
@@ -214,6 +251,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 | **Connection** | `gh` login or a personal token |
 | **Organizations** | which organizations to watch |
 | **Exceptions** | repositories and bot accounts to ignore |
+| **Mascot** | show it or not, which character, its size, where it sits, and your own characters |
 | **General** | refresh interval (1 to 30 minutes), popover layout, days before a PR counts as waiting for review, notifications, open at login, global shortcut, automatic updates, run the setup again |
 | **Diagnostics** | version, last sync, GitHub request budget, and a button that copies all of it for a bug report (no token, organization or PR names) |
 

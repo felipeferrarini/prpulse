@@ -13,6 +13,11 @@ final class AppRuntime: ObservableObject {
     @Published private(set) var pulsePhase = 0.0
     @Published private(set) var popoverLayout = PopoverLayout.single
     @Published private(set) var openCount = 0
+    @Published private(set) var mascotConfig: MascotConfig
+    @Published private(set) var mascotState = MascotState(mood: .calm, count: 0)
+    @Published private(set) var mascotBubble: MascotBubble?
+    /// Changes when the mascot should go back to its saved place.
+    @Published private(set) var mascotPlacementToken = 0
 
     let settings = SettingsStore()
     private let model: AppModel?
@@ -24,15 +29,22 @@ final class AppRuntime: ObservableObject {
     private let windows = WindowManager()
     private var observation: AnyCancellable?
     private var ticker: Timer?
+    private var mascotTimer: Timer?
+    private var upToDateSince: Date?
+    private var lastArrival: Arrival?
 
     init() {
         popoverLayout = settings.settings.popoverLayout
+        mascotConfig = MascotConfig(settings.settings)
         updater = SoftwareUpdater(enabled: DemoMode.current == nil)
         updater.apply(automatic: settings.settings.automaticUpdates)
         if let demo = DemoMode.current {
             model = nil
             data = demo.viewData
             refreshIcon()
+            if demo == .fresh && DemoSnapshot.directory == nil {
+                showMascotBubble(title: tr("notification.title.other", 3), detail: "Per-tenant session cache", seconds: 120)
+            }
             writeSnapshotsIfRequested()
         } else {
             let model = AppModel(
@@ -58,6 +70,10 @@ final class AppRuntime: ObservableObject {
             shortcut = GlobalShortcut { [weak self] in self?.onShortcut() }
             shortcut?.setEnabled(settings.settings.globalShortcut)
         }
+        mascotTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.refreshMascot() }
+        }
+        refreshMascot()
     }
 
     var organizations: [String] { settings.settings.orgs }
@@ -112,6 +128,34 @@ final class AppRuntime: ObservableObject {
         }
     }
 
+    var mascotAnchor: MascotAnchor? { settings.settings.mascotAnchor }
+
+    func setMascotEnabled(_ enabled: Bool) {
+        settings.settings.mascotEnabled = enabled
+        refreshMascotConfig()
+    }
+
+    func setMascotPack(_ id: String) {
+        settings.settings.mascotPack = id
+        refreshMascotConfig()
+    }
+
+    func setMascotScale(_ scale: Int) {
+        settings.settings.mascotScale = scale
+        refreshMascotConfig()
+    }
+
+    func setMascotAnchor(_ anchor: MascotAnchor?) {
+        settings.settings.mascotAnchor = anchor
+    }
+
+    func resetMascotPosition() {
+        settings.settings.mascotAnchor = nil
+        mascotPlacementToken += 1
+    }
+
+    var mascotEnabled: Bool { mascotConfig.enabled }
+
     func popoverOpened() {
         openCount += 1
     }
@@ -135,6 +179,7 @@ final class AppRuntime: ObservableObject {
                 onSave: { [weak self] draft in self?.save(draft) },
                 onRedoSetup: { [weak self] in self?.redoSetup() },
                 onCheckForUpdates: { [weak self] in self?.checkForUpdates() },
+                onResetMascotPosition: { [weak self] in self?.resetMascotPosition() },
                 diagnostics: { [weak self] in self?.diagnosticsReport() ?? .sample },
                 onClose: { [weak self] in self?.windows.close(id: Self.settingsWindow) }
             )
@@ -167,8 +212,11 @@ final class AppRuntime: ObservableObject {
         guard let model else { return nil }
         var chosen = draft
         chosen.popoverLayout = popoverLayout
+        chosen.mascotAnchor = settings.settings.mascotAnchor
+        chosen.mascotIntroduced = true
         chosen.hasCompletedSetup = false
         settings.settings = chosen
+        refreshMascotConfig()
         LaunchAtLogin.apply(chosen.launchAtLogin)
         await model.completeSetup()
         guard settings.settings.hasCompletedSetup else { return Self.failureMessage(model) }
@@ -190,7 +238,10 @@ final class AppRuntime: ObservableObject {
         var chosen = draft
         popoverLayout = chosen.popoverLayout
         chosen.hasCompletedSetup = true
+        chosen.mascotAnchor = settings.settings.mascotAnchor
+        chosen.mascotIntroduced = settings.settings.mascotIntroduced
         settings.settings = chosen
+        refreshMascotConfig()
         LaunchAtLogin.apply(chosen.launchAtLogin)
         updater.apply(automatic: chosen.automaticUpdates)
         shortcut?.setEnabled(chosen.globalShortcut)
@@ -221,12 +272,66 @@ final class AppRuntime: ObservableObject {
             isSetupComplete: settings.settings.hasCompletedSetup,
             orgs: settings.settings.orgs
         )
+        if let arrival = model.arrival, arrival != lastArrival {
+            lastArrival = arrival
+            let title = arrival.count == 1 ? tr("notification.title.one") : tr("notification.title.other", arrival.count)
+            showMascotBubble(title: title, detail: arrival.firstTitle, seconds: 6)
+        }
         refreshIcon()
+    }
+
+    // MARK: Mascot
+
+    private func refreshMascotConfig() {
+        let next = MascotConfig(settings.settings)
+        if next != mascotConfig { mascotConfig = next }
+        refreshMascot()
+    }
+
+    private func refreshMascot() {
+        let now = Date()
+        let isQuiet = data.summary?.total == 0 && !data.isOffline && !isFailed(data.state)
+        if isQuiet { upToDateSince = upToDateSince ?? now } else { upToDateSince = nil }
+        let situation = MascotSituation(
+            state: data.state,
+            isOffline: data.isOffline,
+            summary: data.summary,
+            freshUntil: data.freshUntil,
+            isRefreshing: model?.isRefreshing ?? false,
+            upToDateSince: upToDateSince
+        )
+        let next = MascotState(mood: MascotMoodResolver.mood(for: situation, now: now), count: data.summary?.total ?? 0)
+        if next != mascotState { mascotState = next }
+        introduceMascotIfNeeded()
+    }
+
+    private func isFailed(_ state: LoadState) -> Bool {
+        if case .failed = state { true } else { false }
+    }
+
+    /// Existing users get the mascot with an update: it says hello once.
+    private func introduceMascotIfNeeded() {
+        let current = settings.settings
+        guard mascotConfig.enabled, current.hasCompletedSetup, !current.mascotIntroduced else { return }
+        guard DemoSnapshot.directory == nil, DemoMode.current == nil else { return }
+        settings.settings.mascotIntroduced = true
+        let name = MascotLibrary.info(id: current.mascotPack)?.name ?? ""
+        showMascotBubble(title: tr("mascot.intro.title", name), detail: tr("mascot.intro.detail"), seconds: 9)
+    }
+
+    private func showMascotBubble(title: String, detail: String?, seconds: Double) {
+        let bubble = MascotBubble(title: title, detail: detail)
+        mascotBubble = bubble
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            if self?.mascotBubble?.id == bubble.id { self?.mascotBubble = nil }
+        }
     }
 
     private func refreshIcon() {
         iconState = IconState.make(state: data.state, summary: data.summary, freshUntil: data.freshUntil, now: Date())
         if case .fresh = iconState { startTicker() } else { stopTicker() }
+        refreshMascot()
     }
 
     private func startTicker() {

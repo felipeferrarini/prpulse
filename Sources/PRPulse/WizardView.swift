@@ -2,7 +2,7 @@ import PRPulseCore
 import SwiftUI
 
 enum SetupStep: Int, CaseIterable {
-    case welcome, connect, organization, exceptions, general, done
+    case welcome, connect, organization, exceptions, general, mascot, done
 }
 
 struct WizardView: View {
@@ -70,6 +70,7 @@ struct WizardView: View {
         case .organization: OrganizationBody(model: model)
         case .exceptions: ExceptionsBody(model: model)
         case .general: GeneralBody(model: model)
+        case .mascot: MascotBody(model: model)
         case .done: DoneBody(model: model)
         }
     }
@@ -112,7 +113,7 @@ struct WizardView: View {
         switch step {
         case .welcome: slide < Self.slideCount - 1 ? tr("setup.continue") : tr("wizard.start")
         case .connect: isBusy ? tr("setup.checking") : tr("wizard.connect.action")
-        case .general: tr("setup.finish")
+        case .mascot: tr("setup.finish")
         case .done: tr("wizard.done.open")
         default: tr("setup.continue")
         }
@@ -129,7 +130,8 @@ struct WizardView: View {
             if valid { go(to: .organization) }
         case .organization: go(to: .exceptions)
         case .exceptions: go(to: .general)
-        case .general:
+        case .general: go(to: .mascot)
+        case .mascot:
             isBusy = true
             if let failure = await onFinish() { model.reportFailure(failure) } else { go(to: .done) }
             isBusy = false

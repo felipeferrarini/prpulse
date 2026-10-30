@@ -2,6 +2,19 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] - 2026-10-30
+
+### Added
+
+- A mascot that lives in the bottom right corner of the screen, reacts to the state of your pull requests (calm, asleep, alert with a count, jumping for joy with a speech bubble when something new arrives, worried about PRs that wait for 3 days or more, thinking while it refreshes, sad when GitHub is out of reach) and can be dragged anywhere. Click it to open the panel, right click it for its menu.
+- Six characters: Brasa, Byte, Gota, Broto, Nimbo and Seixo. Your own go in `~/Library/Application Support/PRPulse/Mascots/` as a `sprites.png` sheet and a `mascot.json`.
+- A last step in the setup wizard to pick the mascot, a Mascot page in Settings (character, size, position, your own characters) and a Show mascot item in the menu bar icon's menu.
+- `make mascots` redraws the built-in mascots.
+
+### Notes
+
+- The mascot is on by default and says hello once after the update. Turn it off in Settings or from the menu bar icon.
+
 ## [0.4.2] - 2026-10-29
 
 ### Changed

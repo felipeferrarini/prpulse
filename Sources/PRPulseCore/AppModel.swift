@@ -29,6 +29,8 @@ public final class AppModel: ObservableObject {
     @Published public private(set) var lastUpdated: Date?
     @Published public private(set) var isOffline = false
     @Published public private(set) var freshUntil: Date?
+    @Published public private(set) var isRefreshing = false
+    @Published public private(set) var arrival: Arrival?
 
     private let settings: SettingsStore
     private let notified: NotifiedStore
@@ -37,7 +39,6 @@ public final class AppModel: ObservableObject {
     private let clock: Clock
 
     private var retryNotBefore: Date?
-    private var isRefreshing = false
     private var isSettingUp = false
     private var loop: Task<Void, Never>?
 
@@ -145,6 +146,7 @@ public final class AppModel: ObservableObject {
         notified.replace(with: plan.notified)
         guard settings.settings.notificationsEnabled, !plan.toNotify.isEmpty else { return }
         await sink.deliver(plan.toNotify, summary: summary)
+        arrival = Arrival.make(from: plan.toNotify, in: summary, at: clock.now)
         freshUntil = clock.now.addingTimeInterval(Self.freshDuration)
     }
 

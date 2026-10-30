@@ -9,7 +9,8 @@ struct WizardStage: View {
 
     private var showsIcon: Bool { step == .welcome && slide == 0 }
     private var isConnected: Bool { step.rawValue >= SetupStep.organization.rawValue }
-    private var showsToast: Bool { step.rawValue >= SetupStep.general.rawValue && model.draft.notificationsEnabled && isConnected }
+    private var showsMascot: Bool { step == .mascot }
+    private var showsToast: Bool { step.rawValue >= SetupStep.general.rawValue && step != .mascot && model.draft.notificationsEnabled && isConnected }
 
     private var rows: [StageRow] {
         StageRow.samples(repositories: model.repositoryShortNames)
@@ -27,9 +28,13 @@ struct WizardStage: View {
                 .padding(.bottom, 70)
             MiniPopover(org: OrganizationLabel.text(for: model.draft.orgs), rows: rows, isConnected: isConnected, interval: model.draft.refreshMinutes)
                 .padding(.top, 56)
-                .opacity(showsIcon ? 0 : 1)
+                .opacity(showsIcon || showsMascot ? 0 : 1)
                 .offset(y: showsIcon ? 26 : 0)
                 .scaleEffect(showsIcon ? 0.92 : 1, anchor: .top)
+            MascotShowcase(packID: model.draft.mascotPack, isEnabled: model.draft.mascotEnabled)
+                .opacity(showsMascot ? 1 : 0)
+                .padding(.top, 30)
+                .allowsHitTesting(false)
             Toast(count: rows.count, title: rows.first?.title ?? "")
                 .frame(maxHeight: .infinity, alignment: .bottom)
                 .padding(.bottom, 118)
@@ -324,6 +329,7 @@ private struct Caption: View {
         case .organization: (tr("wizard.cap.org.title"), tr("wizard.cap.org.body"))
         case .exceptions: (tr("wizard.cap.exceptions.title"), tr("wizard.cap.exceptions.body"))
         case .general: (tr("wizard.cap.general.title"), tr("wizard.cap.general.body"))
+        case .mascot: (tr("wizard.cap.mascot.title"), tr("wizard.cap.mascot.body"))
         case .done: (tr("wizard.cap.done.title"), tr("wizard.cap.done.body"))
         }
     }

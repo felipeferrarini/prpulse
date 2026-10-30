@@ -25,7 +25,7 @@ struct StepTitle: View {
     }
 }
 
-private struct StepFrame<Content: View>: View {
+struct StepFrame<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {

@@ -12,13 +12,15 @@ private func strings(_ language: String) throws -> [String: String] {
 }
 
 private func keyLiteralsInSources() throws -> Set<String> {
-    let pattern = try NSRegularExpression(pattern: #""((?:popover|error|reason|notification|setup|settings|lane|chip|wait|wizard|menu|diag|row)\.[A-Za-z0-9.]+)""#)
+    let pattern = try NSRegularExpression(pattern: #""((?:popover|error|reason|notification|setup|settings|lane|chip|wait|wizard|menu|diag|row|mascot)\.[A-Za-z0-9.]+)""#)
     var found = Set<String>()
     let files = try #require(FileManager.default.enumerator(at: appSources, includingPropertiesForKeys: nil))
     for case let url as URL in files where url.pathExtension == "swift" {
         let text = try String(contentsOf: url, encoding: .utf8)
         for match in pattern.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
-            if let range = Range(match.range(at: 1), in: text) { found.insert(String(text[range])) }
+            guard let range = Range(match.range(at: 1), in: text) else { continue }
+            let key = String(text[range])
+            if !key.hasSuffix(".json") { found.insert(key) }
         }
     }
     return found

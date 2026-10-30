@@ -46,6 +46,7 @@ O PRPulse consulta o GitHub a cada poucos minutos, mantém **duas listas curtas*
 - **Menu do botão direito:** atualizar agora (⌘R), abrir no GitHub (buscas já filtradas pela sua organização), liga/desliga de notificações, Ajustes (⌘,), Sobre e Sair.
 - **Assistente de configuração** com prévia ao vivo do popover, e uma tela de **Ajustes** que conta as alterações não salvas (⌘S salva).
 - **Atualiza sozinho:** busca versões novas e instala em segundo plano (dá para desligar em Ajustes).
+- **Um mascote no canto da tela:** um amiguinho no canto inferior direito que reage ao que acontece (alerta, comemora item novo, se preocupa com PR antiga, dorme quando está tudo em dia). Dá para arrastar, trocar de personagem e de tamanho, e adicionar o seu em `~/Library/Application Support/PRPulse/Mascots/`. Vem ligado e dá para desligar em Ajustes ou pelo menu do ícone.
 - **Silencioso por padrão:** bots são ignorados, a primeira execução não despeja o backlog antigo em notificações e cada item avisa uma vez.
 
 <table>

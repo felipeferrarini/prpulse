@@ -3,6 +3,20 @@ public enum AuthSource: String, Codable, Sendable {
     case personalToken
 }
 
+/// Where the mascot sits: the distance from the bottom right corner of one screen, so it follows that corner
+/// when the screen changes size.
+public struct MascotAnchor: Codable, Equatable, Sendable {
+    public var screen: String
+    public var right: Double
+    public var bottom: Double
+
+    public init(screen: String, right: Double, bottom: Double) {
+        self.screen = screen
+        self.right = right
+        self.bottom = bottom
+    }
+}
+
 public struct AppSettings: Codable, Equatable, Sendable {
     public static let defaultIgnoredBots = ["coderabbitai", "sonarqubecloud"]
     public static let refreshOptions = [1, 2, 5, 10, 15, 30]
@@ -20,6 +34,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var globalShortcut: Bool
     /// Days without a review before one of my PRs shows as waiting; 0 hides the list.
     public var waitingReviewDays: Int
+    public var mascotEnabled: Bool
+    public var mascotPack: String
+    /// How many screen points one sprite pixel takes: 3, 4 or 6.
+    public var mascotScale: Int
+    public var mascotIntroduced: Bool
+    public var mascotAnchor: MascotAnchor?
     public var hasCompletedSetup: Bool
     public var popoverLayout: PopoverLayout
 
@@ -34,6 +54,11 @@ public struct AppSettings: Codable, Equatable, Sendable {
         automaticUpdates: true,
         globalShortcut: true,
         waitingReviewDays: 2,
+        mascotEnabled: true,
+        mascotPack: "brasa",
+        mascotScale: 4,
+        mascotIntroduced: false,
+        mascotAnchor: nil,
         hasCompletedSetup: false,
         popoverLayout: .single
     )
@@ -49,6 +74,11 @@ public struct AppSettings: Codable, Equatable, Sendable {
         automaticUpdates: Bool = true,
         globalShortcut: Bool = true,
         waitingReviewDays: Int = 2,
+        mascotEnabled: Bool = true,
+        mascotPack: String = "brasa",
+        mascotScale: Int = 4,
+        mascotIntroduced: Bool = false,
+        mascotAnchor: MascotAnchor? = nil,
         hasCompletedSetup: Bool,
         popoverLayout: PopoverLayout = .single
     ) {
@@ -62,6 +92,11 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.automaticUpdates = automaticUpdates
         self.globalShortcut = globalShortcut
         self.waitingReviewDays = waitingReviewDays
+        self.mascotEnabled = mascotEnabled
+        self.mascotPack = mascotPack
+        self.mascotScale = mascotScale
+        self.mascotIntroduced = mascotIntroduced
+        self.mascotAnchor = mascotAnchor
         self.hasCompletedSetup = hasCompletedSetup
         self.popoverLayout = popoverLayout
     }
@@ -80,6 +115,11 @@ public struct AppSettings: Codable, Equatable, Sendable {
         automaticUpdates = try values.decodeIfPresent(Bool.self, forKey: .automaticUpdates) ?? base.automaticUpdates
         globalShortcut = try values.decodeIfPresent(Bool.self, forKey: .globalShortcut) ?? base.globalShortcut
         waitingReviewDays = try values.decodeIfPresent(Int.self, forKey: .waitingReviewDays) ?? base.waitingReviewDays
+        mascotEnabled = try values.decodeIfPresent(Bool.self, forKey: .mascotEnabled) ?? base.mascotEnabled
+        mascotPack = try values.decodeIfPresent(String.self, forKey: .mascotPack) ?? base.mascotPack
+        mascotScale = try values.decodeIfPresent(Int.self, forKey: .mascotScale) ?? base.mascotScale
+        mascotIntroduced = try values.decodeIfPresent(Bool.self, forKey: .mascotIntroduced) ?? base.mascotIntroduced
+        mascotAnchor = try values.decodeIfPresent(MascotAnchor.self, forKey: .mascotAnchor)
         hasCompletedSetup = try values.decodeIfPresent(Bool.self, forKey: .hasCompletedSetup) ?? base.hasCompletedSetup
         popoverLayout = try values.decodeIfPresent(PopoverLayout.self, forKey: .popoverLayout) ?? base.popoverLayout
     }
@@ -87,6 +127,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case orgs, org, authSource, refreshMinutes, ignoredRepos, ignoredBots, notificationsEnabled
         case launchAtLogin, automaticUpdates, globalShortcut, waitingReviewDays, hasCompletedSetup, popoverLayout
+        case mascotEnabled, mascotPack, mascotScale, mascotIntroduced, mascotAnchor
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -101,6 +142,11 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try values.encode(automaticUpdates, forKey: .automaticUpdates)
         try values.encode(globalShortcut, forKey: .globalShortcut)
         try values.encode(waitingReviewDays, forKey: .waitingReviewDays)
+        try values.encode(mascotEnabled, forKey: .mascotEnabled)
+        try values.encode(mascotPack, forKey: .mascotPack)
+        try values.encode(mascotScale, forKey: .mascotScale)
+        try values.encode(mascotIntroduced, forKey: .mascotIntroduced)
+        try values.encodeIfPresent(mascotAnchor, forKey: .mascotAnchor)
         try values.encode(hasCompletedSetup, forKey: .hasCompletedSetup)
         try values.encode(popoverLayout, forKey: .popoverLayout)
     }

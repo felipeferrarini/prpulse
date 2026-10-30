@@ -2,7 +2,7 @@ import PRPulseCore
 import SwiftUI
 
 enum SettingsPage: CaseIterable, Hashable {
-    case connection, organization, exceptions, general, diagnostics
+    case connection, organization, exceptions, general, mascot, diagnostics
 
     var symbol: String {
         switch self {
@@ -10,6 +10,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .organization: "arrow.triangle.branch"
         case .exceptions: "eye"
         case .general: "slider.horizontal.3"
+        case .mascot: "face.smiling"
         case .diagnostics: "stethoscope"
         }
     }
@@ -20,6 +21,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .organization: tr("settings.section.organization")
         case .exceptions: tr("settings.section.exceptions")
         case .general: tr("settings.section.general")
+        case .mascot: tr("settings.section.mascot")
         case .diagnostics: tr("settings.section.diagnostics")
         }
     }
@@ -30,6 +32,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .organization: tr("settings.lead.organization")
         case .exceptions: tr("settings.lead.exceptions")
         case .general: tr("settings.lead.general")
+        case .mascot: tr("settings.lead.mascot")
         case .diagnostics: tr("settings.lead.diagnostics")
         }
     }
@@ -53,6 +56,9 @@ struct SettingsChanges {
         if draft.automaticUpdates != saved.automaticUpdates { pages.append(.general) }
         if draft.globalShortcut != saved.globalShortcut { pages.append(.general) }
         if draft.waitingReviewDays != saved.waitingReviewDays { pages.append(.general) }
+        if draft.mascotEnabled != saved.mascotEnabled { pages.append(.mascot) }
+        if draft.mascotPack != saved.mascotPack { pages.append(.mascot) }
+        if draft.mascotScale != saved.mascotScale { pages.append(.mascot) }
         self.pages = pages
     }
 
@@ -66,6 +72,7 @@ struct SettingsView: View {
     let onSave: (AppSettings) -> Void
     let onRedoSetup: () -> Void
     let onCheckForUpdates: () -> Void
+    let onResetMascotPosition: () -> Void
     let diagnostics: () -> DiagnosticsReport
     let onClose: () -> Void
 
@@ -84,6 +91,7 @@ struct SettingsView: View {
         onSave: @escaping (AppSettings) -> Void,
         onRedoSetup: @escaping () -> Void,
         onCheckForUpdates: @escaping () -> Void = {},
+        onResetMascotPosition: @escaping () -> Void = {},
         diagnostics: @escaping () -> DiagnosticsReport = { .sample },
         onClose: @escaping () -> Void = {}
     ) {
@@ -91,6 +99,7 @@ struct SettingsView: View {
         self.onSave = onSave
         self.onRedoSetup = onRedoSetup
         self.onCheckForUpdates = onCheckForUpdates
+        self.onResetMascotPosition = onResetMascotPosition
         self.diagnostics = diagnostics
         self.onClose = onClose
         _page = LocalState(initialValue: initialPage)
@@ -197,6 +206,7 @@ struct SettingsView: View {
                 case .organization: OrganizationContent(model: model)
                 case .exceptions: ExceptionsContent(model: model)
                 case .general: GeneralContent(model: model, onRedoSetup: onRedoSetup, onCheckForUpdates: onCheckForUpdates)
+                case .mascot: MascotContent(model: model, onResetPosition: onResetMascotPosition)
                 case .diagnostics: DiagnosticsContent(report: diagnostics)
                 }
             }
