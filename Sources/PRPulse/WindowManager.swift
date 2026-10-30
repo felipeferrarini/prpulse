@@ -53,7 +53,6 @@ final class WindowManager {
             window.isOpaque = false
             window.backgroundColor = .clear
             window.hasShadow = true
-            window.isMovableByWindowBackground = true
             return window
         }
     }

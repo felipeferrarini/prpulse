@@ -68,6 +68,27 @@ extension View {
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5))
             .focusEffectDisabled()
+            .modifier(WindowTitleBarDrag())
+    }
+}
+
+/// Moves the window when it is dragged from its top strip, where a system title bar would be, outside the controls.
+/// The hosting view takes every click for SwiftUI, so `isMovableByWindowBackground` never moves these windows.
+private struct WindowTitleBarDrag: ViewModifier {
+    /// The height of a system title bar.
+    private static let height: CGFloat = 28
+
+    @GestureState private var isDragging = false
+
+    func body(content: Content) -> some View {
+        content.gesture(
+            DragGesture().updating($isDragging) { value, isDragging, _ in
+                guard !isDragging, value.startLocation.y <= Self.height,
+                      let event = NSApp.currentEvent, let window = event.window else { return }
+                isDragging = true
+                window.performDrag(with: event)
+            }
+        )
     }
 }
 

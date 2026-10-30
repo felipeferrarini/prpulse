@@ -2,6 +2,12 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- The setup wizard and the Settings window can now be dragged by their top strip, where a title bar would be. They have no title bar, and their content took every click, so they stayed stuck in the middle of the screen.
+
 ## [0.5.3] - 2026-10-30
 
 ### Fixed
