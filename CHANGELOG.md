@@ -2,6 +2,12 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.3] - 2026-10-30
+
+### Fixed
+
+- When finishing the wizard fails (no connection, no access to the organization, SSO not authorized, rate limit), the last step now says why. Before, the message was only shown in the connection step, so *Finish* looked like it did nothing.
+
 ## [0.5.2] - 2026-10-30
 
 ### Fixed

@@ -15,6 +15,7 @@ struct WizardView: View {
     @LocalState private var slide: Int
     @LocalState private var movingForward = true
     @LocalState private var isBusy = false
+    @LocalState private var failure: String?
 
     static let slideCount = 3
     static let size = CGSize(width: 900, height: 590)
@@ -24,6 +25,7 @@ struct WizardView: View {
         model: SetupModel,
         initialStep: SetupStep = .welcome,
         initialSlide: Int = 0,
+        initialFailure: String? = nil,
         onFinish: @escaping () async -> String?,
         onClose: @escaping () -> Void = {},
         onCancel: @escaping () -> Void = {}
@@ -34,6 +36,7 @@ struct WizardView: View {
         self.onCancel = onCancel
         _step = LocalState(initialValue: initialStep)
         _slide = LocalState(initialValue: initialSlide)
+        _failure = LocalState(initialValue: initialFailure)
     }
 
     var body: some View {
@@ -59,6 +62,7 @@ struct WizardView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .clipped()
+            if let failure, step == .mascot { failureNote(failure) }
             footer
         }
     }
@@ -82,6 +86,18 @@ struct WizardView: View {
             insertion: .move(edge: edge).combined(with: .opacity),
             removal: .move(edge: opposite).combined(with: .opacity)
         )
+    }
+
+    private func failureNote(_ message: String) -> some View {
+        Label(message, systemImage: "exclamationmark.triangle.fill")
+            .font(.system(size: 12.5))
+            .foregroundStyle(WizardPalette.danger)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 32)
+            .padding(.top, 8)
+            .transition(.opacity)
+            .accessibilityAddTraits(.isStaticText)
     }
 
     private var footer: some View {
@@ -133,7 +149,12 @@ struct WizardView: View {
         case .general: go(to: .mascot)
         case .mascot:
             isBusy = true
-            if let failure = await onFinish() { model.reportFailure(failure) } else { go(to: .done) }
+            withAnimation(.easeOut(duration: 0.2)) { failure = nil }
+            if let message = await onFinish() {
+                withAnimation(.easeOut(duration: 0.2)) { failure = message }
+            } else {
+                go(to: .done)
+            }
             isBusy = false
         case .done: onClose()
         }

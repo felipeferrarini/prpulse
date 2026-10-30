@@ -29,6 +29,7 @@ enum DemoSnapshot {
         for step in SetupStep.allCases {
             write(wizard(step), named: "wizard-\(step.rawValue + 1)-\(step)", to: directory)
         }
+        write(wizard(.mascot, failure: tr("setup.error.network")), named: "wizard-6-mascot-error", to: directory)
         for page in SettingsPage.allCases {
             write(settings(page), named: "settings-\(page)", to: directory)
         }
@@ -53,7 +54,7 @@ enum DemoSnapshot {
         return SettingsView(model: model, initialPage: page, onSave: { _ in }, onRedoSetup: {})
     }
 
-    static func wizard(_ step: SetupStep, slide: Int = 0) -> some View {
+    static func wizard(_ step: SetupStep, slide: Int = 0, failure: String? = nil) -> some View {
         var settings = AppSettings.defaults
         settings.orgs = step == .organization ? [] : ["acme"]
         settings.ignoredRepos = ["docs", "infra-legacy"]
@@ -64,7 +65,7 @@ enum DemoSnapshot {
             repositories: ["web", "api", "docs", "infra-legacy", "mobile", "design-system", "billing", "ops", "playground", "website"],
             activity: ["acme": 87, "acme-labs": 14, "orbit": 2]
         )
-        return WizardView(model: model, initialStep: step, initialSlide: slide, onFinish: { nil })
+        return WizardView(model: model, initialStep: step, initialSlide: slide, initialFailure: failure, onFinish: { nil })
     }
 
     static func popover(
