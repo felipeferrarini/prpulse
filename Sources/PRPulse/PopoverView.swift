@@ -6,6 +6,8 @@ struct PopoverView: View {
     @Binding var layout: PopoverLayout
     var openToken = 0
     var onMute: (PullRequestRef) -> Void = { _ in }
+    /// The live popover is built anew each time it opens, so it plays its entrance when it appears.
+    var entersOnAppear = false
     let onRefresh: () -> Void
     let onSettings: () -> Void
 
@@ -18,6 +20,7 @@ struct PopoverView: View {
         layout: Binding<PopoverLayout>,
         openToken: Int = 0,
         onMute: @escaping (PullRequestRef) -> Void = { _ in },
+        entersOnAppear: Bool = false,
         initialTab: PopoverTab = .review,
         initialFilter: ActionLane? = nil,
         onRefresh: @escaping () -> Void,
@@ -27,10 +30,12 @@ struct PopoverView: View {
         _layout = layout
         self.openToken = openToken
         self.onMute = onMute
+        self.entersOnAppear = entersOnAppear
         self.onRefresh = onRefresh
         self.onSettings = onSettings
         _tab = LocalState(initialValue: initialTab)
         _filter = LocalState(initialValue: initialFilter)
+        _entered = LocalState(initialValue: !entersOnAppear)
     }
 
     private static let singleWidth: CGFloat = 560
@@ -48,6 +53,7 @@ struct PopoverView: View {
         .overlay(RoundedRectangle(cornerRadius: PopoverChrome.cornerRadius, style: .continuous).strokeBorder(Palette.line))
         .focusEffectDisabled()
         .onChange(of: openToken) { _, _ in popoverOpened() }
+        .onAppear { if entersOnAppear { popoverOpened() } }
     }
 
     private var width: CGFloat {
@@ -177,7 +183,7 @@ private struct SummaryPanes: View {
         return VStack(spacing: 0) {
             paneHeader(kind).folded(isSingle, height: Self.paneHeaderHeight)
             ScrollView {
-                VStack(spacing: 0) {
+                LazyVStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                         PullRequestRow(model: row, isDimmed: isDimmed(row), entranceIndex: index, entered: entered, onMute: { onMute(row.pr.ref) })
                     }

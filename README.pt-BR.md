@@ -157,7 +157,7 @@ make screenshots  # gera de novo as imagens de docs/images com dados fictícios
 make release      # DMG mais o feed de atualização assinado (build/feed/appcast.xml)
 ```
 
-`PRPulseCore` guarda as regras e o cliente do GitHub como código puro e testado; `PRPulse` é a casca do macOS. Rode o app com dados fictícios usando `PRPULSE_DEMO=pending|fresh|empty|error|unconfigured`. Veja a seção [Development](README.md#development) do README em inglês para a estrutura completa.
+`PRPulseCore` guarda as regras e o cliente do GitHub como código puro e testado; `PRPulse` é a casca do macOS. Rode o app com dados fictícios usando `PRPULSE_DEMO=pending|fresh|empty|error|unconfigured|many`. Veja a seção [Development](README.md#development) do README em inglês para a estrutura completa.
 
 ## Contribuindo
 

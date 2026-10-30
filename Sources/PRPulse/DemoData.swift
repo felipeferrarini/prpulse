@@ -2,7 +2,7 @@ import Foundation
 import PRPulseCore
 
 enum DemoMode: String {
-    case pending, fresh, error, empty, unconfigured
+    case pending, fresh, error, empty, unconfigured, many
 
     static var current: DemoMode? {
         guard let value = ProcessInfo.processInfo.environment["PRPULSE_DEMO"] else { return nil }
@@ -17,6 +17,7 @@ enum DemoMode: String {
         case .empty:
             let empty = Summary(mine: [], review: [])
             return ViewData(state: .ready(empty), summary: empty, lastUpdated: now, orgs: ["acme"])
+        case .many: return ViewData(state: .ready(DemoData.crowded), summary: DemoData.crowded, lastUpdated: now, orgs: ["acme"])
         case .error: return ViewData(state: .failed(.unauthenticated), summary: nil, lastUpdated: nil)
         case .unconfigured: return ViewData(state: .idle, summary: nil, lastUpdated: nil, isSetupComplete: false)
         }
@@ -44,6 +45,19 @@ enum DemoData {
             waiting(402, "api", "Cache the exchange rates", hoursAgo: 134, reviewers: ["mia", "sam"]),
             waiting(407, "web", "Lazy load the settings page", hoursAgo: 71, reviewers: []),
         ]
+    )
+
+    /// Ninety pull requests, to see how the panel behaves with a long list.
+    static let crowded = Summary(
+        mine: (0 ..< 40).map { index in
+            item(1000 + index, "api", "Change number \(index)", hoursAgo: Double(index) * 3 + 2, reasons: [[.ciFailed, .conflict, .readyToMerge, .unansweredComment][index % 4]])
+        },
+        review: (0 ..< 45).map { index in
+            review(2000 + index, "web", "Review number \(index)", author: ["sam", "mia", "ivan", "leo"][index % 4], hoursAgo: Double(index) * 2 + 1, requested: index % 5 == 0)
+        },
+        waiting: (0 ..< 5).map { index in
+            waiting(3000 + index, "infra", "Waiting number \(index)", hoursAgo: Double(index) * 20 + 60, reviewers: index % 2 == 0 ? ["mia"] : [])
+        }
     )
 
     private static func snapshot(_ number: Int, _ repo: String, _ title: String, author: String, hoursAgo: Double, draft: Bool) -> PullRequestSnapshot {

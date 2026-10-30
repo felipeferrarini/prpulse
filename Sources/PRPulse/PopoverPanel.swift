@@ -31,6 +31,7 @@ struct PopoverRoot: View {
             layout: Binding(get: { runtime.popoverLayout }, set: { runtime.setPopoverLayout($0) }),
             openToken: runtime.openCount,
             onMute: { runtime.muteRepository(of: $0) },
+            entersOnAppear: true,
             onRefresh: { runtime.refresh() },
             onSettings: onSettings
         )
@@ -46,7 +47,8 @@ final class PopoverController: NSObject, NSWindowDelegate {
     private let runtime: AppRuntime
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private var panel: PopoverPanel!
-    private var hosting: NSHostingView<PopoverRoot>!
+    /// Holds the popover only while the panel is open: a long list of rows is worth tens of megabytes.
+    private var hosting: NSHostingView<AnyView>!
     private var anchorMaxX: CGFloat = 0
     private var anchorTop: CGFloat = 0
     private var cancellables = Set<AnyCancellable>()
@@ -70,13 +72,7 @@ final class PopoverController: NSObject, NSWindowDelegate {
     }
 
     private func buildPanel() {
-        hosting = NSHostingView(rootView: PopoverRoot(
-            runtime: runtime,
-            onSettings: { [weak self] in
-                self?.hide()
-                self?.runtime.openSettings()
-            }
-        ))
+        hosting = NSHostingView(rootView: Self.emptyRoot)
 
         let backdrop = NSVisualEffectView()
         backdrop.material = .popover
@@ -97,6 +93,18 @@ final class PopoverController: NSObject, NSWindowDelegate {
         panel.isReleasedWhenClosed = false
         panel.delegate = self
         panel.onCancel = { [weak self] in self?.hide() }
+    }
+
+    private static let emptyRoot = AnyView(EmptyView())
+
+    private func makeRoot() -> AnyView {
+        AnyView(PopoverRoot(
+            runtime: runtime,
+            onSettings: { [weak self] in
+                self?.hide()
+                self?.runtime.openSettings()
+            }
+        ))
     }
 
     private func buildStatusItem() {
@@ -172,6 +180,8 @@ final class PopoverController: NSObject, NSWindowDelegate {
 
     private func show() {
         guard let buttonWindow = statusItem.button?.window else { return }
+        runtime.popoverOpened()
+        hosting.rootView = makeRoot()
         hosting.layoutSubtreeIfNeeded()
         let size = hosting.fittingSize
         let buttonFrame = buttonWindow.frame
@@ -180,7 +190,6 @@ final class PopoverController: NSObject, NSWindowDelegate {
         panel.setFrame(frame(for: size, on: buttonWindow.screen), display: false)
         panel.makeKeyAndOrderFront(nil)
         panel.invalidateShadow()
-        runtime.popoverOpened()
         followContentSize()
         outsideClick = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             Task { @MainActor in self?.hide() }
@@ -190,6 +199,7 @@ final class PopoverController: NSObject, NSWindowDelegate {
     private func hide() {
         guard panel.isVisible else { return }
         panel.orderOut(nil)
+        hosting.rootView = Self.emptyRoot
         lastHide = Date()
         if let outsideClick { NSEvent.removeMonitor(outsideClick) }
         outsideClick = nil

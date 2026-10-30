@@ -242,7 +242,7 @@ make screenshots  # re-render docs/images with fake data (English UI)
 make release      # DMG plus the signed update feed (build/feed/appcast.xml)
 ```
 
-Run the app with fake data using `PRPULSE_DEMO=pending|fresh|empty|error|unconfigured`. To iterate on the interface without a GitHub account, that is all you need.
+Run the app with fake data using `PRPULSE_DEMO=pending|fresh|empty|error|unconfigured|many`. To iterate on the interface without a GitHub account, that is all you need.
 
 > [!TIP]
 > With only the Command Line Tools installed, use `scripts/test.sh` (what `make test` runs). Plain `swift test` can lose the Swift Testing macro plugin on incremental builds.

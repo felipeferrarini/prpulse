@@ -2,6 +2,13 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.1] - 2026-10-29
+
+### Changed
+
+- Much less memory: the panel's content is built when it opens and dropped when it closes, and the lists only build the rows you can see. With 90 pull requests the app went from 85 MB to 42 MB open and 20 MB idle in our measurements.
+- `PRPULSE_DEMO=many` shows 90 fake pull requests, to try long lists.
+
 ## [0.4.0] - 2026-10-29
 
 ### Added
