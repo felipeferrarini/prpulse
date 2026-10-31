@@ -16,6 +16,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
     public let commits: [CommitSnapshot]
     public let reviews: [ReviewSnapshot]
     public let requestedReviewers: [String]
+    public let stack: StackMembership?
 
     public init(
         ref: PullRequestRef,
@@ -32,7 +33,8 @@ public struct PullRequestSnapshot: Equatable, Sendable {
         comments: [CommentSnapshot],
         commits: [CommitSnapshot],
         reviews: [ReviewSnapshot],
-        requestedReviewers: [String]
+        requestedReviewers: [String],
+        stack: StackMembership? = nil
     ) {
         self.ref = ref
         self.title = title
@@ -49,6 +51,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
         self.commits = commits
         self.reviews = reviews
         self.requestedReviewers = requestedReviewers
+        self.stack = stack
     }
 
     public func with(requestedReviewers: [String]) -> PullRequestSnapshot {
@@ -56,7 +59,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
             ref: ref, title: title, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
             reviewDecision: reviewDecision, mergeable: mergeable, mergeState: mergeState, checks: checks,
             threads: threads, comments: comments, commits: commits, reviews: reviews,
-            requestedReviewers: requestedReviewers
+            requestedReviewers: requestedReviewers, stack: stack
         )
     }
 
@@ -65,7 +68,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
             ref: ref, title: title, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
             reviewDecision: reviewDecision, mergeable: mergeable, mergeState: mergeState, checks: checks,
             threads: threads, comments: comments, commits: commits, reviews: reviews,
-            requestedReviewers: requestedReviewers
+            requestedReviewers: requestedReviewers, stack: stack
         )
     }
 
@@ -74,7 +77,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
             ref: ref, title: title, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
             reviewDecision: reviewDecision, mergeable: mergeable, mergeState: mergeState, checks: checks,
             threads: threads, comments: comments, commits: commits, reviews: reviews,
-            requestedReviewers: requestedReviewers
+            requestedReviewers: requestedReviewers, stack: stack
         )
     }
 }

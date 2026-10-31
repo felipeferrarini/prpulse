@@ -2,6 +2,13 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.0] - 2026-10-31
+
+### Added
+
+- **Stacks.** Pull requests in a GitHub stack are put together in one row, with a layers icon, how many there are, and their place (`1/3`) on each of them. Click it and the list becomes that stack, bottom first, with two actions: review the stack as a whole (one conversation that sees all of its pull requests, from the bottom to the top) or review each one. The same goes for your own pull requests. A host without stacks, like GitHub Enterprise Server, shows the plain list.
+- **Several pull requests at once.** **Select** above the list of reviews puts a checkbox on each row (a stack ticks all of its own), and **Review together** gives the chosen ones, from any repository, to one conversation, or **Review each** starts one for each. A review of several repositories opens in the first one's folder and can read the clones of the others, but not write to them. The request text has a new `{urls}` placeholder for the list.
+
 ## [0.7.0] - 2026-10-30
 
 ### Added

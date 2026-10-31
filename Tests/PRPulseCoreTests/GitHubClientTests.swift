@@ -322,3 +322,51 @@ private func repositoriesResponse(_ names: [String], next: String? = nil) -> Dat
     #expect(activity.map(\.login) == ["b", "a", "c"])
     #expect(activity.map(\.recentPullRequests) == [40, 2, 0])
 }
+
+// MARK: Stacks
+
+private func stackedPR(number: Int, position: Int) -> [String: Any] {
+    var node = minimalPR(number: number, repo: "api")
+    node["stack"] = ["number": 175, "size": 3, "baseRefName": "main"]
+    node["stackEntry"] = ["position": position]
+    return node
+}
+
+@Test func theSearchAsksForTheStackOfEveryPullRequest() async throws {
+    let transport = FakeTransport { _, _ in emptySearch() }
+
+    _ = try await client(transport).reviewPullRequests(org: "acme", viewer: "me", ignoredRepos: [])
+
+    #expect(transport.calls.allSatisfy { $0.query.contains("stack {") && $0.query.contains("stackEntry {") })
+}
+
+@Test func aPullRequestInAStackCarriesItsPlaceInIt() async throws {
+    let transport = FakeTransport { _, _ in searchResponse(nodes: [stackedPR(number: 12, position: 2), minimalPR(number: 13)]) }
+
+    let prs = try await client(transport).reviewPullRequests(org: "acme", viewer: "me", ignoredRepos: [])
+
+    let stacked = try #require(prs.first { $0.ref.number == 12 })
+    #expect(stacked.stack == StackMembership(number: 175, size: 3, position: 2, baseRef: "main"))
+    #expect(try #require(prs.first { $0.ref.number == 13 }).stack == nil)
+}
+
+@Test func aHostWithoutStacksIsAskedAgainWithoutThemAndRemembersIt() async throws {
+    let refusal = json(["errors": [["message": "Field 'stack' doesn't exist on type 'PullRequest'"]]])
+    let transport = FakeTransport { query, _ in query.contains("stack {") ? refusal : searchResponse(nodes: [minimalPR(number: 5)]) }
+    let github = client(transport)
+
+    let first = try await github.reviewPullRequests(org: "acme", viewer: "me", ignoredRepos: [])
+    let callsAfterFirst = transport.calls.count
+    _ = try await github.reviewPullRequests(org: "acme", viewer: "me", ignoredRepos: [])
+
+    #expect(first.map(\.ref.number) == [5])
+    #expect(transport.calls.dropFirst(callsAfterFirst).allSatisfy { !$0.query.contains("stack {") })
+}
+
+@Test func anErrorThatIsNotAboutStacksIsNotHidden() async throws {
+    let transport = FakeTransport { _, _ in json(["errors": [["message": "Something else broke"]]]) }
+
+    await #expect(throws: GitHubError.malformed("Something else broke")) {
+        try await client(transport).reviewPullRequests(org: "acme", viewer: "me", ignoredRepos: [])
+    }
+}

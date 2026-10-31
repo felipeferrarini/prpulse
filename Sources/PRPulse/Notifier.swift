@@ -36,10 +36,10 @@ final class Notifier: NSObject, NotificationSink, UNUserNotificationCenterDelega
         let content = UNMutableNotificationContent()
         if let approval = run.approval {
             content.title = tr("agents.approval.title")
-            content.body = "\(run.ref.shortName) \(approval.tool): \(approval.summary.split(separator: "\n").first.map(String.init) ?? "")"
+            content.body = "\(run.isGroup ? run.title : run.ref.shortName) \(approval.tool): \(approval.summary.split(separator: "\n").first.map(String.init) ?? "")"
         } else {
             content.title = run.state == .finished ? tr("agents.done.title") : tr("agents.run.failedTitle")
-            content.body = "\(run.ref.shortName) \(run.title)"
+            content.body = run.isGroup ? run.title : "\(run.ref.shortName) \(run.title)"
         }
         content.userInfo = [Self.runKey: run.id.uuidString]
         try? await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))

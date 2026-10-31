@@ -10,6 +10,10 @@ struct PopoverView: View {
     var onReview: ((PullRequestSnapshot) -> Void)?
     /// Set when the main action runs in the background and a draft in Claude Desktop is the other choice.
     var onReviewInDesktop: ((PullRequestSnapshot) -> Void)?
+    /// Set when several pull requests can be given to an agent as one: a whole stack, or the ones the viewer chose.
+    var onReviewGroup: (([PullRequestSnapshot], ReviewRequest.Scope) -> Void)?
+    /// Set when several pull requests can each be given to an agent.
+    var onReviewEach: (([PullRequestSnapshot]) -> Void)?
     var agentRuns = AgentRunList()
     var agentActions: AgentActions?
     var agentFocus = AgentFocus()
@@ -33,6 +37,8 @@ struct PopoverView: View {
         onMute: @escaping (PullRequestRef) -> Void = { _ in },
         onReview: ((PullRequestSnapshot) -> Void)? = nil,
         onReviewInDesktop: ((PullRequestSnapshot) -> Void)? = nil,
+        onReviewGroup: (([PullRequestSnapshot], ReviewRequest.Scope) -> Void)? = nil,
+        onReviewEach: (([PullRequestSnapshot]) -> Void)? = nil,
         agentRuns: AgentRunList = AgentRunList(),
         agentActions: AgentActions? = nil,
         agentFocus: AgentFocus = AgentFocus(),
@@ -49,6 +55,8 @@ struct PopoverView: View {
         self.onMute = onMute
         self.onReview = onReview
         self.onReviewInDesktop = onReviewInDesktop
+        self.onReviewGroup = onReviewGroup
+        self.onReviewEach = onReviewEach
         self.agentRuns = agentRuns
         self.agentActions = agentActions
         self.agentFocus = agentFocus
@@ -125,7 +133,7 @@ struct PopoverView: View {
                     .folded(!isSingle, height: 50)
                 LaneFilterBar(lanes: summary.activeLanes, summary: summary, selection: laneSelection(summary))
                     .padding(.bottom, 12)
-                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, entered: entered, showsOwner: data.showsOwner, onMute: onMute, onReview: onReview, onReviewInDesktop: onReviewInDesktop)
+                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, entered: entered, showsOwner: data.showsOwner, onMute: onMute, onReview: onReview, onReviewInDesktop: onReviewInDesktop, onReviewGroup: onReviewGroup, onReviewEach: onReviewEach, onContentChange: onContentChange)
             }
         }
     }
@@ -189,8 +197,14 @@ private struct SummaryPanes: View {
     let onMute: (PullRequestRef) -> Void
     let onReview: ((PullRequestSnapshot) -> Void)?
     let onReviewInDesktop: ((PullRequestSnapshot) -> Void)?
+    let onReviewGroup: (([PullRequestSnapshot], ReviewRequest.Scope) -> Void)?
+    let onReviewEach: (([PullRequestSnapshot]) -> Void)?
+    let onContentChange: () -> Void
 
     @LocalState private var heights: [PopoverTab: CGFloat] = [:]
+    @LocalState private var openStacks: [PopoverTab: StackKey] = [:]
+    @LocalState private var selecting = false
+    @LocalState private var selection: Set<PullRequestRef> = []
 
     private static let minListHeight: CGFloat = 120
     private static let maxListHeight: CGFloat = 410
@@ -200,6 +214,7 @@ private struct SummaryPanes: View {
 
     private var isSingle: Bool { layout == .single }
     private var paneWidth: CGFloat { isSingle ? Self.singleWidth : Self.splitWidth / 2 }
+    private var canSelect: Bool { onReviewGroup != nil || onReviewEach != nil }
 
     private var listHeight: CGFloat {
         let tallest = max(heights[.review] ?? 0, heights[.mine] ?? 0)
@@ -219,20 +234,27 @@ private struct SummaryPanes: View {
         .onPreferenceChange(PaneHeightKey.self) { heights = $0 }
         .animation(PopoverMotion.glide, value: layout)
         .animation(PopoverMotion.spring, value: tab)
+        .onChange(of: openStacks) { _, _ in onContentChange() }
+        .onChange(of: selecting) { _, _ in onContentChange() }
     }
 
+    // MARK: Panes
+
     private func pane(_ kind: PopoverTab) -> some View {
-        let rows = rows(for: kind)
+        let entries = entries(for: kind)
+        let open = openGroup(in: entries, for: kind)
         let hidden = isSingle && tab != kind
         return VStack(spacing: 0) {
-            paneHeader(kind).folded(isSingle, height: Self.paneHeaderHeight)
+            if let open {
+                stackHeader(open, kind)
+                stackActions(open, kind)
+            } else {
+                paneHeader(kind).folded(isSingle, height: Self.paneHeaderHeight)
+                if isSingle && kind == .review && canSelect && !summary.review.isEmpty { selectRow }
+            }
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                        PullRequestRow(model: row, isDimmed: isDimmed(row), entranceIndex: index, entered: entered, onMute: { onMute(row.pr.ref) }, onReview: onReview.map { review in { review(row.pr) } }, onReviewInDesktop: onReviewInDesktop.map { review in { review(row.pr) } })
-                    }
-                    if kind == .mine && !summary.waiting.isEmpty { waitingSection(startIndex: rows.count) }
-                    if rows.isEmpty && !(kind == .mine && !summary.waiting.isEmpty) { PaneEmptyText() }
+                    if let open { stackRows(open, kind) } else { listRows(entries, kind) }
                 }
                 .padding(.vertical, 4)
                 .background(GeometryReader { proxy in
@@ -240,10 +262,181 @@ private struct SummaryPanes: View {
                 })
             }
             .frame(height: listHeight)
+            if kind == .review && selecting { selectionBar }
         }
         .accessibilityHidden(hidden)
         .allowsHitTesting(!hidden)
     }
+
+    @ViewBuilder private func listRows(_ entries: [ListEntry<RowModel>], _ kind: PopoverTab) -> some View {
+        ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+            switch entry {
+            case .single(let row, _): singleRow(row, index: index, kind: kind)
+            case .stack(let group): stackRow(group, index: index, kind: kind)
+            }
+        }
+        if kind == .mine && !summary.waiting.isEmpty { waitingSection(startIndex: entries.count) }
+        if entries.isEmpty && !(kind == .mine && !summary.waiting.isEmpty) { PaneEmptyText() }
+    }
+
+    private func singleRow(_ row: RowModel, index: Int, kind: PopoverTab) -> some View {
+        PullRequestRow(
+            model: row, isDimmed: isDimmed(row), entranceIndex: index, entered: entered,
+            onMute: { onMute(row.pr.ref) },
+            onReview: onReview.map { review in { review(row.pr) } },
+            onReviewInDesktop: onReviewInDesktop.map { review in { review(row.pr) } },
+            selection: selection(of: row, kind: kind)
+        )
+    }
+
+    private func stackRow(_ group: StackGroup<RowModel>, index: Int, kind: PopoverTab) -> some View {
+        let model = RowModel.stack(group, showsOwner: showsOwner)
+        return PullRequestRow(
+            model: model, isDimmed: isDimmed(model), entranceIndex: index, entered: entered,
+            onOpen: { open(group.key, kind: kind) },
+            selection: selection(of: group, kind: kind),
+            groupActions: actions(for: group, kind: kind)
+        )
+    }
+
+    private func stackRows(_ group: StackGroup<RowModel>, _ kind: PopoverTab) -> some View {
+        ForEach(Array(group.items.enumerated()), id: \.element.id) { index, row in
+            singleRow(row, index: index, kind: kind)
+        }
+    }
+
+    // MARK: The stack that is open
+
+    private func stackHeader(_ group: StackGroup<RowModel>, _ kind: PopoverTab) -> some View {
+        HStack(spacing: 10) {
+            Button { close(kind) } label: {
+                Label(kind == .review ? tr("popover.review") : tr("popover.mine"), systemImage: "chevron.left")
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(Palette.review)
+            }
+            .buttonStyle(.plain)
+            Text(tr("stack.header", showsOwner ? "\(group.key.owner)/\(group.key.repo)" : group.key.repo))
+                .font(.system(size: 12.5))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 0)
+            Text(group.isComplete ? tr("chip.stack", group.size) : tr("stack.partial", group.members.count, group.size))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 14)
+        .frame(height: Self.paneHeaderHeight, alignment: .center)
+    }
+
+    @ViewBuilder private func stackActions(_ group: StackGroup<RowModel>, _ kind: PopoverTab) -> some View {
+        if kind == .review, onReviewGroup != nil || onReviewEach != nil {
+            HStack(spacing: 8) {
+                if let onReviewGroup {
+                    PillButton(title: tr("stack.review"), symbol: "sparkles") { onReviewGroup(group.members.map(\.pr), .stack) }
+                }
+                if let onReviewEach {
+                    PillButton(title: tr("stack.reviewEach"), symbol: "list.bullet") { onReviewEach(group.members.map(\.pr)) }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 8)
+        }
+    }
+
+    private func entries(for kind: PopoverTab) -> [ListEntry<RowModel>] {
+        StackGrouping.entries(rows(for: kind), pr: \.pr)
+    }
+
+    private func openGroup(in entries: [ListEntry<RowModel>], for kind: PopoverTab) -> StackGroup<RowModel>? {
+        guard let key = openStacks[kind] else { return nil }
+        for case .stack(let group) in entries where group.key == key { return group }
+        return nil
+    }
+
+    private func open(_ key: StackKey, kind: PopoverTab) {
+        withAnimation(PopoverMotion.spring) { openStacks[kind] = key }
+    }
+
+    private func close(_ kind: PopoverTab) {
+        withAnimation(PopoverMotion.spring) { openStacks[kind] = nil }
+    }
+
+    private func actions(for group: StackGroup<RowModel>, kind: PopoverTab) -> [RowAction] {
+        var actions: [RowAction] = []
+        if kind == .review, let onReviewGroup {
+            actions.append(RowAction(id: "stack", title: tr("stack.review"), symbol: "sparkles") { onReviewGroup(group.members.map(\.pr), .stack) })
+        }
+        if kind == .review, let onReviewEach {
+            actions.append(RowAction(id: "each", title: tr("stack.reviewEach"), symbol: "list.bullet") { onReviewEach(group.members.map(\.pr)) })
+        }
+        actions.append(RowAction(id: "open", title: tr("stack.open"), symbol: "arrow.up.right.square") { NSWorkspace.shared.open(group.bottom.url) })
+        actions.append(RowAction(id: "copy", title: tr("stack.copy"), symbol: "link") { Self.copyLinks(of: group) })
+        return actions
+    }
+
+    private static func copyLinks(of group: StackGroup<RowModel>) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(group.members.map(\.pr.url.absoluteString).joined(separator: "\n"), forType: .string)
+    }
+
+    // MARK: Choosing several
+
+    private func selection(of row: RowModel, kind: PopoverTab) -> RowSelection? {
+        guard selecting, kind == .review, row.kind == .review else { return nil }
+        let ref = row.pr.ref
+        return RowSelection(state: selection.contains(ref) ? .on : .off) { toggle(ref) }
+    }
+
+    private func selection(of group: StackGroup<RowModel>, kind: PopoverTab) -> RowSelection? {
+        guard selecting, kind == .review else { return nil }
+        let refs = group.refs
+        let chosen = refs.filter(selection.contains).count
+        let state: SelectionState = chosen == 0 ? .off : (chosen == refs.count ? .on : .partial)
+        return RowSelection(state: state) {
+            if state == .on { selection.subtract(refs) } else { selection.formUnion(refs) }
+        }
+    }
+
+    private func toggle(_ ref: PullRequestRef) {
+        if !selection.insert(ref).inserted { selection.remove(ref) }
+    }
+
+    private func chosenPullRequests() -> [PullRequestSnapshot] {
+        summary.review.map(\.pr).filter { selection.contains($0.ref) }
+    }
+
+    private func endSelecting() {
+        withAnimation(PopoverMotion.spring) {
+            selecting = false
+            selection = []
+        }
+    }
+
+    private var selectionBar: some View {
+        let chosen = chosenPullRequests()
+        return HStack(spacing: 8) {
+            Text(tr("batch.count", chosen.count)).font(.system(size: 12)).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            if let onReviewEach {
+                PillButton(title: tr("batch.each"), symbol: "list.bullet", isEnabled: !chosen.isEmpty) {
+                    onReviewEach(chosen)
+                    endSelecting()
+                }
+            }
+            if let onReviewGroup {
+                PillButton(title: tr("batch.together"), symbol: "sparkles", isEnabled: chosen.count > 1) {
+                    onReviewGroup(chosen, .together)
+                    endSelecting()
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 44)
+        .overlay(alignment: .top) { Rectangle().fill(Palette.line).frame(height: 1) }
+    }
+
+    // MARK: Headers and the rest
 
     private func waitingSection(startIndex: Int) -> some View {
         let rows = summary.waiting.map { RowModel.waiting($0, showsOwner: showsOwner) }
@@ -271,11 +464,35 @@ private struct SummaryPanes: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(isReview ? Palette.review : Color.primary)
             Spacer()
+            if isReview && canSelect && !summary.review.isEmpty && !isSingle { selectButton }
             Text(isReview ? tr("popover.pane.review.count", summary.review.count) : tr("popover.pane.mine.count", summary.mine.count))
                 .font(.system(size: 12)).foregroundStyle(.secondary)
         }
         .padding(.horizontal, 14)
         .frame(height: Self.paneHeaderHeight, alignment: .center)
+    }
+
+    /// Where the button to choose several sits when the header of the pane is folded into the tabs.
+    private var selectRow: some View {
+        HStack {
+            Spacer(minLength: 0)
+            selectButton
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 26)
+    }
+
+    private var selectButton: some View {
+        Button {
+            if selecting { endSelecting() } else { withAnimation(PopoverMotion.spring) { selecting = true } }
+        } label: {
+            Label(selecting ? tr("batch.cancel") : tr("batch.select"), systemImage: selecting ? "xmark" : "checklist")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Palette.review)
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, isSingle ? 0 : 6)
+        .help(tr("batch.help"))
     }
 
     private func rows(for kind: PopoverTab) -> [RowModel] {
@@ -288,6 +505,28 @@ private struct SummaryPanes: View {
     private func isDimmed(_ row: RowModel) -> Bool {
         guard let filter else { return false }
         return !row.lanes.contains(filter)
+    }
+}
+
+/// A small button with an icon, in the colour of the actions.
+struct PillButton: View {
+    let title: String
+    let symbol: String
+    var isEnabled = true
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(Palette.review)
+                .padding(.horizontal, 8)
+                .frame(height: 24)
+                .background(Palette.review.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.4)
     }
 }
 

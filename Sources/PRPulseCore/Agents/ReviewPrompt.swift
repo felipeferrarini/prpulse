@@ -3,12 +3,15 @@ import Foundation
 /// The words sent to the agent. Only the pull request's address and number go in, never its title or body: those
 /// come from other people and could carry instructions.
 public enum ReviewPrompt {
-    public static let placeholders = ["{url}", "{repo}", "{number}", "{skill}"]
+    public static let placeholders = ["{url}", "{urls}", "{repo}", "{number}", "{skill}"]
 
-    private static let token = try! NSRegularExpression(pattern: #"\{(url|repo|number|skill)\}"#)
+    private static let token = try! NSRegularExpression(pattern: #"\{(urls|url|repo|number|skill)\}"#)
 
+    /// A request for several pull requests always lists all of them: `{urls}` says where, and a text without it gets the list at the end.
     public static func render(_ template: String, for request: ReviewRequest, skill: String? = nil) -> String {
+        let list = request.targets.map { "- \($0.url.absoluteString)" }.joined(separator: "\n")
         let values = [
+            "urls": list,
             "url": request.url.absoluteString,
             "repo": "\(request.ref.owner)/\(request.ref.repo)",
             "number": String(request.ref.number),
@@ -22,7 +25,9 @@ public enum ReviewPrompt {
             result += values[String(template[name])] ?? ""
             cursor = whole.upperBound
         }
-        return result + template[cursor...]
+        result += template[cursor...]
+        guard request.isGroup, !template.contains("{urls}") else { return result }
+        return result + "\n\n" + list
     }
 
     /// The viewer's own text wins; otherwise the one that names the skill, when there is one.

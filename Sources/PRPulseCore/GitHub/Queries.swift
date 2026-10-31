@@ -43,17 +43,24 @@ enum Queries {
     }
     """
 
-    static func search(_ fragment: PRFragment) -> String {
+    /// `includesStacks` asks for the stack of every pull request; a host that does not know the field is asked without it.
+    static func search(_ fragment: PRFragment, includesStacks: Bool = true) -> String {
         """
         query($q: String!, $first: Int!, $after: String) {
           search(query: $q, type: ISSUE, first: $first, after: $after) {
             issueCount
             pageInfo { hasNextPage endCursor }
-            nodes { ... on PullRequest { \(fields(fragment)) } }
+            nodes { ... on PullRequest { \(fields(fragment))\(includesStacks ? stackFields : "") } }
           }
         }
         """
     }
+
+    private static let stackFields = """
+
+    stack { number size baseRefName }
+    stackEntry { position }
+    """
 
     static func checks(for refs: [PullRequestRef]) -> String {
         let aliases = refs.enumerated().map { index, ref in

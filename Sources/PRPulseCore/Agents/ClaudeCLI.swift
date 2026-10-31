@@ -35,7 +35,7 @@ public enum ClaudeCLI {
     /// Settings for one run in the automatic mode, as JSON for `--settings`. Two layers, because the classifier alone let a shell
     /// redirect write a file: a sandbox that makes the folder read-only to every command and lets them reach GitHub and nothing
     /// else, and what the classifier is told about this session (`$defaults` keeps Claude's own rules).
-    public static func automaticSettings(folder: String) -> String {
+    public static func automaticSettings(folders: [String]) -> String {
         let settings: [String: Any] = [
             "sandbox": [
                 "enabled": true,
@@ -43,7 +43,7 @@ public enum ClaudeCLI {
                 "allowUnsandboxedCommands": false,
                 "enableWeakerNetworkIsolation": true,
                 "network": ["allowedDomains": ["api.github.com", "github.com"]],
-                "filesystem": ["denyWrite": [folder], "denyRead": unreadablePaths],
+                "filesystem": ["denyWrite": folders, "denyRead": unreadablePaths],
             ],
             "autoMode": [
                 "environment": [
@@ -65,24 +65,30 @@ public enum ClaudeCLI {
     /// What every run has in common. Messages go in as JSON lines through standard input, so nothing the viewer or a pull
     /// request writes can pass for an option. A tool outside `readOnlyTools` is not run on its own: in the automatic mode Claude's
     /// classifier decides, inside the limits above; otherwise the agent asks and the viewer answers.
-    private static func conversation(_ approval: ReviewApproval, folder: String) -> [String] {
+    private static func conversation(_ approval: ReviewApproval, folders: [String]) -> [String] {
         let mode: [String] = switch approval {
         case .ask: ["--permission-mode", "default"]
-        case .automatic: ["--permission-mode", "auto", "--disallowedTools", neverAllowedTools.joined(separator: ","), "--settings", automaticSettings(folder: folder)]
+        case .automatic: ["--permission-mode", "auto", "--disallowedTools", neverAllowedTools.joined(separator: ","), "--settings", automaticSettings(folders: folders)]
         }
+        let others = folders.dropFirst().isEmpty ? [] : ["--add-dir"] + folders.dropFirst()
         return ["-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose"]
             + mode
             + ["--permission-prompt-tool", "stdio", "--allowedTools", readOnlyTools.joined(separator: ",")]
+            + others
     }
 
-    /// Arguments for a review that works in `folder`.
-    public static func reviewArguments(sessionID: UUID, name: String, folder: String, approval: ReviewApproval = .automatic) -> [String] {
-        conversation(approval, folder: folder) + ["--session-id", sessionID.uuidString.lowercased(), "--name", name]
+    /// Arguments for a review that works in `folder` and can read `extraFolders` too, the clones of other repositories.
+    public static func reviewArguments(
+        sessionID: UUID, name: String, folder: String, extraFolders: [String] = [], approval: ReviewApproval = .automatic
+    ) -> [String] {
+        conversation(approval, folders: [folder] + extraFolders) + ["--session-id", sessionID.uuidString.lowercased(), "--name", name]
     }
 
     /// Arguments to talk again with a review whose process is gone.
-    public static func resumeArguments(sessionID: String, folder: String, approval: ReviewApproval = .automatic) -> [String] {
-        conversation(approval, folder: folder) + ["--resume", sessionID]
+    public static func resumeArguments(
+        sessionID: String, folder: String, extraFolders: [String] = [], approval: ReviewApproval = .automatic
+    ) -> [String] {
+        conversation(approval, folders: [folder] + extraFolders) + ["--resume", sessionID]
     }
 
     /// Where `PATH` points for the agent: a Mac app is not started from a shell, so `gh` and `git` would not be found.
@@ -114,9 +120,12 @@ public enum ClaudeCLI {
     }
 
     /// What to say to continue a review in Claude Desktop, where a link can only carry text.
-    public static func continuationPrompt(url: URL, review: String, limit: Int = 6000) -> String {
+    public static func continuationPrompt(urls: [URL], review: String, limit: Int = 6000) -> String {
         let text = review.count > limit ? String(review.prefix(limit)) + "\n[…]" : review
-        return "I asked for a review of this pull request: \(url.absoluteString)\nThis is what it said:\n\n\(text)\n\nLet's go through the points together. Start with the most serious one."
+        let subject = urls.count == 1
+            ? "this pull request: \(urls[0].absoluteString)"
+            : "these pull requests:\n" + urls.map { "- \($0.absoluteString)" }.joined(separator: "\n")
+        return "I asked for a review of \(subject)\nThis is what it said:\n\n\(text)\n\nLet's go through the points together. Start with the most serious one."
     }
 
     /// A script Terminal opens to pick a review up again where it was.

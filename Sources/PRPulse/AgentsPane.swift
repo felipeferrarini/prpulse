@@ -119,7 +119,7 @@ private struct AgentRunRow: View {
         HStack(spacing: 11) {
             lead.frame(width: 26, height: 26)
             VStack(alignment: .leading, spacing: 1) {
-                Text("\(run.ref.repo) #\(run.ref.number)  \(run.title)").font(.system(size: 13, weight: .medium)).lineLimit(1)
+                Text(Self.heading(of: run)).font(.system(size: 13, weight: .medium)).lineLimit(1)
                 Text(subtitle).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer(minLength: 6)
@@ -178,6 +178,10 @@ private struct AgentRunRow: View {
         .accessibilityLabel(run.isRunning ? tr("agents.run.cancel") : tr("agents.run.remove"))
     }
 
+    private static func heading(of run: AgentRun) -> String {
+        run.isGroup ? run.title : "\(run.ref.repo) #\(run.ref.number)  \(run.title)"
+    }
+
     static func elapsed(from start: Date, to end: Date) -> String {
         let seconds = max(Int(end.timeIntervalSince(start)), 0)
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
@@ -225,7 +229,7 @@ private struct AgentRunDetail: View {
                     .foregroundStyle(Palette.review)
             }
             .buttonStyle(.plain)
-            Text("\(run.ref.owner)/\(run.ref.repo) #\(run.ref.number)  \(run.title)")
+            Text(run.isGroup ? run.title : "\(run.ref.owner)/\(run.ref.repo) #\(run.ref.number)  \(run.title)")
                 .font(.system(size: 12.5))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)

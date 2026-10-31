@@ -249,3 +249,98 @@ private let alwaysFolder: (String) -> Bool = { _ in true }
 @Test func ownerKeyIsTheOwnerInLowerCase() {
     #expect(web.ownerKey == "acme")
 }
+
+// MARK: Several pull requests
+
+private let second = ReviewTarget(
+    ref: PullRequestRef(owner: "acme", repo: "api", number: 77),
+    url: URL(string: "https://github.com/acme/api/pull/77")!
+)
+private let first = ReviewTarget(ref: request.ref, url: request.url)
+
+@Test func aRequestForSeveralPullRequestsKeepsTheFirstAsItsNameAndTheOrder() {
+    let group = ReviewRequest(targets: [first, second], scope: .stack)
+
+    #expect(group.ref == request.ref)
+    #expect(group.url == request.url)
+    #expect(group.isGroup)
+    #expect(group.scope == .stack)
+    #expect(group.targets == [first, second])
+}
+
+@Test func aRequestForOnePullRequestIsAlwaysSingle() {
+    let one = ReviewRequest(targets: [first], scope: .together)
+
+    #expect(one.scope == .single)
+    #expect(!one.isGroup)
+}
+
+@Test func theUrlsPlaceholderListsEveryPullRequestOnePerLine() {
+    let group = ReviewRequest(targets: [first, second], scope: .together)
+
+    let text = ReviewPrompt.render("Review:\n{urls}\nThanks.", for: group)
+
+    #expect(text == "Review:\n- https://github.com/acme/web/pull/412\n- https://github.com/acme/api/pull/77\nThanks.")
+}
+
+@Test func aTextWithoutTheUrlsPlaceholderGetsTheListAtTheEndWhenThereAreSeveral() {
+    let group = ReviewRequest(targets: [first, second], scope: .together)
+
+    let text = ReviewPrompt.render("Review {url}", for: group)
+
+    #expect(text == "Review https://github.com/acme/web/pull/412\n\n- https://github.com/acme/web/pull/412\n- https://github.com/acme/api/pull/77")
+}
+
+@Test func aSinglePullRequestIsNotGivenAListItDidNotAskFor() {
+    #expect(ReviewPrompt.render("Review {url}", for: request) == "Review https://github.com/acme/web/pull/412")
+}
+
+@Test func theFoldersOfTheOtherRepositoriesAreAddedAndMadeUnwritableToo() throws {
+    let arguments = ClaudeCLI.reviewArguments(sessionID: UUID(), name: "Review", folder: "/code/web", extraFolders: ["/code/api", "/code/docs"])
+
+    let added = try #require(arguments.firstIndex(of: "--add-dir"))
+    #expect(Array(arguments[(added + 1)...].prefix(2)) == ["/code/api", "/code/docs"])
+    let text = try #require(zip(arguments, arguments.dropFirst()).first { $0.0 == "--settings" }?.1)
+    let settings = try #require(JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
+    let filesystem = try #require((settings["sandbox"] as? [String: Any])?["filesystem"] as? [String: Any])
+    #expect(filesystem["denyWrite"] as? [String] == ["/code/web", "/code/api", "/code/docs"])
+}
+
+@Test func withoutOtherFoldersThereIsNoAddDir() {
+    #expect(!ClaudeCLI.reviewArguments(sessionID: UUID(), name: "Review", folder: "/code/web").contains("--add-dir"))
+}
+
+@Test func theFollowUpOfAGroupSeesTheSameFolders() {
+    let arguments = ClaudeCLI.resumeArguments(sessionID: "abc", folder: "/code/web", extraFolders: ["/code/api"])
+
+    #expect(arguments.contains("--add-dir"))
+    #expect(arguments.contains("/code/api"))
+}
+
+@Test func continuingAGroupListsEveryPullRequest() {
+    let text = ClaudeCLI.continuationPrompt(urls: [first.url, second.url], review: "Looks fine.")
+
+    #expect(text.contains("these pull requests:\n- https://github.com/acme/web/pull/412\n- https://github.com/acme/api/pull/77"))
+    #expect(text.contains("Looks fine."))
+}
+
+@Test func aRunOfSeveralPullRequestsIsFoundByAnyOfThemWhileItGoes() {
+    var list = AgentRunList()
+    let run = AgentRun(
+        ref: first.ref, title: "Stack of 2 PRs", url: first.url, folder: "/code/web", skill: nil, startedAt: Date(),
+        targets: [first, second], scope: .stack, extraFolders: ["/code/api"]
+    )
+    list.add(run)
+
+    #expect(list.running(for: second.ref)?.id == run.id)
+    #expect(run.isGroup)
+    #expect(run.urls == [first.url, second.url])
+    #expect(list.running(for: PullRequestRef(owner: "acme", repo: "web", number: 1)) == nil)
+}
+
+@Test func aRunOfOnePullRequestHasItsOwnAddressOnly() {
+    let run = AgentRun(ref: first.ref, title: "T", url: first.url, folder: "/code/web", skill: nil, startedAt: Date())
+
+    #expect(!run.isGroup)
+    #expect(run.urls == [first.url])
+}

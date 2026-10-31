@@ -25,8 +25,19 @@ enum SnapshotMapper {
             comments: comments(from: node) + reviewBodies(from: node),
             commits: commits(from: node),
             reviews: reviews(from: node),
-            requestedReviewers: requestedReviewers(from: node)
+            requestedReviewers: requestedReviewers(from: node),
+            stack: stack(from: node)
         )
+    }
+
+    /// A pull request is in a stack when GitHub gives both the stack and its place in it.
+    private static func stack(from node: JSONObject) -> StackMembership? {
+        guard let stack = node.object("stack"),
+              let number = stack.int("number"),
+              let size = stack.int("size"),
+              let position = node.object("stackEntry")?.int("position")
+        else { return nil }
+        return StackMembership(number: number, size: size, position: position, baseRef: stack.string("baseRefName") ?? "")
     }
 
     static func threadContinuation(from node: JSONObject) -> (id: String, cursor: String)? {

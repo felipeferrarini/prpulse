@@ -51,18 +51,27 @@ final class AgentRunStore: ObservableObject {
     // MARK: Starting and stopping
 
     @discardableResult
-    func start(request: ReviewRequest, title: String, prompt: String, folder: URL?, skill: String?, approval: ReviewApproval, cli: URL) -> AgentRun {
-        if let running = list.running(for: request.ref) { return running }
+    func start(
+        request: ReviewRequest, title: String, prompt: String, folder: URL?, extraFolders: [URL] = [],
+        skill: String?, approval: ReviewApproval, cli: URL
+    ) -> AgentRun {
+        if !request.isGroup, let running = list.running(for: request.ref) { return running }
         let home = FileManager.default.homeDirectoryForCurrentUser
         let session = UUID()
         let run = AgentRun(
             ref: request.ref, title: title, url: request.url, folder: (folder ?? home).path, skill: skill,
-            startedAt: Date(), sessionID: session.uuidString.lowercased()
+            startedAt: Date(), sessionID: session.uuidString.lowercased(),
+            targets: request.isGroup ? request.targets : nil, scope: request.isGroup ? request.scope : nil,
+            extraFolders: extraFolders.isEmpty ? nil : extraFolders.map(\.path)
         )
         list.add(run)
         save()
-        let name = "PRPulse \(request.ref.owner)/\(request.ref.repo)#\(request.ref.number)"
-        begin(run.id, cli: cli, arguments: ClaudeCLI.reviewArguments(sessionID: session, name: name, folder: (folder ?? home).path, approval: approval), directory: folder ?? home, message: prompt)
+        let more = request.isGroup ? " +\(request.targets.count - 1)" : ""
+        let name = "PRPulse \(request.ref.owner)/\(request.ref.repo)#\(request.ref.number)\(more)"
+        let arguments = ClaudeCLI.reviewArguments(
+            sessionID: session, name: name, folder: (folder ?? home).path, extraFolders: extraFolders.map(\.path), approval: approval
+        )
+        begin(run.id, cli: cli, arguments: arguments, directory: folder ?? home, message: prompt)
         return run
     }
 
@@ -121,7 +130,7 @@ final class AgentRunStore: ObservableObject {
         guard let run = list.run(id: id), let session = run.sessionID, let cli else {
             return fail(id, message: tr("agents.cli.missing"))
         }
-        begin(id, cli: cli, arguments: ClaudeCLI.resumeArguments(sessionID: session, folder: run.folder, approval: approval), directory: URL(fileURLWithPath: run.folder), message: text)
+        begin(id, cli: cli, arguments: ClaudeCLI.resumeArguments(sessionID: session, folder: run.folder, extraFolders: run.extraFolders ?? [], approval: approval), directory: URL(fileURLWithPath: run.folder), message: text)
     }
 
     private func begin(_ id: UUID, cli: URL, arguments: [String], directory: URL, message: String) {

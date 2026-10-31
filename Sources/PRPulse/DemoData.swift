@@ -33,6 +33,8 @@ enum DemoData {
             item(398, "web", "Remove the legacy-checkout flag", hoursAgo: 90, reasons: [.conflict, .ciFailed]),
             item(51, "infra", "Update the runner base image", hoursAgo: 9, reasons: [.readyToMerge]),
             item(377, "web", "Adjust the filter tooltip", hoursAgo: 200, reasons: [.readyToMerge]),
+            item(410, "web", "Checkout: split the payment step (1/2)", hoursAgo: 60, reasons: [.ciFailed], stack: (4, 2, 1)),
+            item(411, "web", "Checkout: add the retry screen (2/2)", hoursAgo: 58, reasons: [.unansweredComment], stack: (4, 2, 2)),
         ],
         review: [
             review(412, "web", "Per-tenant session cache", author: "sam", hoursAgo: 76, requested: true),
@@ -40,6 +42,10 @@ enum DemoData {
             review(133, "mobile", "Offline upload queue", author: "ivan", hoursAgo: 121),
             review(419, "web", "Swap the date library for Temporal", author: "leo", hoursAgo: 27),
             review(77, "docs", "Onboarding guide v2", author: "noor", hoursAgo: 4, draft: true),
+            review(301, "api", "Pagination: cursor on (created_at, id) (1/3)", author: "mia", hoursAgo: 40, requested: true, stack: (7, 3, 1)),
+            review(302, "api", "Pagination: cap the page size (2/3)", author: "mia", hoursAgo: 39, requested: true, stack: (7, 3, 2)),
+            review(303, "api", "Pagination: document the new limits (3/3)", author: "mia", hoursAgo: 38, stack: (7, 3, 3)),
+            review(55, "mobile", "Offline queue: persist the retries (2/4)", author: "ivan", hoursAgo: 20, stack: (3, 4, 2)),
         ],
         waiting: [
             waiting(402, "api", "Cache the exchange rates", hoursAgo: 134, reviewers: ["mia", "sam"]),
@@ -60,7 +66,9 @@ enum DemoData {
         }
     )
 
-    private static func snapshot(_ number: Int, _ repo: String, _ title: String, author: String, hoursAgo: Double, draft: Bool) -> PullRequestSnapshot {
+    private static func snapshot(
+        _ number: Int, _ repo: String, _ title: String, author: String, hoursAgo: Double, draft: Bool, stack: (Int, Int, Int)? = nil
+    ) -> PullRequestSnapshot {
         PullRequestSnapshot(
             ref: PullRequestRef(owner: "acme", repo: repo, number: number),
             title: title,
@@ -69,12 +77,15 @@ enum DemoData {
             isDraft: draft,
             createdAt: Date().addingTimeInterval(-hoursAgo * 3600 - 60),
             reviewDecision: nil, mergeable: .mergeable, mergeState: .blocked, checks: .none,
-            threads: [], comments: [], commits: [], reviews: [], requestedReviewers: []
+            threads: [], comments: [], commits: [], reviews: [], requestedReviewers: [],
+            stack: stack.map { StackMembership(number: $0.0, size: $0.1, position: $0.2, baseRef: "main") }
         )
     }
 
-    private static func item(_ number: Int, _ repo: String, _ title: String, hoursAgo: Double, reasons: [MineReason]) -> MineItem {
-        MineItem(pr: snapshot(number, repo, title, author: "me", hoursAgo: hoursAgo, draft: false), reasons: reasons)
+    private static func item(
+        _ number: Int, _ repo: String, _ title: String, hoursAgo: Double, reasons: [MineReason], stack: (Int, Int, Int)? = nil
+    ) -> MineItem {
+        MineItem(pr: snapshot(number, repo, title, author: "me", hoursAgo: hoursAgo, draft: false, stack: stack), reasons: reasons)
     }
 
     private static func waiting(_ number: Int, _ repo: String, _ title: String, hoursAgo: Double, reviewers: [String]) -> WaitingItem {
@@ -82,9 +93,10 @@ enum DemoData {
     }
 
     private static func review(
-        _ number: Int, _ repo: String, _ title: String, author: String, hoursAgo: Double, requested: Bool = false, draft: Bool = false
+        _ number: Int, _ repo: String, _ title: String, author: String, hoursAgo: Double, requested: Bool = false, draft: Bool = false,
+        stack: (Int, Int, Int)? = nil
     ) -> ReviewItem {
-        ReviewItem(pr: snapshot(number, repo, title, author: author, hoursAgo: hoursAgo, draft: draft), isRequested: requested)
+        ReviewItem(pr: snapshot(number, repo, title, author: author, hoursAgo: hoursAgo, draft: draft, stack: stack), isRequested: requested)
     }
 }
 

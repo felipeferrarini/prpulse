@@ -34,6 +34,8 @@ struct PopoverRoot: View {
             onMute: { runtime.muteRepository(of: $0) },
             onReview: runtime.canReview ? { runtime.requestReview(of: $0) } : nil,
             onReviewInDesktop: runtime.offersDraft ? { runtime.requestDraftReview(of: $0) } : nil,
+            onReviewGroup: runtime.canReviewMany ? { runtime.requestReview(of: $0, scope: $1) } : nil,
+            onReviewEach: runtime.canReviewMany ? { runtime.requestEachReview(of: $0) } : nil,
             agentRuns: runtime.agents.list,
             agentActions: runtime.agentActions,
             agentFocus: runtime.agents.focus,

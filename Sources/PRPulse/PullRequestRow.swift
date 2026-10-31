@@ -1,6 +1,23 @@
 import PRPulseCore
 import SwiftUI
 
+enum SelectionState {
+    case off, partial, on
+}
+
+/// A row that can be ticked to act on several at once.
+struct RowSelection {
+    let state: SelectionState
+    let toggle: () -> Void
+}
+
+struct RowAction: Identifiable {
+    let id: String
+    let title: String
+    let symbol: String
+    let perform: () -> Void
+}
+
 struct PullRequestRow: View {
     let model: RowModel
     let isDimmed: Bool
@@ -9,6 +26,11 @@ struct PullRequestRow: View {
     var onMute: (() -> Void)?
     var onReview: (() -> Void)?
     var onReviewInDesktop: (() -> Void)?
+    /// What a click does instead of opening the pull request: a stack opens its own list.
+    var onOpen: (() -> Void)?
+    var selection: RowSelection?
+    /// The menu of a row that stands for a stack.
+    var groupActions: [RowAction] = []
 
     @LocalState private var isHovering = false
     @LocalState private var copied = false
@@ -18,26 +40,33 @@ struct PullRequestRow: View {
     var body: some View {
         let waiting = Waiting(since: model.pr.createdAt, now: Date())
         return HStack(spacing: 0) {
-            Button { NSWorkspace.shared.open(model.pr.url) } label: { openLabel(waiting) }
+            Button(action: tap) { openLabel(waiting) }
                 .buttonStyle(.plain)
             actionsMenu.padding(.trailing, 10)
         }
         .background(isHovering ? Color.primary.opacity(0.07) : .clear)
         .onHover { isHovering = $0 }
         .contextMenu { menu }
-        .help(model.pr.title)
-        .accessibilityLabel("\(model.pr.title), \(model.subtitle), \(waiting.text)")
+        .help(model.title)
+        .accessibilityLabel("\(model.title), \(model.subtitle), \(waiting.text)")
         .opacity(entered ? (isDimmed ? 0.28 : 1) : 0)
         .offset(y: entered ? 0 : 8)
         .animation(.easeInOut(duration: 0.25), value: isDimmed)
         .animation(.easeOut(duration: 0.42).delay(0.11 + Double(min(entranceIndex, 14)) * 0.028), value: entered)
     }
 
+    private func tap() {
+        if let selection { return selection.toggle() }
+        if let onOpen { return onOpen() }
+        NSWorkspace.shared.open(model.pr.url)
+    }
+
     private func openLabel(_ waiting: Waiting) -> some View {
         HStack(spacing: 11) {
+            if let selection { checkbox(selection.state) }
             lead.frame(width: 26, height: 26)
             VStack(alignment: .leading, spacing: 1) {
-                Text(model.pr.title).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                Text(model.title).font(.system(size: 13, weight: .medium)).lineLimit(1)
                 Text(model.subtitle).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer(minLength: 6)
@@ -45,12 +74,21 @@ struct PullRequestRow: View {
                 if model.kind == .waiting, isHovering || copied {
                     copyButton
                 } else {
-                    HStack(spacing: 4) { ForEach(model.chips) { chip($0) } }
+                    HStack(spacing: 4) {
+                        if let badge = model.stackBadge { chip(RowModel.Chip(id: "position", text: badge, tone: nil)) }
+                        ForEach(model.chips) { chip($0) }
+                    }
                 }
             }
             .fixedSize()
             .layoutPriority(1)
             waitIndicator(waiting).frame(width: 62, alignment: .trailing)
+            if model.isStack {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.leading, 14)
         .padding(.trailing, 4)
@@ -59,6 +97,16 @@ struct PullRequestRow: View {
     }
 
     @ViewBuilder private var menu: some View {
+        if model.isStack {
+            ForEach(groupActions) { action in
+                Button(action: action.perform) { Label(action.title, systemImage: action.symbol) }
+            }
+        } else {
+            pullRequestMenu
+        }
+    }
+
+    @ViewBuilder private var pullRequestMenu: some View {
         Button { NSWorkspace.shared.open(model.pr.url) } label: { Label(tr("row.open"), systemImage: "arrow.up.right.square") }
         if model.kind == .review, let onReview {
             Button(action: onReview) { Label(tr("row.review"), systemImage: "sparkles") }
@@ -125,7 +173,27 @@ struct PullRequestRow: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
+        case .stack:
+            Image(systemName: "square.stack.3d.up.fill")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Palette.review)
+                .frame(width: 26, height: 26)
+                .background(Palette.review.opacity(0.16), in: RoundedRectangle(cornerRadius: 7))
+                .accessibilityHidden(true)
         }
+    }
+
+    private func checkbox(_ state: SelectionState) -> some View {
+        let symbol = switch state {
+        case .off: "circle"
+        case .partial: "minus.circle.fill"
+        case .on: "checkmark.circle.fill"
+        }
+        return Image(systemName: symbol)
+            .font(.system(size: 16))
+            .foregroundStyle(state == .off ? Color.secondary.opacity(0.6) : Palette.review)
+            .frame(width: 18)
+            .accessibilityHidden(true)
     }
 
     private func chip(_ chip: RowModel.Chip) -> some View {

@@ -304,8 +304,8 @@ private func settings(in arguments: [String]) throws -> [String: Any] {
 }
 
 @Test func continuingInDesktopCarriesTheReviewAndCutsAVeryLongOne() {
-    let short = ClaudeCLI.continuationPrompt(url: url, review: "Two issues.")
-    let long = ClaudeCLI.continuationPrompt(url: url, review: String(repeating: "x", count: 10_000), limit: 100)
+    let short = ClaudeCLI.continuationPrompt(urls: [url], review: "Two issues.")
+    let long = ClaudeCLI.continuationPrompt(urls: [url], review: String(repeating: "x", count: 10_000), limit: 100)
 
     #expect(short.contains("https://github.com/acme/web/pull/412"))
     #expect(short.contains("Two issues."))

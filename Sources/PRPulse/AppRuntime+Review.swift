@@ -16,6 +16,11 @@ extension AppRuntime {
         settings.settings.reviewAgentEnabled && (cliState.isReady || desktopIsReady)
     }
 
+    /// Several pull requests in one conversation, or one conversation for each, need the Claude Code command line.
+    var canReviewMany: Bool {
+        settings.settings.reviewAgentEnabled && cliState.isReady
+    }
+
     /// The draft in Claude Desktop as a second choice, when the main action runs in the background.
     var offersDraft: Bool {
         canReview && cliState.isReady && desktopIsReady
@@ -59,6 +64,23 @@ extension AppRuntime {
         begin(pr, inBackground: false)
     }
 
+    /// Several pull requests in one conversation, to be seen as one change: a whole stack, or the ones the viewer chose.
+    func requestReview(of prs: [PullRequestSnapshot], scope: ReviewRequest.Scope) {
+        guard cliState.isReady, !prs.isEmpty else { return }
+        guard prs.count > 1 else { return requestReview(of: prs[0]) }
+        let request = ReviewRequest(targets: prs.map { ReviewTarget(ref: $0.ref, url: $0.url) }, scope: scope)
+        if let running = agents.list.runs.first(where: { $0.isRunning && Set($0.targets ?? []) == Set(request.targets) }) {
+            return agents.requestFocus(run: running.id)
+        }
+        let title = tr(scope == .stack ? "agents.group.stack" : "agents.group.together", prs.count)
+        Task { await startReview(request, title: title, inBackground: true) }
+    }
+
+    /// One conversation for each pull request.
+    func requestEachReview(of prs: [PullRequestSnapshot]) {
+        prs.forEach { requestReview(of: $0) }
+    }
+
     /// Opens a session that asks for nothing but a reply, to see that the connection works.
     func testReviewAgent() {
         guard desktopIsReady else { return showAlert(tr("agents.missing.title"), tr("agents.missing.detail")) }
@@ -77,7 +99,8 @@ extension AppRuntime {
 
     private func retry(_ run: AgentRun) {
         agents.remove(run.id)
-        Task { await startReview(ReviewRequest(ref: run.ref, url: run.url), title: run.title, inBackground: true) }
+        let request = run.targets.map { ReviewRequest(targets: $0, scope: run.scope ?? .together) } ?? ReviewRequest(ref: run.ref, url: run.url)
+        Task { await startReview(request, title: run.title, inBackground: true) }
     }
 
     private func startReview(_ request: ReviewRequest, title: String, inBackground: Bool) async {
@@ -88,16 +111,19 @@ extension AppRuntime {
         case .without: folder = nil
         case .cancel: return
         }
+        let extraFolders = request.isGroup ? await otherFolders(of: request, besides: folder, home: home) : []
         let current = settings.settings
         let skills = await Task.detached { ReviewSkillCatalog.discover(home: home) }.value
         let skill = ReviewSkillCatalog.resolve(choice: current.reviewSkill, from: skills)
-        let template = ReviewPrompt.template(
-            custom: current.reviewPrompt, generic: tr("agents.prompt.generic"), withSkill: tr("agents.prompt.skill"), skill: skill?.name
-        )
+        let words = promptWords(for: request.scope)
+        let template = ReviewPrompt.template(custom: current.reviewPrompt, generic: words.generic, withSkill: words.withSkill, skill: skill?.name)
         let prompt = ReviewPrompt.render(template, for: request, skill: skill?.name)
         guard inBackground else { return launch(AgentLaunch(prompt: prompt, folder: folder)) }
         guard let cli = ClaudeCLI.locate(home: home) else { return showAlert(tr("agents.run.failedTitle"), tr("agents.cli.missing")) }
-        agents.start(request: request, title: title, prompt: prompt, folder: folder, skill: skill?.name, approval: current.reviewApproval, cli: cli)
+        agents.start(
+            request: request, title: title, prompt: prompt, folder: folder, extraFolders: extraFolders,
+            skill: skill?.name, approval: current.reviewApproval, cli: cli
+        )
         agents.requestFocus(run: nil)
     }
 
@@ -105,7 +131,7 @@ extension AppRuntime {
 
     func agentFinished(_ run: AgentRun) {
         let title = run.state == .finished ? tr("agents.done.title") : tr("agents.run.failedTitle")
-        showMascotBubble(title: title, detail: "\(run.ref.shortName) \(run.title)", seconds: 8)
+        showMascotBubble(title: title, detail: run.isGroup ? run.title : "\(run.ref.shortName) \(run.title)", seconds: 8)
         if settings.settings.notificationsEnabled { Task { await notifier.deliver(run: run) } }
     }
 
@@ -128,7 +154,7 @@ extension AppRuntime {
         guard desktopIsReady else { return showAlert(tr("agents.missing.title"), tr("agents.missing.detail")) }
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let folder = run.folder == home ? nil : URL(fileURLWithPath: run.folder)
-        launch(AgentLaunch(prompt: ClaudeCLI.continuationPrompt(url: run.url, review: run.output ?? ""), folder: folder))
+        launch(AgentLaunch(prompt: ClaudeCLI.continuationPrompt(urls: run.urls, review: run.output ?? ""), folder: folder))
     }
 
     private func continueInTerminal(_ run: AgentRun) {
@@ -152,7 +178,36 @@ extension AppRuntime {
         }
     }
 
+    private func promptWords(for scope: ReviewRequest.Scope) -> (generic: String, withSkill: String) {
+        switch scope {
+        case .single: (tr("agents.prompt.generic"), tr("agents.prompt.skill"))
+        case .together: (tr("agents.prompt.together"), tr("agents.prompt.together.skill"))
+        case .stack: (tr("agents.prompt.stack"), tr("agents.prompt.stack.skill"))
+        }
+    }
+
     // MARK: Folder
+
+    /// The clones of the other repositories of a review, where they are known or can be found without asking.
+    private func otherFolders(of request: ReviewRequest, besides primary: URL?, home: URL) async -> [URL] {
+        let current = settings.settings
+        let firstKey = request.ref.folderKey
+        var seen: Set<String> = primary.map { [$0.path] } ?? []
+        var folders: [URL] = []
+        var repositories = Set([firstKey])
+        for target in request.targets where repositories.insert(target.ref.folderKey).inserted {
+            let ref = target.ref
+            var found: URL?
+            switch ReviewFolders.saved(for: ref, repositories: current.reviewFolders, organizations: current.reviewOrgFolders, isFolder: Self.isFolder) {
+            case .use(let url): found = url
+            case .without: continue
+            case nil:
+                found = await Task.detached { RepositoryLocator.find(owner: ref.owner, repo: ref.repo, roots: RepositoryLocator.roots(home: home)) }.value
+            }
+            if let found, seen.insert(found.path).inserted { folders.append(found) }
+        }
+        return folders
+    }
 
     /// What the viewer chose (the repository's folder, else its organization's default project), else a clone found in
     /// the usual folders, else the folder the viewer points to now.

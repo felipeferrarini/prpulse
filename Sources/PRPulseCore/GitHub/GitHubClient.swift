@@ -28,6 +28,7 @@ public struct GitHubClient: Sendable {
 
     private let transport: GraphQLTransport
     private let clock: Clock
+    private let stackSupport = StackSupport()
 
     public init(transport: GraphQLTransport, clock: Clock) {
         self.transport = transport
@@ -155,7 +156,7 @@ public struct GitHubClient: Sendable {
     private func fetchPage(_ query: String, _ fragment: PRFragment, size: Int, after: String?) async throws -> Page {
         var variables: [String: Any] = ["q": query, "first": size]
         if let after { variables["after"] = after }
-        let search = try await execute(Queries.search(fragment), variables).object("search")
+        let search = try await searchData(fragment, variables).object("search")
         let nodes = (search?.array("nodes") ?? []).filter { $0.int("number") != nil }
         let pageInfo = search?.object("pageInfo")
         let hasNext = pageInfo?.bool("hasNextPage") ?? false
@@ -164,6 +165,18 @@ public struct GitHubClient: Sendable {
             pullRequests: try await withAllThreads(nodes),
             nextCursor: hasNext ? pageInfo?.string("endCursor") : nil
         )
+    }
+
+    /// Asks for the stacks too. A host that does not have them (GitHub Enterprise Server, so far) refuses the whole query, so
+    /// it is asked again without them, and without them from then on.
+    private func searchData(_ fragment: PRFragment, _ variables: [String: Any]) async throws -> JSONObject {
+        guard stackSupport.isSupported else { return try await execute(Queries.search(fragment, includesStacks: false), variables) }
+        do {
+            return try await execute(Queries.search(fragment), variables)
+        } catch GitHubError.malformed(let message) where message.localizedCaseInsensitiveContains("stack") {
+            stackSupport.isSupported = false
+            return try await execute(Queries.search(fragment, includesStacks: false), variables)
+        }
     }
 
     private func withAllThreads(_ nodes: [JSONObject]) async throws -> [PullRequestSnapshot] {
@@ -217,5 +230,16 @@ public struct GitHubClient: Sendable {
 
     private func execute(_ query: String, _ variables: [String: Any]) async throws -> JSONObject {
         try GraphQLResponse.data(from: try await transport.send(query: query, variables: variables))
+    }
+}
+
+/// Whether the host knows GitHub's stacks, learned from the first answer.
+private final class StackSupport: @unchecked Sendable {
+    private let lock = NSLock()
+    private var supported = true
+
+    var isSupported: Bool {
+        get { lock.withLock { supported } }
+        set { lock.withLock { supported = newValue } }
     }
 }

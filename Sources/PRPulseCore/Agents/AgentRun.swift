@@ -42,6 +42,11 @@ public struct AgentRun: Identifiable, Codable, Equatable, Sendable {
     public var approval: ToolApproval?
     /// The follow-up being answered; its answer goes after the review instead of replacing it.
     public var question: String?
+    /// All the pull requests, when the review is of several: `ref` and `url` are the first one.
+    public var targets: [ReviewTarget]?
+    public var scope: ReviewRequest.Scope?
+    /// The folders of the other repositories, when the review reaches into more than one.
+    public var extraFolders: [String]?
 
     public init(
         id: UUID = UUID(),
@@ -51,7 +56,10 @@ public struct AgentRun: Identifiable, Codable, Equatable, Sendable {
         folder: String,
         skill: String?,
         startedAt: Date,
-        sessionID: String? = nil
+        sessionID: String? = nil,
+        targets: [ReviewTarget]? = nil,
+        scope: ReviewRequest.Scope? = nil,
+        extraFolders: [String]? = nil
     ) {
         self.id = id
         self.ref = ref
@@ -61,6 +69,9 @@ public struct AgentRun: Identifiable, Codable, Equatable, Sendable {
         self.skill = skill
         self.startedAt = startedAt
         self.sessionID = sessionID
+        self.targets = targets
+        self.scope = scope
+        self.extraFolders = extraFolders
         state = .running
         activity = nil
         output = nil
@@ -69,6 +80,10 @@ public struct AgentRun: Identifiable, Codable, Equatable, Sendable {
     }
 
     public var isRunning: Bool { state == .running }
+
+    /// Every address of the review, the first one when it is of a single pull request.
+    public var urls: [URL] { targets?.map(\.url) ?? [url] }
+    public var isGroup: Bool { (targets?.count ?? 1) > 1 }
 
     fileprivate mutating func settle(at date: Date) {
         question = nil
@@ -97,7 +112,7 @@ public struct AgentRunList: Codable, Equatable, Sendable {
 
     /// The run that is still going for this pull request, if any.
     public func running(for ref: PullRequestRef) -> AgentRun? {
-        runs.first { $0.isRunning && $0.ref == ref }
+        runs.first { $0.isRunning && ($0.ref == ref || $0.targets?.contains { $0.ref == ref } == true) }
     }
 
     public mutating func add(_ run: AgentRun) {
