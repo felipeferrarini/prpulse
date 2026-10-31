@@ -227,7 +227,7 @@ make release      # DMG mais o feed de atualização assinado (build/feed/appcas
 
 ## Contribuindo
 
-Issues e pull requests são bem-vindos. Mantenha as regras do `PRPulseCore` cobertas por testes e rode `make test` antes de abrir uma PR.
+Issues e pull requests são bem-vindos; veja o [CONTRIBUTING](CONTRIBUTING.md) (em inglês). Mantenha as regras do `PRPulseCore` cobertas por testes e rode `make test` antes de abrir uma PR.
 
 ## Licença
 

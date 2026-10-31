@@ -347,7 +347,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 ## Development
 
 ```text
-Sources/PRPulseCore   rules, GitHub client, auth, notification planner (pure, tested)
+Sources/PRPulseCore   rules, notification planner, auth, and the provider seam with its GitHub implementation (pure, tested)
 Sources/PRPulse       the macOS shell: status item, popover, wizard, settings
 Tests/                300+ unit tests (Swift Testing)
 scripts/              build, dmg, icon and test helpers
@@ -381,7 +381,7 @@ Ideas, in no particular order. Open an issue if one matters to you.
 
 ## Contributing
 
-Issues and pull requests are welcome. Keep the rules in `PRPulseCore` covered by tests, and run `make test` before opening a PR. For a visual change, attach a before and after picture (`PRPULSE_DEMO` makes that easy).
+Issues and pull requests are welcome; see [CONTRIBUTING](CONTRIBUTING.md). Keep the rules in `PRPulseCore` covered by tests, and run `make test` before opening a PR. To report a vulnerability, read [SECURITY](SECURITY.md). For a visual change, attach a before and after picture (`PRPULSE_DEMO` makes that easy).
 
 ## License
 
