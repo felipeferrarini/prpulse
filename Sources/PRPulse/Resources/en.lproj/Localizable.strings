@@ -372,6 +372,13 @@
 "news.notes" = "Notes";
 "news.earlier" = "Earlier versions";
 "news.unavailable" = "The list of changes is not available in this build.";
+"news.alsoInUpdate" = "Also in this update";
+"news.option.title" = "Show what's new after updating";
+"news.option.detail" = "Opens this list the first time you run a new version.";
+"news.window.name" = "What's new in PRPulse";
+"news.window.title" = "What's new in %@";
+"news.window.lead" = "PRPulse was updated. Here is what changed.";
+"news.window.done" = "Got it";
 "wizard.agents.title" = "Review with Claude";
 "wizard.agents.lead" = "Ask Claude to review the PRs that wait for you.";
 "wizard.agents.more" = "The skill, the default project and the request text are in Settings → Agents.";

@@ -7,6 +7,7 @@ import SwiftUI
 final class AppRuntime: ObservableObject {
     private static let setupWindow = "setup"
     private static let settingsWindow = "settings"
+    private static let newsWindow = "news"
 
     @Published private(set) var data = ViewData()
     @Published private(set) var iconState = IconState.upToDate
@@ -86,7 +87,10 @@ final class AppRuntime: ObservableObject {
                 self?.refreshMascot()
             }
         }
-        if DemoMode.current == nil { refreshCLI(force: true) }
+        if DemoMode.current == nil {
+            refreshCLI(force: true)
+            DispatchQueue.main.async { [weak self] in self?.announceUpdate() }
+        }
         mascotTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refreshMascot() }
         }
@@ -206,6 +210,33 @@ final class AppRuntime: ObservableObject {
         }
     }
 
+    /// After an update, opens the list of what changed. The version is recorded either way, so each update is announced once.
+    private func announceUpdate() {
+        let current = SoftwareUpdater.version
+        guard ReleaseNotes.isNumeric(current), settings.settings.lastSeenVersion != current else { return }
+        let isFirstRun = !settings.settings.hasCompletedSetup
+        let news = ReleaseNotes.unseen(
+            in: NewsContent.bundledReleases(),
+            current: current,
+            seen: settings.settings.lastSeenVersion,
+            isFirstRun: isFirstRun
+        )
+        settings.settings.lastSeenVersion = current
+        guard settings.settings.showNewsAfterUpdate, !news.isEmpty else { return }
+        showReleaseNotes(news)
+    }
+
+    private func showReleaseNotes(_ releases: [ChangelogRelease]) {
+        windows.show(id: Self.newsWindow, title: tr("news.window.name"), chrome: .borderless) {
+            ReleaseNotesView(
+                releases: releases,
+                showAfterUpdate: settings.settings.showNewsAfterUpdate,
+                onShowAfterUpdate: { [weak self] isOn in self?.settings.settings.showNewsAfterUpdate = isOn },
+                onClose: { [weak self] in self?.windows.close(id: Self.newsWindow) }
+            )
+        }
+    }
+
     /// Opens the wizard from scratch. Nothing is replaced until the user finishes it.
     private func redoSetup() {
         windows.close(id: Self.settingsWindow)
@@ -237,6 +268,8 @@ final class AppRuntime: ObservableObject {
         chosen.popoverLayout = popoverLayout
         chosen.mascotAnchor = settings.settings.mascotAnchor
         chosen.mascotIntroduced = true
+        chosen.lastSeenVersion = settings.settings.lastSeenVersion
+        chosen.showNewsAfterUpdate = settings.settings.showNewsAfterUpdate
         chosen.hasCompletedSetup = false
         settings.settings = chosen
         refreshMascotConfig()
@@ -263,6 +296,7 @@ final class AppRuntime: ObservableObject {
         chosen.hasCompletedSetup = true
         chosen.mascotAnchor = settings.settings.mascotAnchor
         chosen.mascotIntroduced = settings.settings.mascotIntroduced
+        chosen.lastSeenVersion = settings.settings.lastSeenVersion
         settings.settings = chosen
         refreshMascotConfig()
         LaunchAtLogin.apply(chosen.launchAtLogin)

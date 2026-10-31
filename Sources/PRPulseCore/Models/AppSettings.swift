@@ -58,6 +58,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var reviewOrgFolders: [String: String]
     public var hasCompletedSetup: Bool
     public var popoverLayout: PopoverLayout
+    /// Opens the list of changes after the app was updated.
+    public var showNewsAfterUpdate: Bool
+    /// The version whose changes the viewer was last shown; empty until the app has announced one.
+    public var lastSeenVersion: String
 
     public static let defaults = AppSettings(
         orgs: [],
@@ -84,7 +88,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         reviewFolders: [:],
         reviewOrgFolders: [:],
         hasCompletedSetup: false,
-        popoverLayout: .single
+        popoverLayout: .single,
+        showNewsAfterUpdate: true,
+        lastSeenVersion: ""
     )
 
     public init(
@@ -112,7 +118,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         reviewFolders: [String: String] = [:],
         reviewOrgFolders: [String: String] = [:],
         hasCompletedSetup: Bool,
-        popoverLayout: PopoverLayout = .single
+        popoverLayout: PopoverLayout = .single,
+        showNewsAfterUpdate: Bool = true,
+        lastSeenVersion: String = ""
     ) {
         self.orgs = orgs
         self.authSource = authSource
@@ -139,6 +147,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.reviewOrgFolders = reviewOrgFolders
         self.hasCompletedSetup = hasCompletedSetup
         self.popoverLayout = popoverLayout
+        self.showNewsAfterUpdate = showNewsAfterUpdate
+        self.lastSeenVersion = lastSeenVersion
     }
 
     public init(from decoder: Decoder) throws {
@@ -170,6 +180,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         reviewOrgFolders = try values.decodeIfPresent([String: String].self, forKey: .reviewOrgFolders) ?? base.reviewOrgFolders
         hasCompletedSetup = try values.decodeIfPresent(Bool.self, forKey: .hasCompletedSetup) ?? base.hasCompletedSetup
         popoverLayout = try values.decodeIfPresent(PopoverLayout.self, forKey: .popoverLayout) ?? base.popoverLayout
+        showNewsAfterUpdate = try values.decodeIfPresent(Bool.self, forKey: .showNewsAfterUpdate) ?? base.showNewsAfterUpdate
+        lastSeenVersion = try values.decodeIfPresent(String.self, forKey: .lastSeenVersion) ?? base.lastSeenVersion
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -177,6 +189,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case launchAtLogin, automaticUpdates, globalShortcut, waitingReviewDays, hasCompletedSetup, popoverLayout
         case mascotEnabled, mascotPack, mascotScale, mascotIntroduced, mascotAnchor
         case reviewAgentEnabled, reviewSkill, reviewApproval, reviewPrompt, reviewFolders, reviewOrgFolders
+        case showNewsAfterUpdate, lastSeenVersion
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -206,6 +219,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try values.encode(reviewOrgFolders, forKey: .reviewOrgFolders)
         try values.encode(hasCompletedSetup, forKey: .hasCompletedSetup)
         try values.encode(popoverLayout, forKey: .popoverLayout)
+        try values.encode(showNewsAfterUpdate, forKey: .showNewsAfterUpdate)
+        try values.encode(lastSeenVersion, forKey: .lastSeenVersion)
     }
 
     /// Settings saved before 0.4 hold a single `org`.

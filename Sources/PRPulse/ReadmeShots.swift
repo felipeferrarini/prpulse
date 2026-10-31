@@ -21,6 +21,7 @@ enum ReadmeShots {
             render(floating(agents(data, scheme), radius: 12, scheme: scheme), named: "agents-\(tag)", scheme: scheme, to: directory)
             render(floating(DemoSnapshot.wizard(.exceptions), radius: 16, scheme: scheme), named: "wizard-\(tag)", scheme: scheme, to: directory)
             render(floating(DemoSnapshot.settings(.organization, login: "octocat"), radius: 16, scheme: scheme), named: "settings-\(tag)", scheme: scheme, to: directory)
+            render(floating(DemoSnapshot.releaseNotes, radius: 16, scheme: scheme), named: "news-\(tag)", scheme: scheme, to: directory)
             render(StatesStrip(scheme: scheme), named: "menubar-\(tag)", scheme: scheme, to: directory)
             render(MascotsStrip(scheme: scheme), named: "mascots-\(tag)", scheme: scheme, to: directory)
         }

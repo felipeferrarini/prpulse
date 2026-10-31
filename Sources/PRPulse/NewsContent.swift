@@ -4,11 +4,20 @@ import SwiftUI
 /// What changed in each version of the app, read from the changelog that ships with it.
 struct NewsContent: View {
     let releases: [ChangelogRelease]
+    let earlierTitle: String
+    /// Shown in Settings, where the viewer decides whether an update opens this list.
+    let showAfterUpdate: Binding<Bool>?
 
     @LocalState private var opened: Set<String> = []
 
-    init(releases: [ChangelogRelease] = NewsContent.bundledReleases()) {
+    init(
+        releases: [ChangelogRelease] = NewsContent.bundledReleases(),
+        earlierTitle: String = tr("news.earlier"),
+        showAfterUpdate: Binding<Bool>? = nil
+    ) {
         self.releases = releases
+        self.earlierTitle = earlierTitle
+        self.showAfterUpdate = showAfterUpdate
     }
 
     static func bundledReleases() -> [ChangelogRelease] {
@@ -19,6 +28,7 @@ struct NewsContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if let showAfterUpdate { optionRow(showAfterUpdate).staggered(1) }
             if let latest = releases.first {
                 versionLine(latest).staggered(2)
                 sections(of: latest).staggered(3)
@@ -27,6 +37,20 @@ struct NewsContent: View {
                 Text(tr("news.unavailable")).font(.system(size: 13.5)).foregroundStyle(WizardPalette.ink2)
             }
         }
+    }
+
+    private func optionRow(_ isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(tr("news.option.title")).font(.system(size: 14, weight: .semibold)).foregroundStyle(WizardPalette.ink)
+                Text(tr("news.option.detail")).font(.system(size: 12.5)).foregroundStyle(WizardPalette.ink3)
+            }
+            Spacer()
+            Toggle(tr("news.option.title"), isOn: isOn).toggleStyle(WizardSwitchStyle()).labelsHidden()
+        }
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) { Rectangle().fill(WizardPalette.line).frame(height: 1) }
+        .padding(.bottom, 18)
     }
 
     // MARK: Releases
@@ -57,7 +81,7 @@ struct NewsContent: View {
     @ViewBuilder private var earlier: some View {
         if releases.count > 1 {
             VStack(alignment: .leading, spacing: 4) {
-                Text(tr("news.earlier"))
+                Text(earlierTitle)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(WizardPalette.ink)
                     .padding(.bottom, 6)

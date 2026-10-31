@@ -113,7 +113,14 @@ A short wizard connects your account, picks the organizations, asks what to leav
   </picture>
 </p>
 
-Everything can be changed later in **Settings**, which counts your unsaved changes, marks the section they are in, and lets you discard them or save with ⌘S. A **What's new** page there lists what changed in each version.
+Everything can be changed later in **Settings**, which counts your unsaved changes, marks the section they are in, and lets you discard them or save with ⌘S. A **What's new** page there lists what changed in each version, and after an update a window shows what is new once (you can turn that off).
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/news-dark.png">
+    <img src="docs/images/news-light.png" alt="The window shown after an update, listing what is new" width="420">
+  </picture>
+</p>
 
 While the wizard or Settings is open, PRPulse shows in the Dock and in the app switcher (⌘Tab), so you can find the window again after another app takes the front. It goes back to the menu bar alone when the last window closes.
 

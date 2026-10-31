@@ -41,9 +41,15 @@ enum DemoSnapshot {
         for page in SettingsPage.allCases {
             write(settings(page), named: "settings-\(page)", to: directory)
         }
+        write(releaseNotes, named: "news-window", to: directory)
         for slide in 1 ..< WizardView.slideCount {
             write(wizard(.welcome, slide: slide), named: "wizard-1-welcome-\(slide + 1)", to: directory)
         }
+    }
+
+    /// The window an update opens, with the two latest releases of the changelog that ships with the app.
+    static var releaseNotes: some View {
+        ReleaseNotesView(releases: Array(NewsContent.bundledReleases().prefix(2)), showAfterUpdate: true)
     }
 
     static func settings(_ page: SettingsPage, login: String = "felipeferrarini") -> some View {

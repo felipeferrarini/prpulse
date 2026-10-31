@@ -372,6 +372,13 @@
 "news.notes" = "Notas";
 "news.earlier" = "Versões anteriores";
 "news.unavailable" = "A lista de mudanças não está disponível neste build.";
+"news.alsoInUpdate" = "Também nesta atualização";
+"news.option.title" = "Mostrar novidades depois de atualizar";
+"news.option.detail" = "Abre esta lista na primeira vez que você abre uma versão nova.";
+"news.window.name" = "Novidades do PRPulse";
+"news.window.title" = "Novidades da %@";
+"news.window.lead" = "O PRPulse foi atualizado. Veja o que mudou.";
+"news.window.done" = "Entendi";
 "wizard.agents.title" = "Revisar com o Claude";
 "wizard.agents.lead" = "Peça ao Claude para revisar as PRs que esperam por você.";
 "wizard.agents.more" = "A skill, o projeto padrão e o texto do pedido ficam em Ajustes → Agentes.";

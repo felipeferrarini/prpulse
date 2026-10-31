@@ -2,6 +2,12 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- **What's new after an update.** The first time you open a new version, a window lists what changed in it, or in every version since the last one you were shown. It is opened once per update; turn it off with **Show what's new after updating**, in the window or in Settings → What's new.
+
 ## [0.8.0] - 2026-10-31
 
 ### Added

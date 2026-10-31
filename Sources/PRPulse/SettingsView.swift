@@ -73,6 +73,7 @@ struct SettingsChanges {
         if draft.reviewApproval != saved.reviewApproval { pages.append(.agents) }
         if draft.reviewFolders != saved.reviewFolders { pages.append(.agents) }
         if draft.reviewOrgFolders != saved.reviewOrgFolders { pages.append(.agents) }
+        if draft.showNewsAfterUpdate != saved.showNewsAfterUpdate { pages.append(.news) }
         self.pages = pages
     }
 
@@ -236,7 +237,7 @@ struct SettingsView: View {
                 case .mascot: MascotContent(model: model, onResetPosition: onResetMascotPosition)
                 case .agents: AgentsContent(model: model, availability: agentAvailability, cliStatus: cliStatus, onTest: onTestReviewAgent)
                 case .diagnostics: DiagnosticsContent(report: diagnostics)
-                case .news: NewsContent()
+                case .news: NewsContent(showAfterUpdate: $model.draft.showNewsAfterUpdate)
                 }
             }
             .padding(.top, 26)

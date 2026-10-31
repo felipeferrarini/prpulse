@@ -158,3 +158,15 @@ private func freshDefaults() -> UserDefaults {
 
     #expect(decoded == settings)
 }
+
+@Test func newsSettingsSurviveARoundTripAndOldDataAnnouncesUpdates() throws {
+    var settings = AppSettings.defaults
+    settings.showNewsAfterUpdate = false
+    settings.lastSeenVersion = "0.8.0"
+    let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
+    #expect(!decoded.showNewsAfterUpdate)
+    #expect(decoded.lastSeenVersion == "0.8.0")
+    let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"hasCompletedSetup":true}"#.utf8))
+    #expect(old.showNewsAfterUpdate)
+    #expect(old.lastSeenVersion.isEmpty)
+}

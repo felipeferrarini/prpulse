@@ -146,9 +146,16 @@ Você precisa de macOS 14 ou mais novo e do toolchain Swift (Xcode ou as Command
 1. **Conexão:** reaproveite o login do [`gh`](https://cli.github.com) ou cole um token pessoal com os escopos `repo` e `read:org`.
 2. **Organizações:** escolha uma ou mais. As que você mais usou nos últimos 90 dias vêm primeiro, com a contagem.
 3. **Exceções:** marque repositórios para ignorar (eles são listados a partir da organização) e edite as contas de bot a pular. Ali também há dois interruptores: ignorar comentários de bots e ignorar as PRs que eles abrem.
-4. **Ajustes:** frequência de atualização, notificações, abrir ao iniciar o Mac e atualizações automáticas. Em Ajustes há também uma aba de **Diagnóstico**, com um botão que copia as informações para um relato de problema (sem token, nem nomes de organização ou de PR), e a aba **Novidades**, que mostra o que mudou em cada versão.
+4. **Ajustes:** frequência de atualização, notificações, abrir ao iniciar o Mac e atualizações automáticas. Em Ajustes há também uma aba de **Diagnóstico**, com um botão que copia as informações para um relato de problema (sem token, nem nomes de organização ou de PR), e a aba **Novidades**, que mostra o que mudou em cada versão; depois de uma atualização, uma janela mostra as novidades uma vez (dá para desligar).
 5. **Revisão com o Claude:** ligue ou desligue, veja se o Claude Desktop e o Claude Code estão prontos e escolha quem aprova (Automático ou Perguntar a mim).
 6. **Mascote:** escolha o personagem que fica no canto da tela, ou desligue.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/news-dark.png">
+    <img src="docs/images/news-light.png" alt="A janela mostrada depois de uma atualização, com as novidades" width="420">
+  </picture>
+</p>
 
 > [!NOTE]
 > Se a sua organização exige SAML SSO, autorize o token para ela no GitHub, senão o ícone vai para o estado de erro. O mesmo acontece se a organização for renomeada ou o token não enxergá-la. Tokens clássicos precisam do escopo `repo`, ou os repositórios privados nunca aparecem.
