@@ -135,7 +135,7 @@ struct MascotBody: View {
     @ObservedObject var model: SetupModel
 
     var body: some View {
-        StepFrame {
+        StepFrame(scrolls: false) {
             StepTitle(title: tr("wizard.mascot.title"), lead: tr("wizard.mascot.lead"))
             MascotContent(model: model, scrollsChooser: true).padding(.top, 10)
         }

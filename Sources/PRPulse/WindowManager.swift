@@ -12,6 +12,8 @@ private final class BorderlessWindow: NSWindow {
     override var canBecomeMain: Bool { true }
 }
 
+/// The windows of the app. While one is open the app shows in the Dock and the app switcher, so it can be found again
+/// after another app takes the front; it goes back to the menu bar alone when the last one closes.
 @MainActor
 final class WindowManager {
     private var windows: [String: NSWindow] = [:]
@@ -23,6 +25,7 @@ final class WindowManager {
             NSApp.activate(ignoringOtherApps: true)
             return
         }
+        AppMenu.installOnce()
         let window = makeWindow(chrome)
         window.title = title
         let hosting = NSHostingView(rootView: content())
@@ -36,6 +39,7 @@ final class WindowManager {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.forget(id) }
         }
+        updateActivationPolicy()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -63,5 +67,10 @@ final class WindowManager {
     private func forget(_ id: String) {
         windows[id] = nil
         if let observer = observers.removeValue(forKey: id) { NotificationCenter.default.removeObserver(observer) }
+        updateActivationPolicy()
+    }
+
+    private func updateActivationPolicy() {
+        NSApp.setActivationPolicy(windows.isEmpty ? .accessory : .regular)
     }
 }

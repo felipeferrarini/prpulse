@@ -37,7 +37,7 @@ enum DemoSnapshot {
         for step in SetupStep.allCases {
             write(wizard(step), named: "wizard-\(step.rawValue + 1)-\(step)", to: directory)
         }
-        write(wizard(.mascot, failure: tr("setup.error.network")), named: "wizard-6-mascot-error", to: directory)
+        write(wizard(.mascot, failure: tr("setup.error.network")), named: "wizard-7-mascot-error", to: directory)
         for page in SettingsPage.allCases {
             write(settings(page), named: "settings-\(page)", to: directory)
         }

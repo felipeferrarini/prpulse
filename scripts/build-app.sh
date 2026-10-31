@@ -29,6 +29,7 @@ sed -e "s/__APP_NAME__/$APP_NAME/g" \
     "$root/Resources/Info.plist.template" > "$app/Contents/Info.plist"
 
 cp "$root/Resources/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
+cp "$root/CHANGELOG.md" "$app/Contents/Resources/CHANGELOG.md"
 
 for bundle in "$bin_dir"/*_"$APP_NAME".bundle; do
     [ -e "$bundle" ] && cp -R "$bundle" "$app/Contents/Resources/"

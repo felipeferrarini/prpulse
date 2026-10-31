@@ -2,6 +2,21 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.0] - 2026-10-30
+
+### Added
+
+- **What's new.** A page in Settings with what changed in each version of PRPulse: the current one open, the earlier ones one click away. It reads the changelog that ships with the app.
+
+### Changed
+
+- The setup wizard has a step for reviews with Claude (turn them on, see whether Claude Desktop and Claude Code are ready, choose who approves), before the mascot.
+- While the setup wizard or Settings is open, PRPulse shows in the Dock and the app switcher (⌘Tab), with a menu bar of its own (Quit, the editing commands, Close), so the window can be found again after another app takes the front. It goes back to the menu bar alone when the last window closes.
+
+### Fixed
+
+- Every step of the setup wizard now scrolls when its content is taller than the window (the Exceptions step cut off its last switch), and so does the list of pages in Settings.
+
 ## [0.6.0] - 2026-10-30
 
 ### Added

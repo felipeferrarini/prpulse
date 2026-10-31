@@ -2,7 +2,7 @@ import PRPulseCore
 import SwiftUI
 
 enum SettingsPage: CaseIterable, Hashable {
-    case connection, organization, exceptions, general, mascot, agents, diagnostics
+    case connection, organization, exceptions, general, mascot, agents, diagnostics, news
 
     var symbol: String {
         switch self {
@@ -13,6 +13,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .mascot: "face.smiling"
         case .agents: "sparkles"
         case .diagnostics: "stethoscope"
+        case .news: "newspaper"
         }
     }
 
@@ -25,6 +26,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .mascot: tr("settings.section.mascot")
         case .agents: tr("settings.section.agents")
         case .diagnostics: tr("settings.section.diagnostics")
+        case .news: tr("settings.section.news")
         }
     }
 
@@ -37,6 +39,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .mascot: tr("settings.lead.mascot")
         case .agents: tr("settings.lead.agents")
         case .diagnostics: tr("settings.lead.diagnostics")
+        case .news: tr("settings.lead.news")
         }
     }
 }
@@ -145,11 +148,15 @@ struct SettingsView: View {
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
             AccountCard(model: model)
-            VStack(spacing: 3) {
-                ForEach(SettingsPage.allCases, id: \.self) { item in navigationRow(item) }
+            ScrollView {
+                VStack(spacing: 3) {
+                    ForEach(SettingsPage.allCases, id: \.self) { item in navigationRow(item) }
+                }
+                .padding(.top, 18)
             }
-            .padding(.top, 18)
-            Spacer()
+            .scrollIndicators(.hidden)
+            .scrollBounceBehavior(.basedOnSize)
+            Spacer(minLength: 0)
             Text(tr("settings.version", Self.version))
                 .font(.system(size: 11.5))
                 .foregroundStyle(WizardPalette.ink3)
@@ -229,6 +236,7 @@ struct SettingsView: View {
                 case .mascot: MascotContent(model: model, onResetPosition: onResetMascotPosition)
                 case .agents: AgentsContent(model: model, availability: agentAvailability, cliStatus: cliStatus, onTest: onTestReviewAgent)
                 case .diagnostics: DiagnosticsContent(report: diagnostics)
+                case .news: NewsContent()
                 }
             }
             .padding(.top, 26)

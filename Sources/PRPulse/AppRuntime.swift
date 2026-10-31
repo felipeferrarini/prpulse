@@ -223,7 +223,10 @@ final class AppRuntime: ObservableObject {
                 model: setup,
                 onFinish: { [weak self] in await self?.finishSetup(setup.draft) },
                 onClose: { [weak self] in self?.windows.close(id: Self.setupWindow) },
-                onCancel: { [weak self] in self?.windows.close(id: Self.setupWindow) }
+                onCancel: { [weak self] in self?.windows.close(id: Self.setupWindow) },
+                agentAvailability: { [weak self] in self?.reviewAgent.availability() ?? .notInstalled },
+                cliStatus: { [weak self] in await self?.checkCLI() ?? .unknown },
+                onTestReviewAgent: { [weak self] in self?.testReviewAgent() }
             )
         }
     }

@@ -329,6 +329,7 @@ private struct Caption: View {
         case .organization: (tr("wizard.cap.org.title"), tr("wizard.cap.org.body"))
         case .exceptions: (tr("wizard.cap.exceptions.title"), tr("wizard.cap.exceptions.body"))
         case .general: (tr("wizard.cap.general.title"), tr("wizard.cap.general.body"))
+        case .agents: (tr("wizard.cap.agents.title"), tr("wizard.cap.agents.body"))
         case .mascot: (tr("wizard.cap.mascot.title"), tr("wizard.cap.mascot.body"))
         case .done: (tr("wizard.cap.done.title"), tr("wizard.cap.done.body"))
         }

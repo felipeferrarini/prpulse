@@ -260,6 +260,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 | **Agents** | turn "Review with Claude" on or off, check Claude Desktop and Claude Code, pick the review skill, set a default project folder per organization, edit the request, and the folders chosen for single repositories |
 | **General** | refresh interval (1 to 30 minutes), popover layout, days before a PR counts as waiting for review, notifications, open at login, global shortcut, automatic updates, run the setup again |
 | **Diagnostics** | version, last sync, GitHub request budget, and a button that copies all of it for a bug report (no token, organization or PR names) |
+| **What's new** | what changed in each version of PRPulse, from the changelog that ships with the app |
 
 ## Known limits
 

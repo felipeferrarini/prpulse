@@ -2,7 +2,7 @@ import PRPulseCore
 import SwiftUI
 
 enum SetupStep: Int, CaseIterable {
-    case welcome, connect, organization, exceptions, general, mascot, done
+    case welcome, connect, organization, exceptions, general, agents, mascot, done
 }
 
 struct WizardView: View {
@@ -10,6 +10,9 @@ struct WizardView: View {
     let onFinish: () async -> String?
     let onClose: () -> Void
     let onCancel: () -> Void
+    let agentAvailability: () -> AgentAvailability
+    let cliStatus: () async -> CLIState
+    let onTestReviewAgent: () -> Void
 
     @LocalState private var step: SetupStep
     @LocalState private var slide: Int
@@ -28,12 +31,18 @@ struct WizardView: View {
         initialFailure: String? = nil,
         onFinish: @escaping () async -> String?,
         onClose: @escaping () -> Void = {},
-        onCancel: @escaping () -> Void = {}
+        onCancel: @escaping () -> Void = {},
+        agentAvailability: @escaping () -> AgentAvailability = { .ready },
+        cliStatus: @escaping () async -> CLIState = { .unknown },
+        onTestReviewAgent: @escaping () -> Void = {}
     ) {
         self.model = model
         self.onFinish = onFinish
         self.onClose = onClose
         self.onCancel = onCancel
+        self.agentAvailability = agentAvailability
+        self.cliStatus = cliStatus
+        self.onTestReviewAgent = onTestReviewAgent
         _step = LocalState(initialValue: initialStep)
         _slide = LocalState(initialValue: initialSlide)
         _failure = LocalState(initialValue: initialFailure)
@@ -74,6 +83,7 @@ struct WizardView: View {
         case .organization: OrganizationBody(model: model)
         case .exceptions: ExceptionsBody(model: model)
         case .general: GeneralBody(model: model)
+        case .agents: AgentsBody(model: model, availability: agentAvailability, cliStatus: cliStatus, onTest: onTestReviewAgent)
         case .mascot: MascotBody(model: model)
         case .done: DoneBody(model: model)
         }
@@ -146,7 +156,8 @@ struct WizardView: View {
             if valid { go(to: .organization) }
         case .organization: go(to: .exceptions)
         case .exceptions: go(to: .general)
-        case .general: go(to: .mascot)
+        case .general: go(to: .agents)
+        case .agents: go(to: .mascot)
         case .mascot:
             isBusy = true
             withAnimation(.easeOut(duration: 0.2)) { failure = nil }

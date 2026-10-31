@@ -7,6 +7,8 @@ struct AgentsContent: View {
     let availability: () -> AgentAvailability
     let cliStatus: () async -> CLIState
     let onTest: () -> Void
+    /// The setup wizard asks only for what decides whether and how reviews run; the rest is in Settings.
+    var isCompact = false
 
     @LocalState private var status = AgentAvailability.ready
     @LocalState private var cli = CLIState.unknown
@@ -28,10 +30,12 @@ struct AgentsContent: View {
             statusRow.staggered(3)
             cliRow.staggered(4)
             approvalRow.staggered(5)
-            skillRow.staggered(6)
-            projectRow.staggered(7)
-            promptRow.staggered(8)
-            foldersRow.staggered(9)
+            if !isCompact {
+                skillRow.staggered(6)
+                projectRow.staggered(7)
+                promptRow.staggered(8)
+                foldersRow.staggered(9)
+            }
         }
         .task {
             status = availability()

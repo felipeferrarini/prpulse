@@ -25,14 +25,31 @@ struct StepTitle: View {
     }
 }
 
+/// The body of a step. It scrolls when its content is taller than the window, so no step can run out of room; a step that
+/// keeps its title in place and scrolls a list of its own sets `scrolls` to false.
 struct StepFrame<Content: View>: View {
+    var scrolls = true
     @ViewBuilder let content: Content
 
     var body: some View {
+        if scrolls {
+            GeometryReader { proxy in
+                ScrollView {
+                    column.frame(minHeight: proxy.size.height, alignment: .topLeading)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+            }
+        } else {
+            column.frame(maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    private var column: some View {
         VStack(alignment: .leading, spacing: 0) { content }
             .padding(.horizontal, 32)
             .padding(.top, 26)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.bottom, scrolls ? 12 : 0)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 
@@ -219,7 +236,7 @@ struct OrganizationBody: View {
     @ObservedObject var model: SetupModel
 
     var body: some View {
-        StepFrame {
+        StepFrame(scrolls: false) {
             StepTitle(title: tr("setup.org.title"), lead: tr("setup.org.caption"))
             ScrollView {
                 OrganizationContent(model: model).padding(.vertical, 2)
@@ -637,6 +654,29 @@ struct DoneBody: View {
                 .frame(width: 28, height: 28)
                 .background(WizardPalette.soft, in: RoundedRectangle(cornerRadius: 8))
             Text(text).font(.system(size: 14)).foregroundStyle(WizardPalette.ink)
+        }
+    }
+}
+
+// MARK: - Agents
+
+struct AgentsBody: View {
+    @ObservedObject var model: SetupModel
+    let availability: () -> AgentAvailability
+    let cliStatus: () async -> CLIState
+    let onTest: () -> Void
+
+    var body: some View {
+        StepFrame {
+            StepTitle(title: tr("wizard.agents.title"), lead: tr("wizard.agents.lead"))
+            AgentsContent(model: model, availability: availability, cliStatus: cliStatus, onTest: onTest, isCompact: true)
+                .padding(.top, 14)
+            Text(tr("wizard.agents.more"))
+                .font(.system(size: 12.5))
+                .foregroundStyle(WizardPalette.ink3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 12)
+            Spacer(minLength: 0)
         }
     }
 }
