@@ -21,6 +21,9 @@ struct PopoverView: View {
     var entersOnAppear = false
     /// Called when something inside the popover changes what it needs to show, so its window can follow.
     var onContentChange: () -> Void = {}
+    /// What the pictures of the README start with: a stack opened, pull requests ticked, the agents with a review open.
+    var initialStack: (tab: PopoverTab, key: StackKey)?
+    var initialSelection: Set<PullRequestRef>?
     let onRefresh: () -> Void
     let onSettings: () -> Void
 
@@ -44,6 +47,9 @@ struct PopoverView: View {
         agentFocus: AgentFocus = AgentFocus(),
         entersOnAppear: Bool = false,
         onContentChange: @escaping () -> Void = {},
+        initialStack: (tab: PopoverTab, key: StackKey)? = nil,
+        initialSelection: Set<PullRequestRef>? = nil,
+        initialAgentRun: UUID? = nil,
         initialTab: PopoverTab = .review,
         initialFilter: ActionLane? = nil,
         onRefresh: @escaping () -> Void,
@@ -62,11 +68,15 @@ struct PopoverView: View {
         self.agentFocus = agentFocus
         self.entersOnAppear = entersOnAppear
         self.onContentChange = onContentChange
+        self.initialStack = initialStack
+        self.initialSelection = initialSelection
         self.onRefresh = onRefresh
         self.onSettings = onSettings
         _tab = LocalState(initialValue: initialTab)
         _filter = LocalState(initialValue: initialFilter)
         _entered = LocalState(initialValue: !entersOnAppear)
+        _showsAgents = LocalState(initialValue: initialAgentRun != nil)
+        _openRun = LocalState(initialValue: initialAgentRun)
     }
 
     private static let singleWidth: CGFloat = 560
@@ -133,7 +143,7 @@ struct PopoverView: View {
                     .folded(!isSingle, height: 50)
                 LaneFilterBar(lanes: summary.activeLanes, summary: summary, selection: laneSelection(summary))
                     .padding(.bottom, 12)
-                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, entered: entered, showsOwner: data.showsOwner, onMute: onMute, onReview: onReview, onReviewInDesktop: onReviewInDesktop, onReviewGroup: onReviewGroup, onReviewEach: onReviewEach, onContentChange: onContentChange)
+                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, entered: entered, showsOwner: data.showsOwner, onMute: onMute, onReview: onReview, onReviewInDesktop: onReviewInDesktop, onReviewGroup: onReviewGroup, onReviewEach: onReviewEach, initialStack: initialStack, initialSelection: initialSelection, onContentChange: onContentChange)
             }
         }
     }
@@ -199,6 +209,8 @@ private struct SummaryPanes: View {
     let onReviewInDesktop: ((PullRequestSnapshot) -> Void)?
     let onReviewGroup: (([PullRequestSnapshot], ReviewRequest.Scope) -> Void)?
     let onReviewEach: (([PullRequestSnapshot]) -> Void)?
+    var initialStack: (tab: PopoverTab, key: StackKey)?
+    var initialSelection: Set<PullRequestRef>?
     let onContentChange: () -> Void
 
     @LocalState private var heights: [PopoverTab: CGFloat] = [:]
@@ -236,6 +248,13 @@ private struct SummaryPanes: View {
         .animation(PopoverMotion.spring, value: tab)
         .onChange(of: openStacks) { _, _ in onContentChange() }
         .onChange(of: selecting) { _, _ in onContentChange() }
+        .onAppear {
+            if let initialStack { openStacks[initialStack.tab] = initialStack.key }
+            if let initialSelection {
+                selecting = true
+                selection = initialSelection
+            }
+        }
     }
 
     // MARK: Panes

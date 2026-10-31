@@ -16,6 +16,9 @@ enum ReadmeShots {
             render(HeroScene(scheme: scheme, data: data), named: "hero-\(tag)", scheme: scheme, to: directory)
             render(floating(popover(data, scheme, layout: .single), radius: 12, scheme: scheme), named: "popover-\(tag)", scheme: scheme, to: directory)
             render(floating(popover(data, scheme, layout: .split), radius: 12, scheme: scheme), named: "popover-split-\(tag)", scheme: scheme, to: directory)
+            render(floating(popover(data, scheme, layout: .single, stack: StackKey(owner: "acme", repo: "api", number: 7)), radius: 12, scheme: scheme), named: "stack-\(tag)", scheme: scheme, to: directory)
+            render(floating(popover(data, scheme, layout: .single, selection: Self.picked), radius: 12, scheme: scheme), named: "batch-\(tag)", scheme: scheme, to: directory)
+            render(floating(agents(data, scheme), radius: 12, scheme: scheme), named: "agents-\(tag)", scheme: scheme, to: directory)
             render(floating(DemoSnapshot.wizard(.exceptions), radius: 16, scheme: scheme), named: "wizard-\(tag)", scheme: scheme, to: directory)
             render(floating(DemoSnapshot.settings(.organization, login: "octocat"), radius: 16, scheme: scheme), named: "settings-\(tag)", scheme: scheme, to: directory)
             render(StatesStrip(scheme: scheme), named: "menubar-\(tag)", scheme: scheme, to: directory)
@@ -23,9 +26,35 @@ enum ReadmeShots {
         }
     }
 
-    private static func popover(_ data: ViewData, _ scheme: ColorScheme, layout: PopoverLayout) -> some View {
-        PopoverView(data: data, layout: .constant(layout), onRefresh: {}, onSettings: {})
-            .background(Color(nsColor: scheme == .dark ? NSColor(hex: 0x24252B) : NSColor(hex: 0xF5F5F8)))
+    private static let picked: Set<PullRequestRef> = [
+        PullRequestRef(owner: "acme", repo: "api", number: 301),
+        PullRequestRef(owner: "acme", repo: "api", number: 302),
+        PullRequestRef(owner: "acme", repo: "api", number: 303),
+        PullRequestRef(owner: "acme", repo: "web", number: 412),
+    ]
+
+    private static func popover(
+        _ data: ViewData, _ scheme: ColorScheme, layout: PopoverLayout, stack: StackKey? = nil, selection: Set<PullRequestRef>? = nil
+    ) -> some View {
+        PopoverView(
+            data: data, layout: .constant(layout),
+            onReviewGroup: stack != nil || selection != nil ? { _, _ in } : nil,
+            onReviewEach: stack != nil || selection != nil ? { _ in } : nil,
+            initialStack: stack.map { (PopoverTab.review, $0) }, initialSelection: selection,
+            onRefresh: {}, onSettings: {}
+        )
+        .background(Color(nsColor: scheme == .dark ? NSColor(hex: 0x24252B) : NSColor(hex: 0xF5F5F8)))
+    }
+
+    /// The panel with the agents open and a review that is ready, with its follow-up box.
+    private static func agents(_ data: ViewData, _ scheme: ColorScheme) -> some View {
+        let runs = DemoSnapshot.sampleRuns()
+        return PopoverView(
+            data: data, layout: .constant(.single),
+            agentRuns: runs, agentActions: AgentActions(), initialAgentRun: runs.runs[1].id,
+            onRefresh: {}, onSettings: {}
+        )
+        .background(Color(nsColor: scheme == .dark ? NSColor(hex: 0x24252B) : NSColor(hex: 0xF5F5F8)))
     }
 
     private static func floating<Content: View>(_ view: Content, radius: CGFloat, scheme: ColorScheme) -> some View {

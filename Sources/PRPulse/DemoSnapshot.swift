@@ -93,7 +93,7 @@ enum DemoSnapshot {
         case followUp
     }
 
-    private static func sampleRuns(_ scene: AgentScene = .plain) -> AgentRunList {
+    static func sampleRuns(_ scene: AgentScene = .plain) -> AgentRunList {
         let now = Date()
         func make(_ number: Int, _ repo: String, _ title: String, minutes: Double) -> AgentRun {
             AgentRun(
