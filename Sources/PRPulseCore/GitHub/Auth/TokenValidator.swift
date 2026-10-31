@@ -5,7 +5,7 @@ public struct TokenValidator: Sendable {
         _ = try await provider.token()
         do {
             return try await client.viewer()
-        } catch GitHubError.unauthorized {
+        } catch ProviderError.unauthorized {
             throw AuthError.tokenRejected
         }
     }

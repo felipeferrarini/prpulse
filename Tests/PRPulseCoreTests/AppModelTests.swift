@@ -134,7 +134,7 @@ private struct Harness {
 @MainActor @Test func unauthorizedShowsFailedStateAndDoesNotNotify() async {
     let h = Harness()
     h.world.mine = [changesRequestedPR(1)]
-    h.world.failure = GitHubError.unauthorized
+    h.world.failure = ProviderError.unauthorized
 
     await h.model.refresh()
 
@@ -150,7 +150,7 @@ private struct Harness {
 
 @MainActor @Test func ssoRequiredShowsFailedState() async {
     let h = Harness()
-    h.world.failure = GitHubError.ssoRequired(org: "acme")
+    h.world.failure = ProviderError.ssoRequired(org: "acme")
 
     await h.model.refresh()
 
@@ -170,7 +170,7 @@ private struct Harness {
     guard case .ready(let before) = h.model.state else { Issue.record("expected ready"); return }
     let notifiedBefore = h.sink.batches.count
 
-    h.world.failure = GitHubError.network("offline")
+    h.world.failure = ProviderError.network("offline")
     await h.model.refresh()
 
     #expect(h.model.state == .ready(before))
@@ -184,7 +184,7 @@ private struct Harness {
 
 @MainActor @Test func networkFailureWithoutSummaryIsOfflineNotUpToDate() async {
     let h = Harness()
-    h.world.failure = GitHubError.network("offline")
+    h.world.failure = ProviderError.network("offline")
 
     await h.model.refresh()
 
@@ -197,7 +197,7 @@ private struct Harness {
     let h = Harness()
     h.world.mine = [changesRequestedPR(1)]
     await h.model.refresh()
-    h.world.failure = GitHubError.network("offline")
+    h.world.failure = ProviderError.network("offline")
     await h.model.refresh()
     h.world.failure = nil
     await h.model.refresh()
@@ -219,7 +219,7 @@ private struct Harness {
 
 @MainActor @Test func rateLimitedKeepsSummaryAndDelaysNextRefresh() async {
     let h = Harness()
-    h.world.failure = GitHubError.rateLimited(retryAfter: 900)
+    h.world.failure = ProviderError.rateLimited(retryAfter: 900)
 
     await h.model.refresh()
 
@@ -232,7 +232,7 @@ private struct Harness {
 
 @MainActor @Test func failedSetupDoesNotMarkSetupComplete() async {
     let h = Harness()
-    h.world.failure = GitHubError.unauthorized
+    h.world.failure = ProviderError.unauthorized
 
     await h.model.completeSetup()
 
@@ -272,7 +272,7 @@ private struct Harness {
 
 @MainActor @Test func offlineWithoutAnySummaryRetriesSoon() async {
     let h = Harness()
-    h.world.failure = GitHubError.network("offline")
+    h.world.failure = ProviderError.network("offline")
     await h.model.refresh()
     #expect(h.model.nextDelay() == 60)
 

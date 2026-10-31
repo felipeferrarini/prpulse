@@ -190,8 +190,8 @@ final class SetupModel: ObservableObject {
         case AuthError.signInExpired: tr("setup.signin.error.expired")
         case AuthError.signInUnavailable: tr("setup.signin.error.unavailable")
         case AuthError.signInClientRejected: tr("setup.signin.error.client")
-        case GitHubError.ssoRequired: tr("error.sso.body")
-        case GitHubError.network: tr("setup.error.network")
+        case ProviderError.ssoRequired: tr("error.sso.body")
+        case ProviderError.network: tr("setup.error.network")
         default: tr("setup.error.generic", error.localizedDescription)
         }
     }

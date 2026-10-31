@@ -23,7 +23,7 @@ private func emptySearch() -> Data {
 @Test func samlEnforcementMapsToSsoRequired() async throws {
     let transport = FakeTransport { _, _ in try fixtureData("saml-error") }
 
-    await #expect(throws: GitHubError.ssoRequired(org: nil)) {
+    await #expect(throws: ProviderError.ssoRequired(org: nil)) {
         try await client(transport).minePullRequests(org: "acme", viewer: "me")
     }
 }
@@ -32,7 +32,7 @@ private func emptySearch() -> Data {
     let body = json(["data": NSNull(), "errors": [["type": "RATE_LIMITED", "message": "API rate limit exceeded"]]])
     let transport = FakeTransport { _, _ in body }
 
-    await #expect(throws: GitHubError.rateLimited(retryAfter: nil)) {
+    await #expect(throws: ProviderError.rateLimited(retryAfter: nil)) {
         try await client(transport).viewer()
     }
 }
@@ -164,7 +164,7 @@ private func emptySearch() -> Data {
 @Test func organizationCheckFailsWhenTheOrganizationIsNullForThisToken() async throws {
     let transport = FakeTransport { _, _ in json(["data": ["organization": NSNull()]]) }
 
-    await #expect(throws: GitHubError.organizationNotAccessible("acme")) {
+    await #expect(throws: ProviderError.organizationNotAccessible("acme")) {
         try await client(transport).verifyOrganization("acme")
     }
 }
@@ -172,7 +172,7 @@ private func emptySearch() -> Data {
 @Test func organizationCheckSurfacesSamlEnforcement() async throws {
     let transport = FakeTransport { _, _ in try fixtureData("saml-error") }
 
-    await #expect(throws: GitHubError.ssoRequired(org: nil)) {
+    await #expect(throws: ProviderError.ssoRequired(org: nil)) {
         try await client(transport).verifyOrganization("acme")
     }
 }
@@ -366,7 +366,7 @@ private func stackedPR(number: Int, position: Int) -> [String: Any] {
 @Test func anErrorThatIsNotAboutStacksIsNotHidden() async throws {
     let transport = FakeTransport { _, _ in json(["errors": [["message": "Something else broke"]]]) }
 
-    await #expect(throws: GitHubError.malformed("Something else broke")) {
+    await #expect(throws: ProviderError.malformed("Something else broke")) {
         try await client(transport).reviewPullRequests(org: "acme", viewer: "me", ignoredRepos: [])
     }
 }

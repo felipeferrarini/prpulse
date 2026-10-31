@@ -72,7 +72,7 @@ private func ghProvider(exists: Bool = true, status: Int32 = 0, output: String =
 }
 
 @Test func validatorMapsUnauthorizedToTokenRejected() async {
-    let transport = FakeTransport { _, _ in throw GitHubError.unauthorized }
+    let transport = FakeTransport { _, _ in throw ProviderError.unauthorized }
     let client = GitHubClient(transport: transport, clock: SystemClock())
 
     await #expect(throws: AuthError.tokenRejected) {
@@ -94,7 +94,7 @@ private func ghProvider(exists: Bool = true, status: Int32 = 0, output: String =
     let transport = FakeTransport { _, _ in try fixtureData("saml-error") }
     let client = GitHubClient(transport: transport, clock: SystemClock())
 
-    await #expect(throws: GitHubError.ssoRequired(org: nil)) {
+    await #expect(throws: ProviderError.ssoRequired(org: nil)) {
         try await TokenValidator().validate(provider: FixedProvider(), client: client)
     }
 }

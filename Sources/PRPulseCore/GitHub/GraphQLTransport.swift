@@ -61,22 +61,22 @@ public struct URLSessionTransport: GraphQLTransport, ScopeProbing {
             return try await session.data(for: request)
         } catch let error as URLError {
             if error.code == .cancelled { throw CancellationError() }
-            throw GitHubError.network(error.localizedDescription)
+            throw ProviderError.network(error.localizedDescription)
         }
     }
 
     private func validate(_ data: Data, _ response: URLResponse) throws -> Data {
-        guard let http = response as? HTTPURLResponse else { throw GitHubError.network("invalid response") }
+        guard let http = response as? HTTPURLResponse else { throw ProviderError.network("invalid response") }
         if let rateLimit = RateLimit.parse({ http.value(forHTTPHeaderField: $0) }) { rateLimits?.record(rateLimit) }
         switch http.statusCode {
         case 200..<300: return data
-        case 401: throw GitHubError.unauthorized
+        case 401: throw ProviderError.unauthorized
         case 403, 429: throw forbiddenError(http, body: data)
-        default: throw GitHubError.network("HTTP \(http.statusCode)")
+        default: throw ProviderError.network("HTTP \(http.statusCode)")
         }
     }
 
-    private func forbiddenError(_ http: HTTPURLResponse, body: Data) -> GitHubError {
+    private func forbiddenError(_ http: HTTPURLResponse, body: Data) -> ProviderError {
         let text = String(data: body, encoding: .utf8)?.lowercased() ?? ""
         let retryAfter = http.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init)
         if retryAfter != nil || text.contains("rate limit") { return .rateLimited(retryAfter: retryAfter) }

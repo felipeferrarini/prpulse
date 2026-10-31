@@ -38,7 +38,7 @@ public struct GitHubClient: Sendable {
     public func viewer() async throws -> ViewerInfo {
         let data = try await execute(Queries.viewer, [:])
         guard let viewer = data.object("viewer"), let login = viewer.string("login") else {
-            throw GitHubError.malformed("viewer is missing")
+            throw ProviderError.malformed("viewer is missing")
         }
         return ViewerInfo(login: login, organizations: viewer.nodes("organizations").compactMap { $0.string("login") })
     }
@@ -82,7 +82,7 @@ public struct GitHubClient: Sendable {
 
     public func verifyOrganization(_ org: String) async throws {
         let data = try await execute(Queries.organization, ["login": org])
-        guard data.object("organization") != nil else { throw GitHubError.organizationNotAccessible(org) }
+        guard data.object("organization") != nil else { throw ProviderError.organizationNotAccessible(org) }
     }
 
     public func minePullRequests(org: String, viewer: String) async throws -> [PullRequestSnapshot] {
@@ -173,7 +173,7 @@ public struct GitHubClient: Sendable {
         guard stackSupport.isSupported else { return try await execute(Queries.search(fragment, includesStacks: false), variables) }
         do {
             return try await execute(Queries.search(fragment), variables)
-        } catch GitHubError.malformed(let message) where message.localizedCaseInsensitiveContains("stack") {
+        } catch ProviderError.malformed(let message) where message.localizedCaseInsensitiveContains("stack") {
             stackSupport.isSupported = false
             return try await execute(Queries.search(fragment, includesStacks: false), variables)
         }

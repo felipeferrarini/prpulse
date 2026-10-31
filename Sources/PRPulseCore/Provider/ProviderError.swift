@@ -1,6 +1,6 @@
 import Foundation
 
-public enum GitHubError: Error, Equatable {
+public enum ProviderError: Error, Equatable {
     case unauthorized
     case ssoRequired(org: String?)
     case rateLimited(retryAfter: TimeInterval?)

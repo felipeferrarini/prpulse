@@ -63,7 +63,7 @@ private func checker(
 
 @Test func failedValidationDoesNotOverwriteTheStoredToken() async throws {
     let store = MemoryStore("good_token")
-    let checker = try checker(store: store, outcome: .failure(GitHubError.unauthorized))
+    let checker = try checker(store: store, outcome: .failure(ProviderError.unauthorized))
 
     await #expect(throws: AuthError.tokenRejected) {
         try await checker.check(source: .personalToken, typedToken: "typo_token")

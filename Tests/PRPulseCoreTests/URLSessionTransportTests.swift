@@ -63,21 +63,21 @@ struct URLSessionTransportTests {
 
     @Test func unauthorizedMapsTo401Error() async {
         StubURLProtocol.handler = { _ in (401, [:], Data("{}".utf8)) }
-        await #expect(throws: GitHubError.unauthorized) {
+        await #expect(throws: ProviderError.unauthorized) {
             try await transport().send(query: "q", variables: [:])
         }
     }
 
     @Test func secondaryRateLimitMapsWithRetryAfter() async {
         StubURLProtocol.handler = { _ in (403, ["Retry-After": "30"], Data("{\"message\":\"You have exceeded a secondary rate limit\"}".utf8)) }
-        await #expect(throws: GitHubError.rateLimited(retryAfter: 30)) {
+        await #expect(throws: ProviderError.rateLimited(retryAfter: 30)) {
             try await transport().send(query: "q", variables: [:])
         }
     }
 
     @Test func serverErrorMapsToNetwork() async {
         StubURLProtocol.handler = { _ in (502, [:], Data()) }
-        await #expect(throws: GitHubError.network("HTTP 502")) {
+        await #expect(throws: ProviderError.network("HTTP 502")) {
             try await transport().send(query: "q", variables: [:])
         }
     }
@@ -102,7 +102,7 @@ struct URLSessionTransportTests {
 
     @Test func scopeProbeMapsUnauthorized() async {
         StubURLProtocol.handler = { _ in (401, [:], Data("{}".utf8)) }
-        await #expect(throws: GitHubError.unauthorized) {
+        await #expect(throws: ProviderError.unauthorized) {
             try await transport().oauthScopes()
         }
     }
@@ -120,7 +120,7 @@ struct URLSessionTransportTests {
         StubURLProtocol.failure = URLError(.notConnectedToInternet)
         defer { StubURLProtocol.failure = nil }
 
-        await #expect(throws: GitHubError.self) {
+        await #expect(throws: ProviderError.self) {
             try await transport().send(query: "q", variables: [:])
         }
     }

@@ -58,7 +58,7 @@ import Testing
 }
 
 @Test func mapperThrowsMalformedWhenNumberIsMissing() {
-    #expect(throws: GitHubError.self) {
+    #expect(throws: ProviderError.self) {
         try SnapshotMapper.snapshot(from: ["title": "x"])
     }
 }

@@ -8,7 +8,7 @@ enum SnapshotMapper {
               let owner = repo.object("owner")?.string("login"),
               let url = node.string("url").flatMap(URL.init(string:)),
               let createdAt = parseDate(node.string("createdAt"))
-        else { throw GitHubError.malformed("pull request node is missing required fields") }
+        else { throw ProviderError.malformed("pull request node is missing required fields") }
 
         return PullRequestSnapshot(
             ref: PullRequestRef(owner: owner, repo: repoName, number: number),

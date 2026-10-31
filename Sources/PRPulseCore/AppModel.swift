@@ -164,16 +164,16 @@ public final class AppModel: ObservableObject {
         switch error {
         case is CancellationError:
             if lastSummary == nil, state == .loading { state = .idle }
-        case GitHubError.unauthorized, is AuthError, is KeychainTokenStore.KeychainError:
+        case ProviderError.unauthorized, is AuthError, is KeychainTokenStore.KeychainError:
             isOffline = false
             state = .failed(.unauthenticated)
-        case GitHubError.organizationNotAccessible(let org):
+        case ProviderError.organizationNotAccessible(let org):
             isOffline = false
             state = .failed(.organizationNotAccessible(org))
-        case GitHubError.ssoRequired(let org):
+        case ProviderError.ssoRequired(let org):
             isOffline = false
             state = .failed(.ssoRequired(org: org))
-        case GitHubError.rateLimited(let retryAfter):
+        case ProviderError.rateLimited(let retryAfter):
             retryNotBefore = clock.now.addingTimeInterval(retryAfter ?? Self.defaultRetryAfter)
             markOffline()
         default:
