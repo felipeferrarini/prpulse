@@ -14,6 +14,16 @@ struct PopoverHeader: View {
     let org: String
     let total: Int
     @Binding var layout: PopoverLayout
+    var agentRuns = AgentRunList()
+    @Binding var showsAgents: Bool
+
+    init(org: String, total: Int, layout: Binding<PopoverLayout>, agentRuns: AgentRunList = AgentRunList(), showsAgents: Binding<Bool> = .constant(false)) {
+        self.org = org
+        self.total = total
+        _layout = layout
+        self.agentRuns = agentRuns
+        _showsAgents = showsAgents
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -24,6 +34,7 @@ struct PopoverHeader: View {
             Text(org).font(.system(size: 13, weight: .semibold))
             Text(pendingText).font(.system(size: 13)).foregroundStyle(.secondary)
             Spacer(minLength: 8)
+            if !agentRuns.runs.isEmpty || showsAgents { AgentsToggle(runs: agentRuns, isOn: $showsAgents) }
             LayoutToggle(layout: $layout)
         }
     }

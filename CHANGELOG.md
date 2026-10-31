@@ -2,6 +2,16 @@
 
 All notable changes to PRPulse. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.0] - 2026-10-30
+
+### Added
+
+- **Review with Claude.** On a pull request waiting for your review, the `⋯` menu and the right click have a new action that opens a session in Claude Desktop with the request already written. If you have a review skill under `~/.claude` (yours or a plugin's), the request names it; otherwise it asks for a review focused on performance, security and code and project conventions. Only the PR's address and number go in the request, never its title or description. It needs Claude Desktop on the Mac, and the session opens in the repository's clone, which PRPulse finds in your usual folders (or asks for) so Claude can read the code.
+- **Reviews in the background.** With Claude Code installed and signed in, "Review with Claude" runs the review on its own, without opening anything. A `✦` button in the panel header lists the reviews in progress (what the agent is reading, how long it has been going) and the ones done; opening one shows the review, with buttons to continue it in Claude Desktop or Terminal, copy it or try again. A notification and the mascot tell you when it is ready. The agent reads the code and the PR on its own (`gh pr view`, `gh pr diff`, `git log`…). Settings → Agents → **Approvals** decides the rest. **Automatic**, the default, uses Claude Code's auto mode, and PRPulse keeps the review read-only on top of it: commands run in a sandbox where the repository folder cannot be written and only GitHub can be reached, and editing files, changing git or writing to GitHub is denied. **Ask me** makes anything beyond reading wait with what it wants to do shown, with a notification and the mascot, and Allow or Deny answers it once. A review is stopped after 20 minutes. A note under a finished review says how to ask Claude Desktop to import it into its session list (Help → Troubleshooting → Import Claude Code CLI sessions). The menu keeps "Open draft in Claude Desktop" as the other choice, and the draft is also what you get without Claude Code.
+- **Follow-ups.** Under a review that is ready there is a box to ask more in the same conversation, for a while after it finished (and after that PRPulse picks the session up again). Stop interrupts the answer and keeps the review.
+- **A default project per organization.** If you keep all of an organization's projects under one root folder and run your sessions there, set that folder in Settings → Agents: every review of the organization opens in it. A folder picked for a single repository wins over it, and when PRPulse asks where a repository is, a checkbox sets the answer for the whole organization.
+- **Settings → Agents:** turn the action on or off, see whether Claude Desktop and Claude Code are ready (and what to do when the latter is not signed in), choose who approves (Automatic or Ask me), pick the skill (automatic by default), set the default projects, edit the request text and see or forget the folders chosen for single repositories.
+
 ## [0.5.4] - 2026-10-30
 
 ### Fixed

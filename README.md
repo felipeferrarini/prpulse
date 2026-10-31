@@ -156,6 +156,10 @@ Six characters come with the app. To add your own, drop a folder with a `sprites
 
 The moods are `calm`, `sleep`, `alert`, `joy`, `worried`, `think` and `sad`. Only `calm` is required; a mood you leave out plays `calm`. `make mascots` redraws the built-in ones.
 
+### Ask Claude to review a PR
+
+On a pull request waiting for your review, the `⋯` menu (and a right click) has **Review with Claude**. With [Claude Code](https://claude.com/claude-code) installed and signed in (run `claude` once in a terminal and use `/login`), it **runs in the background**: a `✦` button appears in the panel header with the reviews in progress (what the agent is reading right now, and for how long), you get a notification when one is ready, and opening it shows the review with buttons to continue the conversation in Claude Desktop or Terminal. The agent reads on its own: the code and the PR (`gh pr view`, `gh pr diff`, `git log`…). For anything else, Settings → Agents has **Approvals**. **Automatic** (the default) uses Claude Code's [auto mode](https://code.claude.com/docs/en/permission-modes): its classifier decides what is safe, so reviews rarely wait for you. PRPulse keeps it read-only on top of that: its commands run in a sandbox where the repository folder cannot be written and only GitHub can be reached (`~/.ssh`, `~/.aws` and `~/.gnupg` cannot be read), and editing files, changing git or writing to GitHub (`gh pr comment`, `gh api`…) is denied. If auto mode is not available to you, Claude Code asks instead. **Ask me** keeps the review waiting with the command shown, with a notification, until you press Allow or Deny (once, never remembered). Under a review that is ready there is a box to **ask a follow-up** in the same conversation. Without Claude Code, or from the menu's second item, it opens a draft in Claude Desktop instead (you press Enter to send it). The request holds the PR's address, the focus (performance, security, code and project conventions) and a note not to post anything on GitHub. If you already have a review skill under `~/.claude` or in a plugin, the request names it instead; Settings → Agents lets you pick one and edit the text. The session opens in the folder of the repository's clone (PRPulse looks in your usual folders and asks when it cannot find one), or, if you set a **default project** for the organization, in that folder for every repository of it: handy when you keep all of an organization's projects under one root folder and run your sessions there. Only the PR's address and number go in the request, never its title or description, which other people wrote. Cursor and Codex are planned.
+
 ### Quiet by design
 
 - **Bots stay out of the way.** Comments from CodeRabbit, SonarQube and any account GitHub marks as a bot don't ask you to reply, and you can add the accounts GitHub does not mark. Two switches decide what to ignore: their comments (on by default) and the PRs they open, like Dependabot's, which stay out of the review list (both on by default).
@@ -240,6 +244,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 
 - PRPulse talks **only to GitHub** (`api.github.com` and `github.com`) with your own credentials. There is no server of ours, no analytics and no telemetry.
 - A personal token is stored in the **macOS Keychain**. With the `gh` option, the token is read from `gh` on demand and never stored by PRPulse.
+- **Review with Claude** hands the PR's address to Claude Code or Claude Desktop on your Mac. PRPulse sends nothing anywhere for it; what they do with the request follows their own terms, and a background review uses your Claude plan like any other session. The reviews are kept in `~/Library/Application Support/PRPulse/` (the latest twenty), and nothing else is stored.
 - Update checks read one small feed file from your releases page on `github.com`. Nothing about you or your Mac is sent.
 - Updates are signed with a key only the maintainer holds, and the app refuses anything that doesn't match.
 - The app is open source (MIT), so all of this is checkable.
@@ -252,6 +257,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 | **Organizations** | which organizations to watch |
 | **Exceptions** | repositories to ignore, your list of bot accounts, and two switches: ignore comments from bots, ignore PRs opened by bots |
 | **Mascot** | show it or not, which character, its size, where it sits, and your own characters |
+| **Agents** | turn "Review with Claude" on or off, check Claude Desktop and Claude Code, pick the review skill, set a default project folder per organization, edit the request, and the folders chosen for single repositories |
 | **General** | refresh interval (1 to 30 minutes), popover layout, days before a PR counts as waiting for review, notifications, open at login, global shortcut, automatic updates, run the setup again |
 | **Diagnostics** | version, last sync, GitHub request budget, and a button that copies all of it for a bug report (no token, organization or PR names) |
 

@@ -44,6 +44,18 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var mascotScale: Int
     public var mascotIntroduced: Bool
     public var mascotAnchor: MascotAnchor?
+    /// Shows "Review with Claude" on the pull requests waiting for the viewer's review.
+    public var reviewAgentEnabled: Bool
+    /// `ReviewSkillCatalog.automaticChoice`, `noneChoice` or the name of a skill.
+    public var reviewSkill: String
+    /// Who decides when the agent wants to do more than read.
+    public var reviewApproval: ReviewApproval
+    /// The words sent with the request; empty uses the built-in text.
+    public var reviewPrompt: String
+    /// The folder picked for one repository, by `owner/name`. An empty path means there is no folder to use.
+    public var reviewFolders: [String: String]
+    /// The default project of an organization, by owner: the folder every one of its sessions opens in.
+    public var reviewOrgFolders: [String: String]
     public var hasCompletedSetup: Bool
     public var popoverLayout: PopoverLayout
 
@@ -65,6 +77,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
         mascotScale: 4,
         mascotIntroduced: false,
         mascotAnchor: nil,
+        reviewAgentEnabled: true,
+        reviewSkill: ReviewSkillCatalog.automaticChoice,
+        reviewApproval: .automatic,
+        reviewPrompt: "",
+        reviewFolders: [:],
+        reviewOrgFolders: [:],
         hasCompletedSetup: false,
         popoverLayout: .single
     )
@@ -87,6 +105,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
         mascotScale: Int = 4,
         mascotIntroduced: Bool = false,
         mascotAnchor: MascotAnchor? = nil,
+        reviewAgentEnabled: Bool = true,
+        reviewSkill: String = ReviewSkillCatalog.automaticChoice,
+        reviewApproval: ReviewApproval = .automatic,
+        reviewPrompt: String = "",
+        reviewFolders: [String: String] = [:],
+        reviewOrgFolders: [String: String] = [:],
         hasCompletedSetup: Bool,
         popoverLayout: PopoverLayout = .single
     ) {
@@ -107,6 +131,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.mascotScale = mascotScale
         self.mascotIntroduced = mascotIntroduced
         self.mascotAnchor = mascotAnchor
+        self.reviewAgentEnabled = reviewAgentEnabled
+        self.reviewSkill = reviewSkill
+        self.reviewApproval = reviewApproval
+        self.reviewPrompt = reviewPrompt
+        self.reviewFolders = reviewFolders
+        self.reviewOrgFolders = reviewOrgFolders
         self.hasCompletedSetup = hasCompletedSetup
         self.popoverLayout = popoverLayout
     }
@@ -132,6 +162,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
         mascotScale = try values.decodeIfPresent(Int.self, forKey: .mascotScale) ?? base.mascotScale
         mascotIntroduced = try values.decodeIfPresent(Bool.self, forKey: .mascotIntroduced) ?? base.mascotIntroduced
         mascotAnchor = try values.decodeIfPresent(MascotAnchor.self, forKey: .mascotAnchor)
+        reviewAgentEnabled = try values.decodeIfPresent(Bool.self, forKey: .reviewAgentEnabled) ?? base.reviewAgentEnabled
+        reviewSkill = try values.decodeIfPresent(String.self, forKey: .reviewSkill) ?? base.reviewSkill
+        reviewApproval = try values.decodeIfPresent(ReviewApproval.self, forKey: .reviewApproval) ?? base.reviewApproval
+        reviewPrompt = try values.decodeIfPresent(String.self, forKey: .reviewPrompt) ?? base.reviewPrompt
+        reviewFolders = try values.decodeIfPresent([String: String].self, forKey: .reviewFolders) ?? base.reviewFolders
+        reviewOrgFolders = try values.decodeIfPresent([String: String].self, forKey: .reviewOrgFolders) ?? base.reviewOrgFolders
         hasCompletedSetup = try values.decodeIfPresent(Bool.self, forKey: .hasCompletedSetup) ?? base.hasCompletedSetup
         popoverLayout = try values.decodeIfPresent(PopoverLayout.self, forKey: .popoverLayout) ?? base.popoverLayout
     }
@@ -140,6 +176,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case orgs, org, authSource, refreshMinutes, ignoredRepos, ignoredBots, ignoreBotComments, ignoreBotPullRequests, notificationsEnabled
         case launchAtLogin, automaticUpdates, globalShortcut, waitingReviewDays, hasCompletedSetup, popoverLayout
         case mascotEnabled, mascotPack, mascotScale, mascotIntroduced, mascotAnchor
+        case reviewAgentEnabled, reviewSkill, reviewApproval, reviewPrompt, reviewFolders, reviewOrgFolders
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -161,6 +198,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try values.encode(mascotScale, forKey: .mascotScale)
         try values.encode(mascotIntroduced, forKey: .mascotIntroduced)
         try values.encodeIfPresent(mascotAnchor, forKey: .mascotAnchor)
+        try values.encode(reviewAgentEnabled, forKey: .reviewAgentEnabled)
+        try values.encode(reviewSkill, forKey: .reviewSkill)
+        try values.encode(reviewApproval, forKey: .reviewApproval)
+        try values.encode(reviewPrompt, forKey: .reviewPrompt)
+        try values.encode(reviewFolders, forKey: .reviewFolders)
+        try values.encode(reviewOrgFolders, forKey: .reviewOrgFolders)
         try values.encode(hasCompletedSetup, forKey: .hasCompletedSetup)
         try values.encode(popoverLayout, forKey: .popoverLayout)
     }

@@ -133,3 +133,28 @@ private func freshDefaults() -> UserDefaults {
     let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
     #expect(!decoded.ignoreBotComments)
 }
+
+@Test func reviewWithAnAgentIsOnWithTheAutomaticSkillAlsoForSettingsSavedByEarlierVersions() throws {
+    let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"orgs":["acme"],"hasCompletedSetup":true}"#.utf8))
+
+    #expect(old.reviewAgentEnabled)
+    #expect(old.reviewSkill == ReviewSkillCatalog.automaticChoice)
+    #expect(old.reviewApproval == .automatic)
+    #expect(old.reviewPrompt.isEmpty)
+    #expect(old.reviewFolders.isEmpty)
+    #expect(old.reviewOrgFolders.isEmpty)
+}
+
+@Test func reviewChoicesSurviveASaveAndALoad() throws {
+    var settings = AppSettings.defaults
+    settings.reviewAgentEnabled = false
+    settings.reviewSkill = "pr-review"
+    settings.reviewApproval = .ask
+    settings.reviewPrompt = "Look at {url}"
+    settings.reviewFolders = ["acme/web": "/Users/me/web", "acme/docs": ""]
+    settings.reviewOrgFolders = ["acme": "/Users/me/acme"]
+
+    let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
+
+    #expect(decoded == settings)
+}

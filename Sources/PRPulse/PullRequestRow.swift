@@ -7,6 +7,8 @@ struct PullRequestRow: View {
     let entranceIndex: Int
     let entered: Bool
     var onMute: (() -> Void)?
+    var onReview: (() -> Void)?
+    var onReviewInDesktop: (() -> Void)?
 
     @LocalState private var isHovering = false
     @LocalState private var copied = false
@@ -58,6 +60,12 @@ struct PullRequestRow: View {
 
     @ViewBuilder private var menu: some View {
         Button { NSWorkspace.shared.open(model.pr.url) } label: { Label(tr("row.open"), systemImage: "arrow.up.right.square") }
+        if model.kind == .review, let onReview {
+            Button(action: onReview) { Label(tr("row.review"), systemImage: "sparkles") }
+        }
+        if model.kind == .review, let onReviewInDesktop {
+            Button(action: onReviewInDesktop) { Label(tr("row.reviewDesktop"), systemImage: "bubble.left.and.text.bubble.right") }
+        }
         Button(action: copyLink) { Label(tr("row.copyLink"), systemImage: "link") }
         if model.canMute, let onMute {
             Divider()

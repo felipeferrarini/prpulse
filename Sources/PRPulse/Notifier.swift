@@ -4,11 +4,15 @@ import UserNotifications
 
 final class Notifier: NSObject, NotificationSink, UNUserNotificationCenterDelegate, @unchecked Sendable {
     private static let urlKey = "url"
+    private static let runKey = "run"
     private static let maxLines = 3
 
     private var center: UNUserNotificationCenter? {
         Bundle.main.bundleIdentifier == nil ? nil : UNUserNotificationCenter.current()
     }
+
+    /// Called when a notification about a review is opened.
+    var onOpenRun: (@MainActor (UUID) -> Void)?
 
     func activate() {
         center?.delegate = self
@@ -26,10 +30,30 @@ final class Notifier: NSObject, NotificationSink, UNUserNotificationCenterDelega
         try? await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 
+    /// A review an agent did in the background is ready or did not finish, or the agent waits to be allowed to use a tool.
+    func deliver(run: AgentRun) async {
+        guard let center, await isAuthorized(center) else { return }
+        let content = UNMutableNotificationContent()
+        if let approval = run.approval {
+            content.title = tr("agents.approval.title")
+            content.body = "\(run.ref.shortName) \(approval.tool): \(approval.summary.split(separator: "\n").first.map(String.init) ?? "")"
+        } else {
+            content.title = run.state == .finished ? tr("agents.done.title") : tr("agents.run.failedTitle")
+            content.body = "\(run.ref.shortName) \(run.title)"
+        }
+        content.userInfo = [Self.runKey: run.id.uuidString]
+        try? await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+    }
+
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        let info = response.notification.request.content.userInfo
+        if let text = info[Self.runKey] as? String, let id = UUID(uuidString: text) {
+            await MainActor.run { onOpenRun?(id) }
+            return
+        }
         guard let text = response.notification.request.content.userInfo[Self.urlKey] as? String,
               let url = URL(string: text) else { return }
         await MainActor.run { _ = NSWorkspace.shared.open(url) }

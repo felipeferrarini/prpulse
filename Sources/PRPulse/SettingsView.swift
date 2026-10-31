@@ -2,7 +2,7 @@ import PRPulseCore
 import SwiftUI
 
 enum SettingsPage: CaseIterable, Hashable {
-    case connection, organization, exceptions, general, mascot, diagnostics
+    case connection, organization, exceptions, general, mascot, agents, diagnostics
 
     var symbol: String {
         switch self {
@@ -11,6 +11,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .exceptions: "eye"
         case .general: "slider.horizontal.3"
         case .mascot: "face.smiling"
+        case .agents: "sparkles"
         case .diagnostics: "stethoscope"
         }
     }
@@ -22,6 +23,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .exceptions: tr("settings.section.exceptions")
         case .general: tr("settings.section.general")
         case .mascot: tr("settings.section.mascot")
+        case .agents: tr("settings.section.agents")
         case .diagnostics: tr("settings.section.diagnostics")
         }
     }
@@ -33,6 +35,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .exceptions: tr("settings.lead.exceptions")
         case .general: tr("settings.lead.general")
         case .mascot: tr("settings.lead.mascot")
+        case .agents: tr("settings.lead.agents")
         case .diagnostics: tr("settings.lead.diagnostics")
         }
     }
@@ -61,6 +64,12 @@ struct SettingsChanges {
         if draft.mascotEnabled != saved.mascotEnabled { pages.append(.mascot) }
         if draft.mascotPack != saved.mascotPack { pages.append(.mascot) }
         if draft.mascotScale != saved.mascotScale { pages.append(.mascot) }
+        if draft.reviewAgentEnabled != saved.reviewAgentEnabled { pages.append(.agents) }
+        if draft.reviewSkill != saved.reviewSkill { pages.append(.agents) }
+        if draft.reviewPrompt != saved.reviewPrompt { pages.append(.agents) }
+        if draft.reviewApproval != saved.reviewApproval { pages.append(.agents) }
+        if draft.reviewFolders != saved.reviewFolders { pages.append(.agents) }
+        if draft.reviewOrgFolders != saved.reviewOrgFolders { pages.append(.agents) }
         self.pages = pages
     }
 
@@ -75,6 +84,9 @@ struct SettingsView: View {
     let onRedoSetup: () -> Void
     let onCheckForUpdates: () -> Void
     let onResetMascotPosition: () -> Void
+    let agentAvailability: () -> AgentAvailability
+    let cliStatus: () async -> CLIState
+    let onTestReviewAgent: () -> Void
     let diagnostics: () -> DiagnosticsReport
     let onClose: () -> Void
 
@@ -94,6 +106,9 @@ struct SettingsView: View {
         onRedoSetup: @escaping () -> Void,
         onCheckForUpdates: @escaping () -> Void = {},
         onResetMascotPosition: @escaping () -> Void = {},
+        agentAvailability: @escaping () -> AgentAvailability = { .ready },
+        cliStatus: @escaping () async -> CLIState = { .unknown },
+        onTestReviewAgent: @escaping () -> Void = {},
         diagnostics: @escaping () -> DiagnosticsReport = { .sample },
         onClose: @escaping () -> Void = {}
     ) {
@@ -102,6 +117,9 @@ struct SettingsView: View {
         self.onRedoSetup = onRedoSetup
         self.onCheckForUpdates = onCheckForUpdates
         self.onResetMascotPosition = onResetMascotPosition
+        self.agentAvailability = agentAvailability
+        self.cliStatus = cliStatus
+        self.onTestReviewAgent = onTestReviewAgent
         self.diagnostics = diagnostics
         self.onClose = onClose
         _page = LocalState(initialValue: initialPage)
@@ -209,6 +227,7 @@ struct SettingsView: View {
                 case .exceptions: ExceptionsContent(model: model)
                 case .general: GeneralContent(model: model, onRedoSetup: onRedoSetup, onCheckForUpdates: onCheckForUpdates)
                 case .mascot: MascotContent(model: model, onResetPosition: onResetMascotPosition)
+                case .agents: AgentsContent(model: model, availability: agentAvailability, cliStatus: cliStatus, onTest: onTestReviewAgent)
                 case .diagnostics: DiagnosticsContent(report: diagnostics)
                 }
             }

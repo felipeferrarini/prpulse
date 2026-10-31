@@ -20,8 +20,15 @@ final class AppRuntime: ObservableObject {
     @Published private(set) var mascotPlacementToken = 0
 
     let settings = SettingsStore()
+    let reviewAgent: any ReviewAgent = ClaudeDesktopAgent()
+    let agents = AgentRunStore()
+    @Published var cliState = CLIState.unknown
+    var lastCLICheck = Date.distantPast
+    /// Set by the popover controller, which owns the panel.
+    var onOpenPanel: () -> Void = {}
+    private var agentObservation: AnyCancellable?
     private let model: AppModel?
-    private let notifier = Notifier()
+    let notifier = Notifier()
     private let updater: SoftwareUpdater
     private var shortcut: GlobalShortcut?
     /// Set by the popover controller, which owns the panel.
@@ -70,6 +77,16 @@ final class AppRuntime: ObservableObject {
             shortcut = GlobalShortcut { [weak self] in self?.onShortcut() }
             shortcut?.setEnabled(settings.settings.globalShortcut)
         }
+        agents.onFinished = { [weak self] run in self?.agentFinished(run) }
+        agents.onNeedsApproval = { [weak self] run in self?.agentNeedsApproval(run) }
+        notifier.onOpenRun = { [weak self] id in self?.openAgentRun(id) }
+        agentObservation = agents.objectWillChange.sink { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.objectWillChange.send()
+                self?.refreshMascot()
+            }
+        }
+        if DemoMode.current == nil { refreshCLI(force: true) }
         mascotTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refreshMascot() }
         }
@@ -180,6 +197,9 @@ final class AppRuntime: ObservableObject {
                 onRedoSetup: { [weak self] in self?.redoSetup() },
                 onCheckForUpdates: { [weak self] in self?.checkForUpdates() },
                 onResetMascotPosition: { [weak self] in self?.resetMascotPosition() },
+                agentAvailability: { [weak self] in self?.reviewAgent.availability() ?? .notInstalled },
+                cliStatus: { [weak self] in await self?.checkCLI() ?? .unknown },
+                onTestReviewAgent: { [weak self] in self?.testReviewAgent() },
                 diagnostics: { [weak self] in self?.diagnosticsReport() ?? .sample },
                 onClose: { [weak self] in self?.windows.close(id: Self.settingsWindow) }
             )
@@ -297,7 +317,7 @@ final class AppRuntime: ObservableObject {
             isOffline: data.isOffline,
             summary: data.summary,
             freshUntil: data.freshUntil,
-            isRefreshing: model?.isRefreshing ?? false,
+            isRefreshing: (model?.isRefreshing ?? false) || agents.hasRunning,
             upToDateSince: upToDateSince
         )
         let next = MascotState(mood: MascotMoodResolver.mood(for: situation, now: now), count: data.summary?.total ?? 0)
@@ -319,7 +339,7 @@ final class AppRuntime: ObservableObject {
         showMascotBubble(title: tr("mascot.intro.title", name), detail: tr("mascot.intro.detail"), seconds: 9)
     }
 
-    private func showMascotBubble(title: String, detail: String?, seconds: Double) {
+    func showMascotBubble(title: String, detail: String?, seconds: Double) {
         let bubble = MascotBubble(title: title, detail: detail)
         mascotBubble = bubble
         Task { @MainActor [weak self] in

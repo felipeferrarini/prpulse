@@ -6,21 +6,38 @@ struct PopoverView: View {
     @Binding var layout: PopoverLayout
     var openToken = 0
     var onMute: (PullRequestRef) -> Void = { _ in }
+    /// Set when an agent can be asked to review the pull requests waiting for the viewer.
+    var onReview: ((PullRequestSnapshot) -> Void)?
+    /// Set when the main action runs in the background and a draft in Claude Desktop is the other choice.
+    var onReviewInDesktop: ((PullRequestSnapshot) -> Void)?
+    var agentRuns = AgentRunList()
+    var agentActions: AgentActions?
+    var agentFocus = AgentFocus()
     /// The live popover is built anew each time it opens, so it plays its entrance when it appears.
     var entersOnAppear = false
+    /// Called when something inside the popover changes what it needs to show, so its window can follow.
+    var onContentChange: () -> Void = {}
     let onRefresh: () -> Void
     let onSettings: () -> Void
 
     @LocalState private var tab: PopoverTab
     @LocalState private var filter: ActionLane?
     @LocalState private var entered = true
+    @LocalState private var showsAgents = false
+    @LocalState private var openRun: UUID?
 
     init(
         data: ViewData,
         layout: Binding<PopoverLayout>,
         openToken: Int = 0,
         onMute: @escaping (PullRequestRef) -> Void = { _ in },
+        onReview: ((PullRequestSnapshot) -> Void)? = nil,
+        onReviewInDesktop: ((PullRequestSnapshot) -> Void)? = nil,
+        agentRuns: AgentRunList = AgentRunList(),
+        agentActions: AgentActions? = nil,
+        agentFocus: AgentFocus = AgentFocus(),
         entersOnAppear: Bool = false,
+        onContentChange: @escaping () -> Void = {},
         initialTab: PopoverTab = .review,
         initialFilter: ActionLane? = nil,
         onRefresh: @escaping () -> Void,
@@ -30,7 +47,13 @@ struct PopoverView: View {
         _layout = layout
         self.openToken = openToken
         self.onMute = onMute
+        self.onReview = onReview
+        self.onReviewInDesktop = onReviewInDesktop
+        self.agentRuns = agentRuns
+        self.agentActions = agentActions
+        self.agentFocus = agentFocus
         self.entersOnAppear = entersOnAppear
+        self.onContentChange = onContentChange
         self.onRefresh = onRefresh
         self.onSettings = onSettings
         _tab = LocalState(initialValue: initialTab)
@@ -53,6 +76,10 @@ struct PopoverView: View {
         .overlay(RoundedRectangle(cornerRadius: PopoverChrome.cornerRadius, style: .continuous).strokeBorder(Palette.line))
         .focusEffectDisabled()
         .onChange(of: openToken) { _, _ in popoverOpened() }
+        .onChange(of: agentFocus.token) { _, _ in applyAgentFocus() }
+        .onChange(of: showsAgents) { _, _ in onContentChange() }
+        .onChange(of: openRun) { _, _ in onContentChange() }
+        .onChange(of: agentRuns) { _, _ in onContentChange() }
         .onAppear { if entersOnAppear { popoverOpened() } }
     }
 
@@ -83,11 +110,13 @@ struct PopoverView: View {
     private func summaryContent(_ summary: Summary) -> some View {
         let isSingle = layout == .single
         return VStack(spacing: 0) {
-            PopoverHeader(org: data.orgLabel, total: summary.total, layout: $layout)
+            PopoverHeader(org: data.orgLabel, total: summary.total, layout: $layout, agentRuns: agentRuns, showsAgents: $showsAgents)
                 .padding(.horizontal, 14)
                 .padding(.top, 14)
                 .padding(.bottom, 12)
-            if summary.total == 0 && summary.waiting.isEmpty {
+            if showsAgents, let agentActions {
+                AgentsPane(runs: agentRuns, actions: agentActions, openRun: $openRun)
+            } else if summary.total == 0 && summary.waiting.isEmpty {
                 EmptyStateView()
             } else {
                 TabSegment(tab: $tab, reviewCount: summary.review.count, mineCount: summary.mine.count)
@@ -96,7 +125,7 @@ struct PopoverView: View {
                     .folded(!isSingle, height: 50)
                 LaneFilterBar(lanes: summary.activeLanes, summary: summary, selection: laneSelection(summary))
                     .padding(.bottom, 12)
-                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, entered: entered, showsOwner: data.showsOwner, onMute: onMute)
+                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, entered: entered, showsOwner: data.showsOwner, onMute: onMute, onReview: onReview, onReviewInDesktop: onReviewInDesktop)
             }
         }
     }
@@ -124,8 +153,21 @@ struct PopoverView: View {
             entered = false
             filter = nil
             tab = (data.summary?.review.isEmpty ?? true) && hasMineContent ? .mine : .review
+            showsAgents = false
+            openRun = nil
         }
         DispatchQueue.main.async { entered = true }
+        applyAgentFocus()
+    }
+
+    /// A review was just started, or its notification was opened: show the agents, and the review if there is one.
+    private func applyAgentFocus() {
+        guard agentFocus.isPending, let agentActions else { return }
+        withAnimation(PopoverMotion.spring) {
+            showsAgents = true
+            openRun = agentFocus.run
+        }
+        agentActions.consumeFocus()
     }
 }
 
@@ -145,6 +187,8 @@ private struct SummaryPanes: View {
     let entered: Bool
     let showsOwner: Bool
     let onMute: (PullRequestRef) -> Void
+    let onReview: ((PullRequestSnapshot) -> Void)?
+    let onReviewInDesktop: ((PullRequestSnapshot) -> Void)?
 
     @LocalState private var heights: [PopoverTab: CGFloat] = [:]
 
@@ -185,7 +229,7 @@ private struct SummaryPanes: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                        PullRequestRow(model: row, isDimmed: isDimmed(row), entranceIndex: index, entered: entered, onMute: { onMute(row.pr.ref) })
+                        PullRequestRow(model: row, isDimmed: isDimmed(row), entranceIndex: index, entered: entered, onMute: { onMute(row.pr.ref) }, onReview: onReview.map { review in { review(row.pr) } }, onReviewInDesktop: onReviewInDesktop.map { review in { review(row.pr) } })
                     }
                     if kind == .mine && !summary.waiting.isEmpty { waitingSection(startIndex: rows.count) }
                     if rows.isEmpty && !(kind == .mine && !summary.waiting.isEmpty) { PaneEmptyText() }

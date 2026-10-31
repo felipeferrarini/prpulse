@@ -24,6 +24,14 @@ enum DemoSnapshot {
             }
         }
         for scheme in [ColorScheme.light, .dark] {
+            let suffix = scheme == .dark ? "dark" : "light"
+            write(agents(open: nil, scheme), named: "popover-agents-\(suffix)", to: directory)
+            write(agents(open: 1, scheme), named: "popover-agents-detail-\(suffix)", to: directory)
+            write(agents(open: 0, scheme, scene: .approval), named: "popover-agents-approval-\(suffix)", to: directory)
+            write(agents(open: 1, scheme, scene: .followUp), named: "popover-agents-followup-\(suffix)", to: directory)
+            write(agents(open: nil, scheme, scene: .approval), named: "popover-agents-waiting-\(suffix)", to: directory)
+        }
+        for scheme in [ColorScheme.light, .dark] {
             write(iconStrip(scheme), named: "icons-\(scheme == .dark ? "dark" : "light")", to: directory)
         }
         for step in SetupStep.allCases {
@@ -72,6 +80,58 @@ enum DemoSnapshot {
         _ data: ViewData, _ scheme: ColorScheme, layout: PopoverLayout, tab: PopoverTab = .review, filter: ActionLane? = nil
     ) -> some View {
         PopoverView(data: data, layout: .constant(layout), initialTab: tab, initialFilter: filter, onRefresh: {}, onSettings: {})
+            .background(Color(nsColor: .windowBackgroundColor))
+            .environment(\.colorScheme, scheme)
+    }
+
+    /// The reviews of the agents: one going on, one ready and one that failed.
+    enum AgentScene {
+        case plain
+        /// The review going on waits to be allowed to run a command.
+        case approval
+        /// A question about the review that is ready, with a command to allow.
+        case followUp
+    }
+
+    private static func sampleRuns(_ scene: AgentScene = .plain) -> AgentRunList {
+        let now = Date()
+        func make(_ number: Int, _ repo: String, _ title: String, minutes: Double) -> AgentRun {
+            AgentRun(
+                ref: PullRequestRef(owner: "acme", repo: repo, number: number), title: title,
+                url: URL(string: "https://github.com/acme/\(repo)/pull/\(number)")!, folder: "/Users/you/Projects/acme", skill: "code-review",
+                startedAt: now.addingTimeInterval(-minutes * 60), sessionID: "demo"
+            )
+        }
+        var list = AgentRunList()
+        let failed = make(133, "mobile", "Offline upload queue", minutes: 14)
+        let ready = make(208, "api", "Fix pagination on /invoices", minutes: 6)
+        let going = make(412, "web", "Per-tenant session cache", minutes: 2)
+        for run in [failed, ready, going] { list.add(run) }
+        list.fail(failed.id, message: "Not logged in. Please run /login.", at: now.addingTimeInterval(-13 * 60))
+        list.finish(ready.id, output: """
+        **Two things to fix before merging.**
+
+        1. `src/invoices/list.ts:48` builds the cursor from `created_at`, which is not unique. Two invoices created in the same second can be skipped between pages. Use `(created_at, id)`.
+        2. `src/invoices/list.ts:71` sends the page size to the database without a ceiling, so `?limit=100000` reads the whole table.
+
+        What is fine: the tests cover the empty page and the last page, and the new index is used by the query (checked with EXPLAIN in the description).
+        """, at: now.addingTimeInterval(-4 * 60))
+        list.update(going.id) { $0.activity = "Reading session-cache.ts" }
+        if scene == .approval {
+            list.setApproval(going.id, ToolApproval(requestID: "demo", tool: "Bash", summary: "gh api repos/acme/web/pulls/412/comments --paginate"))
+        }
+        if scene == .followUp {
+            list.ask(ready.id, question: "Would a unique index on (created_at, id) be enough?", at: now)
+            list.setApproval(ready.id, ToolApproval(requestID: "demo", tool: "Bash", summary: "psql -c \"EXPLAIN SELECT * FROM invoices ORDER BY created_at, id LIMIT 50\""))
+        }
+        return list
+    }
+
+    static func agents(open: Int?, _ scheme: ColorScheme, scene: AgentScene = .plain) -> some View {
+        let list = sampleRuns(scene)
+        let opened = open.map { list.runs[$0].id }
+        return AgentsPane(runs: list, actions: AgentActions(), openRun: .constant(opened))
+            .frame(width: 560)
             .background(Color(nsColor: .windowBackgroundColor))
             .environment(\.colorScheme, scheme)
     }

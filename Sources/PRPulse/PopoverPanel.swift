@@ -24,6 +24,7 @@ final class PopoverPanel: NSPanel {
 struct PopoverRoot: View {
     @ObservedObject var runtime: AppRuntime
     let onSettings: () -> Void
+    var onContentChange: () -> Void = {}
 
     var body: some View {
         PopoverView(
@@ -31,7 +32,13 @@ struct PopoverRoot: View {
             layout: Binding(get: { runtime.popoverLayout }, set: { runtime.setPopoverLayout($0) }),
             openToken: runtime.openCount,
             onMute: { runtime.muteRepository(of: $0) },
+            onReview: runtime.canReview ? { runtime.requestReview(of: $0) } : nil,
+            onReviewInDesktop: runtime.offersDraft ? { runtime.requestDraftReview(of: $0) } : nil,
+            agentRuns: runtime.agents.list,
+            agentActions: runtime.agentActions,
+            agentFocus: runtime.agents.focus,
             entersOnAppear: true,
+            onContentChange: onContentChange,
             onRefresh: { runtime.refresh() },
             onSettings: onSettings
         )
@@ -56,6 +63,8 @@ final class PopoverController: NSObject, NSWindowDelegate {
     private var lastHide = Date.distantPast
     private var followTimer: Timer?
     private var followUntil = Date.distantPast
+    /// Looks now and then, while the panel is open, at what the content wants, for the changes nobody announces.
+    private var sizeCheckTimer: Timer?
 
     init(runtime: AppRuntime) {
         self.runtime = runtime
@@ -65,6 +74,7 @@ final class PopoverController: NSObject, NSWindowDelegate {
         observeIcon()
         observeContent()
         runtime.onShortcut = { [weak self] in self?.toggleFromOutside() }
+        runtime.onOpenPanel = { [weak self] in self?.showFromOutside() }
     }
 
     private func buildPanel() {
@@ -99,7 +109,8 @@ final class PopoverController: NSObject, NSWindowDelegate {
             onSettings: { [weak self] in
                 self?.hide()
                 self?.runtime.openSettings()
-            }
+            },
+            onContentChange: { [weak self] in self?.followContentSize() }
         ))
     }
 
@@ -167,6 +178,12 @@ final class PopoverController: NSObject, NSWindowDelegate {
     }
 
     /// Opens or closes the panel on behalf of the mascot or the shortcut.
+    func showFromOutside() {
+        guard !panel.isVisible else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        show()
+    }
+
     func toggleFromOutside() {
         if !panel.isVisible { NSApp.activate(ignoringOtherApps: true) }
         togglePanel()
@@ -193,6 +210,9 @@ final class PopoverController: NSObject, NSWindowDelegate {
         panel.makeKeyAndOrderFront(nil)
         panel.invalidateShadow()
         followContentSize()
+        sizeCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.applyIdealSize() }
+        }
         outsideClick = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             Task { @MainActor in self?.hide() }
         }
@@ -201,6 +221,8 @@ final class PopoverController: NSObject, NSWindowDelegate {
     private func hide() {
         guard panel.isVisible else { return }
         panel.orderOut(nil)
+        sizeCheckTimer?.invalidate()
+        sizeCheckTimer = nil
         hosting.rootView = Self.emptyRoot
         lastHide = Date()
         if let outsideClick { NSEvent.removeMonitor(outsideClick) }
