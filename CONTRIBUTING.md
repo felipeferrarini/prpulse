@@ -12,7 +12,7 @@ make app          # universal, ad-hoc signed build/PRPulse.app
 make screenshots  # re-render docs/images with fake data (English UI)
 ```
 
-With only the Command Line Tools installed, use `make test` or `scripts/test.sh` instead of plain `swift test`, which can lose the Swift Testing macro plugin on incremental builds.
+With only the Command Line Tools installed, use `make test` or `bash scripts/test.sh` instead of plain `swift test`, which can lose the Swift Testing macro plugin on incremental builds.
 
 To work on the interface without a GitHub account, run the app with fake data: `PRPULSE_DEMO=pending|fresh|empty|error|unconfigured|many`.
 
