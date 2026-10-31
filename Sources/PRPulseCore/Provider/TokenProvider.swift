@@ -38,3 +38,13 @@ public struct StoredTokenProvider: TokenProvider {
         return token
     }
 }
+
+public struct FixedTokenProvider: TokenProvider {
+    private let value: String
+
+    public init(_ value: String) {
+        self.value = value
+    }
+
+    public func token() async throws -> String { value }
+}

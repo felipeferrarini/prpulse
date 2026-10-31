@@ -81,7 +81,7 @@ private struct Harness {
         model = AppModel(
             settings: store,
             notified: notified,
-            makeClient: {
+            makeProvider: {
                 if let makeClientError { throw makeClientError }
                 let delay = world.takeFirstClientDelay()
                 if delay > 0 { try await Task.sleep(for: .milliseconds(delay)) }

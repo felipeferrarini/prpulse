@@ -1,15 +1,5 @@
 import Foundation
 
-public struct FixedTokenProvider: TokenProvider {
-    private let value: String
-
-    public init(_ value: String) {
-        self.value = value
-    }
-
-    public func token() async throws -> String { value }
-}
-
 public struct ConnectionChecker: Sendable {
     private let makeTransport: @Sendable (TokenProvider) -> GraphQLTransport
     private let store: TokenStore

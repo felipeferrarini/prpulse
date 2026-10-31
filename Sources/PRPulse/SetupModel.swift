@@ -127,7 +127,7 @@ final class SetupModel: ObservableObject {
         repositories = .loading
         do {
             let provider = repositoryTokenProvider()
-            let client = GitHubClient(transport: URLSessionTransport(token: { try await provider.token() }), clock: SystemClock())
+            let client = ClientFactory.provider(token: provider)
             var names: [String] = []
             for owner in owners {
                 names += try await client.repositories(owner: owner).map { "\(owner)/\($0)" }

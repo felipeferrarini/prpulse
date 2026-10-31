@@ -58,7 +58,7 @@ final class AppRuntime: ObservableObject {
             let model = AppModel(
                 settings: settings,
                 notified: .standard(appName: "PRPulse"),
-                makeClient: ClientFactory.makeClientFactory(settings: settings),
+                makeProvider: ClientFactory.makeProviderFactory(settings: settings),
                 sink: notifier,
                 clock: SystemClock()
             )

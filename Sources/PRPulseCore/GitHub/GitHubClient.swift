@@ -1,19 +1,6 @@
 import Foundation
 
-public struct ViewerInfo: Equatable, Sendable {
-    public let login: String
-    public let organizations: [String]
-    /// PRs the viewer was involved in over the last months, per organization, when that could be loaded.
-    public let recentPullRequests: [String: Int]
-
-    public init(login: String, organizations: [String], recentPullRequests: [String: Int] = [:]) {
-        self.login = login
-        self.organizations = organizations
-        self.recentPullRequests = recentPullRequests
-    }
-}
-
-public struct GitHubClient: Sendable {
+public struct GitHubClient: PullRequestProvider {
     static let searchEpoch = Date(timeIntervalSince1970: 1_420_070_400)
     static let searchEndMargin: TimeInterval = 86_400
     private static let activityLookback: TimeInterval = 90 * 86_400

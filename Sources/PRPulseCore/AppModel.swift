@@ -34,7 +34,7 @@ public final class AppModel: ObservableObject {
 
     private let settings: SettingsStore
     private let notified: NotifiedStore
-    private let makeClient: @Sendable () async throws -> GitHubClient
+    private let makeProvider: @Sendable () async throws -> any PullRequestProvider
     private let sink: NotificationSink
     private let clock: Clock
 
@@ -45,13 +45,13 @@ public final class AppModel: ObservableObject {
     public init(
         settings: SettingsStore,
         notified: NotifiedStore,
-        makeClient: @escaping @Sendable () async throws -> GitHubClient,
+        makeProvider: @escaping @Sendable () async throws -> any PullRequestProvider,
         sink: NotificationSink,
         clock: Clock
     ) {
         self.settings = settings
         self.notified = notified
-        self.makeClient = makeClient
+        self.makeProvider = makeProvider
         self.sink = sink
         self.clock = clock
     }
@@ -118,7 +118,7 @@ public final class AppModel: ObservableObject {
     }
 
     private func fetchSummary(_ current: AppSettings) async throws -> Summary {
-        let client = try await makeClient()
+        let client = try await makeProvider()
         for org in current.orgs { try await client.verifyOrganization(org) }
         let login = try await client.viewer().login
         var minePRs: [PullRequestSnapshot] = []
