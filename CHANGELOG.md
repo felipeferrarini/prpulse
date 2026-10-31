@@ -4,6 +4,8 @@ All notable changes to PRPulse. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-31
+
 ### Added
 
 - **Sign in from the app.** On the connection step and in Settings, **Sign in with GitHub** runs `gh auth login --web` for you: PRPulse shows the one-time code, copies it, opens github.com/login/device and waits until you approve. **Paste token** fills the token field from the clipboard when it holds a GitHub token.
