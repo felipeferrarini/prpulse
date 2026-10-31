@@ -160,6 +160,22 @@ Você precisa de macOS 14 ou mais novo e do toolchain Swift (Xcode ou as Command
 > [!NOTE]
 > Se a sua organização exige SAML SSO, autorize o token para ela no GitHub, senão o ícone vai para o estado de erro. O mesmo acontece se a organização for renomeada ou o token não enxergá-la. Tokens clássicos precisam do escopo `repo`, ou os repositórios privados nunca aparecem.
 
+## Entrar com o OAuth App do seu time
+
+Para um time, o jeito mais simples é um OAuth App que alguém registra uma vez. Todo o resto entra pelo navegador, sem token e sem `gh`. O Client ID do app é público (o device flow não usa segredo), então pode ser compartilhado.
+
+1. Um dono da sua organização abre **Settings → Developer settings → OAuth Apps → New OAuth App** (na organização, para que ela confie no app desde o começo).
+2. Preencha o nome (PRPulse), a homepage (este repositório) e qualquer callback, como `http://localhost`. Marque **Enable Device Flow**, registre o app e copie o **Client ID**. Não gere um client secret: o PRPulse nunca usa um.
+3. Cada pessoa escolhe **Entrar pelo navegador** (no assistente ou em Ajustes → Conexão), cola o Client ID e clica no botão. O PRPulse mostra um código, abre github.com/login/device e guarda o token no Keychain.
+
+Para distribuir para o time todo, defina o Client ID nas preferências do app e o campo já vem preenchido:
+
+```bash
+defaults write io.github.felipeferrarini.prpulse OAuthClientID -string "Iv1.0123456789abcdef"
+```
+
+Um perfil de configuração (MDM) pode definir a mesma chave `OAuthClientID` nesse domínio. Um app que pertence a uma pessoa, e não à organização, pode precisar da aprovação de um dono quando a organização restringe apps de terceiros. O login pede os escopos `repo` e `read:org`.
+
 ## O que conta como "precisa de você"
 
 ### Minhas PRs

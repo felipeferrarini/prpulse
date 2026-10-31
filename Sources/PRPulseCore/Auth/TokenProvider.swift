@@ -12,6 +12,8 @@ public enum AuthError: Error, Equatable {
     case signInExpired
     /// GitHub could not be reached, or does not allow this kind of sign-in.
     case signInUnavailable
+    /// GitHub did not accept the client id, or the app has the device flow off.
+    case signInClientRejected
 }
 
 public protocol TokenProvider: Sendable {

@@ -240,7 +240,9 @@ final class AppRuntime: ObservableObject {
     /// Opens the wizard from scratch. Nothing is replaced until the user finishes it.
     private func redoSetup() {
         windows.close(id: Self.settingsWindow)
-        showSetup(settings: .defaults)
+        var fresh = AppSettings.defaults
+        fresh.oauthClientID = settings.settings.oauthClientID
+        showSetup(settings: fresh)
     }
 
     private func showSetup() {

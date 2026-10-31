@@ -275,6 +275,22 @@ You need macOS 14 or later and the Swift toolchain (Xcode or the Command Line To
 > [!NOTE]
 > If your organization enforces SAML SSO, authorize the token for it on GitHub, otherwise the icon turns into the error state. The same happens if the organization is renamed or your token can't see it. Classic tokens must include the `repo` scope, or private repositories would never show up.
 
+## Sign in with your team's OAuth App
+
+For a team, the easiest sign-in is an OAuth App that someone registers once. Everybody else signs in from the browser with no token and no `gh`. The app's Client ID is public (the device flow needs no secret), so it is safe to share.
+
+1. An owner of your organization opens **Settings → Developer settings → OAuth Apps → New OAuth App** (on the organization, so it is trusted by it from the start).
+2. Fill in a name (PRPulse), the homepage (this repository) and any callback URL, such as `http://localhost`. Tick **Enable Device Flow**, register the app, and copy the **Client ID**. Do not generate a client secret; PRPulse never uses one.
+3. Everyone else picks **Sign in with the browser** (in the setup or in Settings → Connection), pastes the Client ID and clicks the button. PRPulse shows a code, opens github.com/login/device, and keeps the token in the Keychain.
+
+To roll it out to a whole team, set the Client ID in the app's preferences and the field comes filled in:
+
+```bash
+defaults write io.github.felipeferrarini.prpulse OAuthClientID -string "Iv1.0123456789abcdef"
+```
+
+A configuration profile (MDM) can set the same `OAuthClientID` key for that domain. An app owned by a person, instead of the organization, may need an owner's approval when the organization restricts third-party apps. The sign-in asks for the `repo` and `read:org` scopes.
+
 ## What counts as "needs you"
 
 ### My PRs

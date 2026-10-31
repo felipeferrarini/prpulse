@@ -27,6 +27,8 @@ final class SetupModel: ObservableObject {
     @Published private(set) var login: String?
 
     let signIn = BrowserSignIn()
+    /// What a company configured for the OAuth App's client id, when it did.
+    let managedClientID: String? = UserDefaults.standard.string(forKey: OAuthApp.managedKey)
 
     private let tokens: TokenStore
     private let isSetup: Bool
@@ -39,6 +41,9 @@ final class SetupModel: ObservableObject {
         hasStoredToken = ((try? tokens.load()) ?? nil) != nil
         signIn.onSignedIn = { [weak self] method, token in try await self?.signedIn(method, token: token) }
     }
+
+    /// The client id the browser sign-in would use; empty when there is none, which leaves the sign-in off.
+    var clientID: String { OAuthApp.resolve(typed: draft.oauthClientID, managed: managedClientID) }
 
     /// The viewer approved a sign-in in the browser: use what it gave.
     private func signedIn(_ method: BrowserSignIn.Method, token: String?) async throws {
@@ -184,6 +189,7 @@ final class SetupModel: ObservableObject {
         case AuthError.signInDenied: tr("setup.signin.error.denied")
         case AuthError.signInExpired: tr("setup.signin.error.expired")
         case AuthError.signInUnavailable: tr("setup.signin.error.unavailable")
+        case AuthError.signInClientRejected: tr("setup.signin.error.client")
         case GitHubError.ssoRequired: tr("error.sso.body")
         case GitHubError.network: tr("setup.error.network")
         default: tr("setup.error.generic", error.localizedDescription)

@@ -163,10 +163,13 @@ private func freshDefaults() -> UserDefaults {
     var settings = AppSettings.defaults
     settings.showNewsAfterUpdate = false
     settings.lastSeenVersion = "0.8.0"
+    settings.oauthClientID = "Iv1.0123456789abcdef"
     let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
     #expect(!decoded.showNewsAfterUpdate)
     #expect(decoded.lastSeenVersion == "0.8.0")
+    #expect(decoded.oauthClientID == "Iv1.0123456789abcdef")
     let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"hasCompletedSetup":true}"#.utf8))
     #expect(old.showNewsAfterUpdate)
     #expect(old.lastSeenVersion.isEmpty)
+    #expect(old.oauthClientID.isEmpty)
 }

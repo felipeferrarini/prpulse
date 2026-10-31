@@ -62,6 +62,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var showNewsAfterUpdate: Bool
     /// The version whose changes the viewer was last shown; empty until the app has announced one.
     public var lastSeenVersion: String
+    /// The client id of the OAuth App the team registered, for signing in from the browser; empty when there is none.
+    public var oauthClientID: String
 
     public static let defaults = AppSettings(
         orgs: [],
@@ -90,7 +92,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         hasCompletedSetup: false,
         popoverLayout: .single,
         showNewsAfterUpdate: true,
-        lastSeenVersion: ""
+        lastSeenVersion: "",
+        oauthClientID: ""
     )
 
     public init(
@@ -120,7 +123,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         hasCompletedSetup: Bool,
         popoverLayout: PopoverLayout = .single,
         showNewsAfterUpdate: Bool = true,
-        lastSeenVersion: String = ""
+        lastSeenVersion: String = "",
+        oauthClientID: String = ""
     ) {
         self.orgs = orgs
         self.authSource = authSource
@@ -149,6 +153,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.popoverLayout = popoverLayout
         self.showNewsAfterUpdate = showNewsAfterUpdate
         self.lastSeenVersion = lastSeenVersion
+        self.oauthClientID = oauthClientID
     }
 
     public init(from decoder: Decoder) throws {
@@ -182,6 +187,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         popoverLayout = try values.decodeIfPresent(PopoverLayout.self, forKey: .popoverLayout) ?? base.popoverLayout
         showNewsAfterUpdate = try values.decodeIfPresent(Bool.self, forKey: .showNewsAfterUpdate) ?? base.showNewsAfterUpdate
         lastSeenVersion = try values.decodeIfPresent(String.self, forKey: .lastSeenVersion) ?? base.lastSeenVersion
+        oauthClientID = try values.decodeIfPresent(String.self, forKey: .oauthClientID) ?? base.oauthClientID
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -189,7 +195,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case launchAtLogin, automaticUpdates, globalShortcut, waitingReviewDays, hasCompletedSetup, popoverLayout
         case mascotEnabled, mascotPack, mascotScale, mascotIntroduced, mascotAnchor
         case reviewAgentEnabled, reviewSkill, reviewApproval, reviewPrompt, reviewFolders, reviewOrgFolders
-        case showNewsAfterUpdate, lastSeenVersion
+        case showNewsAfterUpdate, lastSeenVersion, oauthClientID
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -221,6 +227,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try values.encode(popoverLayout, forKey: .popoverLayout)
         try values.encode(showNewsAfterUpdate, forKey: .showNewsAfterUpdate)
         try values.encode(lastSeenVersion, forKey: .lastSeenVersion)
+        try values.encode(oauthClientID, forKey: .oauthClientID)
     }
 
     /// Settings saved before 0.4 hold a single `org`.

@@ -123,9 +123,18 @@ private func flow(_ script: Script) -> DeviceFlow {
     }
 }
 
-@Test func deviceFlowIsUnavailableWhenGitHubRefuses() async {
-    await #expect(throws: AuthError.signInUnavailable) {
+@Test func deviceFlowSaysWhenGitHubDoesNotAcceptTheClientId() async {
+    await #expect(throws: AuthError.signInClientRejected) {
         try await flow(Script([#"{"error":"device_flow_disabled"}"#])).signIn { _ in }
+    }
+    await #expect(throws: AuthError.signInClientRejected) {
+        try await flow(Script([#"{"error":"Not Found"}"#])).signIn { _ in }
+    }
+}
+
+@Test func deviceFlowIsUnavailableWhenGitHubSaysNothingUseful() async {
+    await #expect(throws: AuthError.signInUnavailable) {
+        try await flow(Script(["<html>bad gateway</html>"])).signIn { _ in }
     }
 }
 
@@ -137,4 +146,22 @@ private func flow(_ script: Script) -> DeviceFlow {
     #expect(!TokenFormat.looksLikeToken("ghp_short"))
     #expect(!TokenFormat.looksLikeToken("hello world, this is not a token at all"))
     #expect(!TokenFormat.looksLikeToken("ghp_abcdefghijklmnop qrstuvwxyz"))
+}
+
+// MARK: - Team OAuth App
+
+@Test func aClientIdIsOneWordOfLettersDigitsDotsAndUnderscores() {
+    #expect(OAuthApp.isValid("Iv1.0123456789abcdef"))
+    #expect(OAuthApp.isValid("  0123456789abcdef0123\n"))
+    #expect(!OAuthApp.isValid(""))
+    #expect(!OAuthApp.isValid("short"))
+    #expect(!OAuthApp.isValid("has a space in it 123456"))
+    #expect(!OAuthApp.isValid("https://github.com/apps/prpulse"))
+}
+
+@Test func theClientIdTheViewerTypedWinsOverTheOneTheCompanySet() {
+    #expect(OAuthApp.resolve(typed: "0123456789abcdef0123", managed: "Iv1.fedcba9876543210") == "0123456789abcdef0123")
+    #expect(OAuthApp.resolve(typed: "", managed: " Iv1.fedcba9876543210 ") == "Iv1.fedcba9876543210")
+    #expect(OAuthApp.resolve(typed: "oops", managed: "Iv1.fedcba9876543210") == "Iv1.fedcba9876543210")
+    #expect(OAuthApp.resolve(typed: "", managed: nil).isEmpty)
 }

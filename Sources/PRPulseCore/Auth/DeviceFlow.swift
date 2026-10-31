@@ -1,10 +1,28 @@
 import Foundation
 
-/// The app registered on GitHub for signing in from the browser.
+/// The OAuth App a team registers on GitHub so its people can sign in from the browser. Its client id is public: the device
+/// flow needs no secret, so one person registers the app and everyone else only gets the id.
 public enum OAuthApp {
-    /// The client id of the OAuth App, which is public: the device flow needs no secret. Empty until the app is registered,
-    /// and the sign-in from the browser is left out while it is.
-    public static let clientID = ""
+    /// The key a company can set in the app's preferences (`defaults write` or a configuration profile) to fill the id in.
+    public static let managedKey = "OAuthClientID"
+    /// How to register the app.
+    public static let guideURL = URL(string: "https://github.com/felipeferrarini/prpulse#sign-in-with-your-teams-oauth-app")!
+
+    /// A client id is one word of letters, digits, dots and underscores, such as `Iv1.0123456789abcdef` or 20 hex digits.
+    public static func isValid(_ id: String) -> Bool {
+        let value = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (10 ... 40).contains(value.count)
+            && value.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "." || $0 == "_") }
+    }
+
+    /// The id to sign in with: what the viewer typed, else what the company configured. Empty when there is none.
+    public static func resolve(typed: String, managed: String?) -> String {
+        for candidate in [typed, managed ?? ""] {
+            let value = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            if isValid(value) { return value }
+        }
+        return ""
+    }
 }
 
 /// GitHub's OAuth device flow: the app asks for a code, the viewer enters it at github.com/login/device, and the app trades
@@ -36,7 +54,7 @@ public struct DeviceFlow: Sendable {
         guard let deviceCode = start["device_code"] as? String,
               let userCode = start["user_code"] as? String,
               let address = start["verification_uri"] as? String, let url = URL(string: address) else {
-            throw AuthError.signInUnavailable
+            throw start["error"] == nil ? AuthError.signInUnavailable : AuthError.signInClientRejected
         }
         onCode(DeviceCode(userCode: userCode, verificationURL: url))
         var interval = (start["interval"] as? Double) ?? 5

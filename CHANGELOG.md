@@ -7,11 +7,12 @@ All notable changes to PRPulse. The format follows [Keep a Changelog](https://ke
 ### Added
 
 - **Sign in from the app.** On the connection step and in Settings, **Sign in with GitHub** runs `gh auth login --web` for you: PRPulse shows the one-time code, copies it, opens github.com/login/device and waits until you approve. **Paste token** fills the token field from the clipboard when it holds a GitHub token.
+- **Your team's OAuth App.** Pick **Sign in with the browser**, paste the Client ID of an OAuth App someone on the team registered and sign in from the browser, with no token and no `gh`. A company can fill the id in with `defaults write io.github.felipeferrarini.prpulse OAuthClientID -string …` or a configuration profile. The README explains how to register the app.
 
 ### Changed
 
 - **Generate token on GitHub** is a button now, and opens the token page with the `repo` and `read:org` scopes already ticked.
-- When `gh` is not installed, the connection step says how to install it instead of only reporting it.
+- **A simpler connection step.** The three ways to sign in (the `gh` login, the browser, a token) are a list where only the one you pick shows what to do, instead of everything at once. When `gh` is not installed, it shows the command to install it.
 
 ## [0.9.0] - 2026-10-31
 

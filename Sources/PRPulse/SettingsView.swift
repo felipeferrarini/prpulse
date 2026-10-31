@@ -51,6 +51,7 @@ struct SettingsChanges {
     init(draft: AppSettings, saved: AppSettings, hasNewToken: Bool) {
         var pages: [SettingsPage] = []
         if draft.authSource != saved.authSource { pages.append(.connection) }
+        if draft.oauthClientID != saved.oauthClientID { pages.append(.connection) }
         if hasNewToken { pages.append(.connection) }
         if draft.orgs != saved.orgs { pages.append(.organization) }
         if draft.ignoredRepos.sorted() != saved.ignoredRepos.sorted() { pages.append(.exceptions) }

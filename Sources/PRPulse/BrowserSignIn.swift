@@ -16,7 +16,7 @@ final class BrowserSignIn: ObservableObject {
         case starting(Method)
         case waiting(Method, DeviceCode)
         case done(Method)
-        case failed(String)
+        case failed(Method, String)
     }
 
     @Published private(set) var state = State.idle
@@ -35,15 +35,12 @@ final class BrowserSignIn: ObservableObject {
         }
     }
 
-    /// The browser sign-in needs the OAuth app, which is left out until it is registered.
-    static var isGitHubAppAvailable: Bool { !OAuthApp.clientID.isEmpty }
-
-    func start(_ method: Method) {
+    func start(_ method: Method, clientID: String = "") {
         guard !isBusy else { return }
         state = .starting(method)
         task = Task { [weak self] in
             do {
-                let token = try await Self.run(method) { code in
+                let token = try await Self.run(method, clientID: clientID) { code in
                     Task { @MainActor in self?.show(code, for: method) }
                 }
                 try await self?.onSignedIn(method, token)
@@ -51,7 +48,7 @@ final class BrowserSignIn: ObservableObject {
             } catch is CancellationError {
                 self?.state = .idle
             } catch {
-                self?.state = .failed(SetupModel.message(for: error))
+                self?.state = .failed(method, SetupModel.message(for: error))
             }
         }
     }
@@ -78,13 +75,13 @@ final class BrowserSignIn: ObservableObject {
         open(code)
     }
 
-    private static func run(_ method: Method, onCode: @escaping @Sendable (DeviceCode) -> Void) async throws -> String? {
+    private static func run(_ method: Method, clientID: String, onCode: @escaping @Sendable (DeviceCode) -> Void) async throws -> String? {
         switch method {
         case .gh:
             try await GhLogin().signIn(onCode: onCode)
             return nil
         case .github:
-            return try await DeviceFlow(clientID: OAuthApp.clientID).signIn(onCode: onCode)
+            return try await DeviceFlow(clientID: clientID).signIn(onCode: onCode)
         }
     }
 }
