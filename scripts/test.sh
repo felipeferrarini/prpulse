@@ -10,4 +10,4 @@ if [ -d "$plugins" ]; then
     args+=(-Xswiftc -plugin-path -Xswiftc "$plugins")
 fi
 
-exec swift test "${args[@]}"
+exec swift test ${args[@]+"${args[@]}"}
