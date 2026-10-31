@@ -26,6 +26,8 @@ final class SetupModel: ObservableObject {
     @Published private(set) var organizationActivity: [String: Int] = [:]
     @Published private(set) var login: String?
 
+    let signIn = BrowserSignIn()
+
     private let tokens: TokenStore
     private let isSetup: Bool
     private var isPreview = false
@@ -35,6 +37,23 @@ final class SetupModel: ObservableObject {
         self.isSetup = isSetup
         self.tokens = tokens
         hasStoredToken = ((try? tokens.load()) ?? nil) != nil
+        signIn.onSignedIn = { [weak self] method, token in try await self?.signedIn(method, token: token) }
+    }
+
+    /// The viewer approved a sign-in in the browser: use what it gave.
+    private func signedIn(_ method: BrowserSignIn.Method, token: String?) async throws {
+        switch method {
+        case .gh:
+            await checkGh()
+            draft.authSource = .ghCli
+        case .github:
+            guard let token else { return }
+            try tokens.save(token)
+            hasStoredToken = true
+            personalToken = ""
+            draft.authSource = .personalToken
+        }
+        if case .failed = validation { validation = .idle }
     }
 
     func checkGh() async {
@@ -154,13 +173,17 @@ final class SetupModel: ObservableObject {
         org == organizations.last
     }
 
-    private static func message(for error: Error) -> String {
+    static func message(for error: Error) -> String {
         switch error {
         case AuthError.ghNotInstalled: tr("setup.error.ghNotInstalled")
         case AuthError.ghNotLoggedIn: tr("setup.error.ghNotLoggedIn")
         case AuthError.tokenMissing: tr("setup.error.tokenMissing")
         case AuthError.tokenRejected: tr("setup.error.tokenRejected")
         case AuthError.missingRepoScope: tr("setup.error.missingScope")
+        case AuthError.ghLoginFailed: tr("setup.signin.error.gh")
+        case AuthError.signInDenied: tr("setup.signin.error.denied")
+        case AuthError.signInExpired: tr("setup.signin.error.expired")
+        case AuthError.signInUnavailable: tr("setup.signin.error.unavailable")
         case GitHubError.ssoRequired: tr("error.sso.body")
         case GitHubError.network: tr("setup.error.network")
         default: tr("setup.error.generic", error.localizedDescription)

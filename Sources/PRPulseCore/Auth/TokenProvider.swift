@@ -4,6 +4,14 @@ public enum AuthError: Error, Equatable {
     case tokenMissing
     case tokenRejected
     case missingRepoScope
+    /// `gh auth login` ended without a login.
+    case ghLoginFailed
+    /// The viewer turned the sign-in down in the browser.
+    case signInDenied
+    /// The code was not entered before it expired.
+    case signInExpired
+    /// GitHub could not be reached, or does not allow this kind of sign-in.
+    case signInUnavailable
 }
 
 public protocol TokenProvider: Sendable {

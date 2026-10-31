@@ -1,3 +1,4 @@
+import AppKit
 import PRPulseCore
 import SwiftUI
 
@@ -163,11 +164,15 @@ struct ConnectBody: View {
 struct ConnectionContent: View {
     @ObservedObject var model: SetupModel
 
+    @LocalState private var pasteNote: String?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             option(.ghCli, symbol: "terminal", title: tr("setup.connect.gh"), detail: tr("wizard.connect.gh.detail"), status: ghStatus)
+            if model.draft.authSource == .ghCli { ghActions.transition(.opacity.combined(with: .move(edge: .top))) }
             option(.personalToken, symbol: "key", title: tr("setup.connect.token"), detail: tr("wizard.connect.token.detail"), status: nil)
             if model.draft.authSource == .personalToken { tokenField.transition(.opacity.combined(with: .move(edge: .top))) }
+            SignInPanel(signIn: model.signIn)
             if case .failed(let message) = model.validation {
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .font(.system(size: 12.5))
@@ -179,7 +184,21 @@ struct ConnectionContent: View {
                 .padding(.top, 6)
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.85), value: model.draft.authSource)
+        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: model.ghStatus)
         .task { await model.checkGh() }
+    }
+
+    /// Signing in to gh from here, so the viewer does not have to open a terminal.
+    @ViewBuilder private var ghActions: some View {
+        switch model.ghStatus {
+        case .notLoggedIn:
+            SignInButton(title: tr("setup.signin.gh"), symbol: "person.badge.key") { model.signIn.start(.gh) }
+                .disabled(model.signIn.isBusy)
+        case .notInstalled:
+            Text(tr("setup.signin.gh.install")).font(.system(size: 12.5)).foregroundStyle(WizardPalette.ink2).lineSpacing(2)
+        default:
+            EmptyView()
+        }
     }
 
     private var ghStatus: (text: String, color: Color)? {
@@ -216,16 +235,38 @@ struct ConnectionContent: View {
     }
 
     private var tokenField: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                if BrowserSignIn.isGitHubAppAvailable {
+                    SignInButton(title: tr("setup.signin.browser"), symbol: "safari") { model.signIn.start(.github) }
+                        .disabled(model.signIn.isBusy)
+                }
+                SignInButton(title: tr("setup.connect.token.link"), symbol: "arrow.up.right.square") {
+                    NSWorkspace.shared.open(TokenFormat.creationURL)
+                }
+                SignInButton(title: tr("setup.signin.paste"), symbol: "doc.on.clipboard", action: pasteToken)
+            }
             SecureField(tr("setup.connect.token.placeholder"), text: $model.personalToken)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .frame(height: 40)
                 .background(WizardPalette.card, in: RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(WizardPalette.line))
-            if model.hasStoredToken { Text(tr("setup.connect.token.stored")).font(.caption).foregroundStyle(WizardPalette.ink3) }
-            Link(tr("setup.connect.token.link"), destination: URL(string: "https://github.com/settings/tokens/new?scopes=repo,read:org&description=PRPulse")!)
-                .font(.caption)
+            if let pasteNote {
+                Text(pasteNote).font(.caption).foregroundStyle(WizardPalette.ink3)
+            } else if model.hasStoredToken {
+                Text(tr("setup.connect.token.stored")).font(.caption).foregroundStyle(WizardPalette.ink3)
+            }
+        }
+    }
+
+    private func pasteToken() {
+        let text = NSPasteboard.general.string(forType: .string) ?? ""
+        if TokenFormat.looksLikeToken(text) {
+            model.personalToken = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            pasteNote = tr("setup.signin.pasted")
+        } else {
+            pasteNote = tr("setup.signin.pasteEmpty")
         }
     }
 }

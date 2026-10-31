@@ -265,7 +265,7 @@ You need macOS 14 or later and the Swift toolchain (Xcode or the Command Line To
 
 ## First run
 
-1. **Connection:** reuse your [`gh`](https://cli.github.com) login, or paste a personal token with the `repo` and `read:org` scopes.
+1. **Connection:** reuse your [`gh`](https://cli.github.com) login, or paste a personal token with the `repo` and `read:org` scopes. Without a login, **Sign in with GitHub** runs `gh auth login` for you (it shows the code, copies it and opens the page), and **Generate token on GitHub** opens the token page with the scopes already ticked.
 2. **Organizations:** pick one or more. The ones you worked in most over the last 90 days come first, with a count.
 3. **Exceptions:** tick repositories to ignore (they are listed from the organization) and edit the bot accounts to skip.
 4. **Settings:** refresh interval, notifications, open at login.

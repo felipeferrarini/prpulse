@@ -42,6 +42,9 @@ enum DemoSnapshot {
             write(settings(page), named: "settings-\(page)", to: directory)
         }
         write(releaseNotes, named: "news-window", to: directory)
+        write(wizard(.connect, gh: .notLoggedIn), named: "wizard-2-connect-signin", to: directory)
+        write(wizard(.connect, gh: .notInstalled), named: "wizard-2-connect-install", to: directory)
+        write(wizard(.connect, source: .personalToken), named: "wizard-2-connect-token", to: directory)
         for slide in 1 ..< WizardView.slideCount {
             write(wizard(.welcome, slide: slide), named: "wizard-1-welcome-\(slide + 1)", to: directory)
         }
@@ -68,14 +71,15 @@ enum DemoSnapshot {
         return SettingsView(model: model, initialPage: page, onSave: { _ in }, onRedoSetup: {})
     }
 
-    static func wizard(_ step: SetupStep, slide: Int = 0, failure: String? = nil) -> some View {
+    static func wizard(_ step: SetupStep, slide: Int = 0, failure: String? = nil, gh: GhStatus = .available, source: AuthSource = .ghCli) -> some View {
         var settings = AppSettings.defaults
+        settings.authSource = source
         settings.orgs = step == .organization ? [] : ["acme"]
         settings.ignoredRepos = ["docs", "infra-legacy"]
         let model = SetupModel(settings: settings)
         model.loadPreview(
             organizations: ["acme", "acme-labs", "orbit", "octocat"],
-            gh: .available,
+            gh: gh,
             repositories: ["web", "api", "docs", "infra-legacy", "mobile", "design-system", "billing", "ops", "playground", "website"],
             activity: ["acme": 87, "acme-labs": 14, "orbit": 2]
         )
