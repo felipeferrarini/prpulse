@@ -15,7 +15,7 @@ private struct MascotRoot: View {
     @ObservedObject var model: MascotModel
 
     private var showsBadge: Bool {
-        model.count > 0 && [.alert, .joy, .worried].contains(model.mood)
+        model.count > 0 && [.alert, .joy, .worried, .nudged].contains(model.mood)
     }
 
     var body: some View {
@@ -309,10 +309,29 @@ final class MascotController: NSObject {
         menu.addItem(sizes)
         menu.addItem(item(tr("mascot.menu.reset"), action: #selector(resetPosition)))
         menu.addItem(.separator())
+        addNudgeItems(to: menu)
         menu.addItem(item(tr("mascot.menu.hide"), action: #selector(hide)))
         menu.addItem(item(tr("menu.settings"), action: #selector(openSettings)))
         return menu
     }
+
+    private func addNudgeItems(to menu: NSMenu) {
+        if runtime.nudgesPaused {
+            menu.addItem(item(tr("mascot.menu.resumeNudges"), action: #selector(resumeNudges)))
+        } else {
+            let pause = NSMenuItem(title: tr("mascot.menu.pauseNudges"), action: nil, keyEquivalent: "")
+            let options = NSMenu()
+            options.addItem(item(tr("mascot.menu.pause.hour"), action: #selector(pauseNudgesForAnHour)))
+            options.addItem(item(tr("mascot.menu.pause.tomorrow"), action: #selector(pauseNudgesUntilTomorrow)))
+            pause.submenu = options
+            menu.addItem(pause)
+        }
+        menu.addItem(.separator())
+    }
+
+    @objc private func pauseNudgesForAnHour() { runtime.pauseNudges(until: Date().addingTimeInterval(3600)) }
+    @objc private func pauseNudgesUntilTomorrow() { runtime.pauseNudges(until: NudgePause.tomorrowMorning()) }
+    @objc private func resumeNudges() { runtime.pauseNudges(until: nil) }
 
     private func item(_ title: String, action: Selector) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")

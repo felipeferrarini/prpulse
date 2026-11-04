@@ -28,7 +28,7 @@ final class AppRuntime: ObservableObject {
     /// Set by the popover controller, which owns the panel.
     var onOpenPanel: () -> Void = {}
     private var agentObservation: AnyCancellable?
-    private let model: AppModel?
+    let model: AppModel?
     let notifier = Notifier()
     private let updater: SoftwareUpdater
     private var shortcut: GlobalShortcut?
@@ -40,6 +40,7 @@ final class AppRuntime: ObservableObject {
     private var mascotTimer: Timer?
     private var upToDateSince: Date?
     private var lastArrival: Arrival?
+    var lastNudgeID: String?
 
     init() {
         popoverLayout = settings.settings.popoverLayout
@@ -58,12 +59,14 @@ final class AppRuntime: ObservableObject {
             let model = AppModel(
                 settings: settings,
                 notified: .standard(appName: "PRPulse"),
+                nudges: .standard(appName: "PRPulse"),
                 makeProvider: ClientFactory.makeProviderFactory(settings: settings),
                 sink: notifier,
                 clock: SystemClock()
             )
             self.model = model
             notifier.activate()
+            notifier.onOpenPullRequest = { [weak self] url in self?.model?.acknowledgeNudges(openedURL: url) }
             observation = model.objectWillChange.sink { [weak self] _ in
                 DispatchQueue.main.async { self?.syncFromModel() }
             }
@@ -271,6 +274,7 @@ final class AppRuntime: ObservableObject {
         chosen.mascotAnchor = settings.settings.mascotAnchor
         chosen.mascotIntroduced = true
         chosen.lastSeenVersion = settings.settings.lastSeenVersion
+        chosen.nudgesPausedUntil = settings.settings.nudgesPausedUntil
         chosen.showNewsAfterUpdate = settings.settings.showNewsAfterUpdate
         chosen.hasCompletedSetup = false
         settings.settings = chosen
@@ -331,6 +335,7 @@ final class AppRuntime: ObservableObject {
             isSetupComplete: settings.settings.hasCompletedSetup,
             orgs: settings.settings.orgs
         )
+        receiveNudge(from: model)
         if let arrival = model.arrival, arrival != lastArrival {
             lastArrival = arrival
             let title = arrival.count == 1 ? tr("notification.title.one") : tr("notification.title.other", arrival.count)
@@ -357,7 +362,8 @@ final class AppRuntime: ObservableObject {
             summary: data.summary,
             freshUntil: data.freshUntil,
             isRefreshing: (model?.isRefreshing ?? false) || agents.hasRunning,
-            upToDateSince: upToDateSince
+            upToDateSince: upToDateSince,
+            isNudged: !(model?.pendingNudges.isEmpty ?? true)
         )
         let next = MascotState(mood: MascotMoodResolver.mood(for: situation, now: now), count: data.summary?.total ?? 0)
         if next != mascotState { mascotState = next }

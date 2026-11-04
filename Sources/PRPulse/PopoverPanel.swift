@@ -44,6 +44,7 @@ struct PopoverRoot: View {
             onRefresh: { runtime.refresh() },
             onSettings: onSettings
         )
+        .environment(\.nudging, runtime.nudgeActions)
     }
 }
 

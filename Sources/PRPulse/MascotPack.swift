@@ -23,9 +23,12 @@ struct MascotPack {
 
     var fps: Double { Double(manifest.fps) }
 
-    /// The frames of a mood; a pack that does not draw it plays its calm frames.
+    /// The frames of a mood; a pack that does not draw it plays the closest it has: a nudge looks like an alert, the rest
+    /// like calm.
     func frames(for mood: MascotMood) -> [CGImage] {
-        frames[mood] ?? frames[.calm] ?? []
+        if let own = frames[mood] { return own }
+        if mood == .nudged, let alert = frames[.alert] { return alert }
+        return frames[.calm] ?? []
     }
 
     static func load(_ info: MascotInfo) throws -> MascotPack {

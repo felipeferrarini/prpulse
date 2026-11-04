@@ -24,6 +24,13 @@ enum ClientFactory {
         return GitHubClient(transport: transport, clock: SystemClock())
     }
 
+    /// The writing side of the forge in use: it only ever nudges a reviewer.
+    static func nudger(settings: SettingsStore) -> any PullRequestNudger {
+        let token = tokenProvider(for: settings.settings.authSource)
+        let transport = URLSessionTransport(token: { try await token.token() }, rateLimits: rateLimits)
+        return GitHubClient(transport: transport, clock: SystemClock())
+    }
+
     static func makeProviderFactory(settings: SettingsStore) -> @Sendable () async throws -> any PullRequestProvider {
         {
             provider(token: tokenProvider(for: settings.settings.authSource), rateLimits: rateLimits)

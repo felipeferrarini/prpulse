@@ -412,8 +412,16 @@ struct GeneralContent: View {
                 switchRow(tr("settings.shortcut.title"), detail: tr("settings.shortcut.detail", GlobalShortcut.display), isOn: $model.draft.globalShortcut)
                     .staggered(6)
             }
-            if let onCheckForUpdates { updatesRow(onCheckForUpdates).staggered(7) }
-            if let onRedoSetup { redoRow(onRedoSetup).staggered(8) }
+            if onCheckForUpdates != nil {
+                switchRow(tr("settings.nudges.title"), detail: tr("settings.nudges.detail"), isOn: $model.draft.nudgesEnabled)
+                    .staggered(7)
+                switchRow(tr("settings.nudges.sound.title"), detail: tr("settings.nudges.sound.detail"), isOn: $model.draft.nudgeSoundEnabled)
+                    .staggered(8)
+                    .opacity(model.draft.nudgesEnabled ? 1 : 0.45)
+                    .allowsHitTesting(model.draft.nudgesEnabled)
+            }
+            if let onCheckForUpdates { updatesRow(onCheckForUpdates).staggered(9) }
+            if let onRedoSetup { redoRow(onRedoSetup).staggered(10) }
         }
     }
 

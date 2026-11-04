@@ -34,6 +34,10 @@
     "sad": {
       "row": 6,
       "frames": 24
+    },
+    "nudged": {
+      "row": 7,
+      "frames": 24
     }
   }
 }

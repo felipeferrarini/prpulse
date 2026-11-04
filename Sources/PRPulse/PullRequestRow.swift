@@ -32,6 +32,7 @@ struct PullRequestRow: View {
     /// The menu of a row that stands for a stack.
     var groupActions: [RowAction] = []
 
+    @Environment(\.nudging) private var nudging
     @LocalState private var isHovering = false
     @LocalState private var copied = false
 
@@ -58,6 +59,7 @@ struct PullRequestRow: View {
     private func tap() {
         if let selection { return selection.toggle() }
         if let onOpen { return onOpen() }
+        nudging.opened(model.pr.url)
         NSWorkspace.shared.open(model.pr.url)
     }
 
@@ -107,7 +109,10 @@ struct PullRequestRow: View {
     }
 
     @ViewBuilder private var pullRequestMenu: some View {
-        Button { NSWorkspace.shared.open(model.pr.url) } label: { Label(tr("row.open"), systemImage: "arrow.up.right.square") }
+        Button {
+            nudging.opened(model.pr.url)
+            NSWorkspace.shared.open(model.pr.url)
+        } label: { Label(tr("row.open"), systemImage: "arrow.up.right.square") }
         if model.kind == .review, let onReview {
             Button(action: onReview) { Label(tr("row.review"), systemImage: "sparkles") }
         }
@@ -115,9 +120,39 @@ struct PullRequestRow: View {
             Button(action: onReviewInDesktop) { Label(tr("row.reviewDesktop"), systemImage: "bubble.left.and.text.bubble.right") }
         }
         Button(action: copyLink) { Label(tr("row.copyLink"), systemImage: "link") }
+        if model.kind == .mine { nudgeMenu }
         if model.canMute, let onMute {
             Divider()
             Button(action: onMute) { Label(tr("row.mute", model.pr.ref.repo), systemImage: "eye.slash") }
+        }
+    }
+
+    @ViewBuilder private var nudgeMenu: some View {
+        let candidates = nudging.candidates(model.pr)
+        if model.pr.isDraft || candidates.isEmpty {
+            Button {} label: { Label(model.pr.isDraft ? tr("row.nudge.draft") : tr("row.nudge.empty"), systemImage: "hand.wave") }
+                .disabled(true)
+        } else {
+            Menu {
+                ForEach(candidates) { candidate in
+                    if let block = candidate.block {
+                        Button {} label: { Text(Self.blockText(block, login: candidate.login)) }.disabled(true)
+                    } else {
+                        Button { nudging.send(model.pr, candidate, false) } label: { Text(tr("row.nudge.person", candidate.login)) }
+                        Button { nudging.send(model.pr, candidate, true) } label: { Text(tr("row.nudge.personMessage", candidate.login)) }
+                    }
+                }
+            } label: {
+                Label(tr("row.nudge"), systemImage: "hand.wave")
+            }
+        }
+    }
+
+    private static func blockText(_ block: NudgeBlock, login: String) -> String {
+        switch block {
+        case .noNewCommits: tr("row.nudge.block.noCommits", login)
+        case .tooSoon(let date): tr("row.nudge.block.soon", login, date.formatted(date: .omitted, time: .shortened))
+        case .limitReached: tr("row.nudge.block.limit", login)
         }
     }
 

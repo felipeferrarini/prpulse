@@ -13,6 +13,8 @@ final class Notifier: NSObject, NotificationSink, UNUserNotificationCenterDelega
 
     /// Called when a notification about a review is opened.
     var onOpenRun: (@MainActor (UUID) -> Void)?
+    /// Called when a notification that opens a pull request is clicked.
+    var onOpenPullRequest: (@MainActor (URL) -> Void)?
 
     func activate() {
         center?.delegate = self
@@ -27,6 +29,26 @@ final class Notifier: NSObject, NotificationSink, UNUserNotificationCenterDelega
             : tr("notification.title.other", pullRequests.count)
         content.body = pullRequests.prefix(Self.maxLines).map { "\($0.ref.shortName) \($0.title)" }.joined(separator: "\n")
         if pullRequests.count == 1 { content.userInfo = [Self.urlKey: pullRequests[0].url.absoluteString] }
+        try? await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+    }
+
+    /// The author nudged the viewer. The sound and the mascot are the app's own; this is the banner.
+    func deliver(nudge: IncomingNudge) async {
+        await post(nudge, title: tr("nudge.notification.title", nudge.nudge.author.login))
+    }
+
+    /// The nudge was not looked at for a while.
+    func remind(_ nudge: IncomingNudge) async {
+        await post(nudge, title: tr("nudge.reminder.title", nudge.nudge.author.login))
+    }
+
+    private func post(_ nudge: IncomingNudge, title: String) async {
+        guard let center, await isAuthorized(center) else { return }
+        let content = UNMutableNotificationContent()
+        content.title = title
+        let line = "\(nudge.ref.shortName) \(nudge.title)"
+        content.body = nudge.nudge.message.map { "\(line)\n\($0)" } ?? line
+        content.userInfo = [Self.urlKey: nudge.url.absoluteString]
         try? await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
 
@@ -56,7 +78,10 @@ final class Notifier: NSObject, NotificationSink, UNUserNotificationCenterDelega
         }
         guard let text = response.notification.request.content.userInfo[Self.urlKey] as? String,
               let url = URL(string: text) else { return }
-        await MainActor.run { _ = NSWorkspace.shared.open(url) }
+        await MainActor.run {
+            onOpenPullRequest?(url)
+            _ = NSWorkspace.shared.open(url)
+        }
     }
 
     func userNotificationCenter(

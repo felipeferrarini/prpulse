@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FPS = 8;
-const STATES = [['calm', 24], ['sleep', 24], ['alert', 24], ['joy', 12], ['worried', 24], ['think', 12], ['sad', 24]];
+const STATES = [['calm', 24], ['sleep', 24], ['alert', 24], ['joy', 12], ['worried', 24], ['think', 12], ['sad', 24], ['nudged', 24]];
 
 /* ---------- a tiny pixel toolkit ---------- */
 const W = 28, H = 28;
@@ -42,6 +42,7 @@ const outline = (g, c) => {
 };
 const recolor = (g, fn) => { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (g[y][x]) g[y][x] = fn(x, y, g[y][x]) || g[y][x]; };
 const bits = (g, x, y, rows, c, on = '#') => rows.forEach((r, j) => [...r].forEach((ch, i) => { if (ch === on) put(g, x + i, y + j, c); }));
+const shiftX = (g, dx) => { const o = blank(); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const nx = x + dx; if (g[y][x] && nx >= 0 && nx < W) o[y][nx] = g[y][x]; } return o; };
 const shift = (g, dy) => { const o = blank(); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const ny = y + dy; if (g[y][x] && ny >= 0 && ny < H) o[ny][x] = g[y][x]; } return o; };
 
 const DIGITS = {
@@ -79,6 +80,7 @@ const MOODS = {
   worried: { eyes: 'open',  mouth: 'wavy',  label: 'PR parada há dias',    hint: 'espera de 3 dias ou mais' },
   think:   { eyes: 'up',    mouth: 'flat',  label: 'Atualizando',          hint: 'consultando o GitHub' },
   sad:     { eyes: 'sad',   mouth: 'frown', label: 'Sem conexão',          hint: 'ícone vermelho' },
+  nudged:  { eyes: 'wide',  mouth: 'open',  label: 'Cutucada',             hint: 'o autor pediu uma nova revisão' },
 };
 
 function face(g, spec, mood, f) {
@@ -94,7 +96,7 @@ function face(g, spec, mood, f) {
   const lx = spec.cx - spec.eyeDx - Math.floor(e.w / 2), rx = spec.cx + spec.eyeDx - Math.floor((e.w - 1) / 2);
   const dx = mood === 'think' ? 1 : 0;
   [lx, rx].forEach(x0 => { e.px.forEach(([i, j, k]) => put1(x0 + i + dx, spec.eyeY + j, k)); (e.extra || []).forEach(([i, j, k]) => put1(x0 + i, spec.eyeY + j, k)); });
-  if (mood === 'worried' && spec.brows) {
+  if ((mood === 'worried' || mood === 'nudged') && spec.brows) {
     [[lx, [[0, -3], [1, -2]]], [rx, [[1, -3], [0, -2]]]].forEach(([x0, pts]) => pts.forEach(([i, j]) => put(g, x0 + i, spec.eyeY + j, spec.eye)));
   }
   if (spec.cheek && mood !== 'sleep') { rect(g, spec.cx - spec.cheekDx - 1, spec.eyeY + 2, 2, 1, spec.cheek); rect(g, spec.cx + spec.cheekDx, spec.eyeY + 2, 2, 1, spec.cheek); }
@@ -244,6 +246,12 @@ function effects(g, mood, f, count) {
   if (mood === 'worried') { const y = 6 + (f % 8 < 4 ? 0 : 1); put(g, 4, y, Bl); put(g, 4, y + 1, Bl); put(g, 3, y + 1, Bl); put(g, 5, y + 1, Bl); put(g, 4, y + 2, Bl); }
   if (mood === 'think') { const n = 1 + Math.floor(f / 4) % 3; for (let i = 0; i < n; i++) rect(g, 20 + i * 3, 2, 2, 2, Wh); }
   if (mood === 'sad') bits(g, 22, 2, GLYPH.q, Bl);
+  if (mood === 'nudged') {
+    if (f % 4 < 3) { bits(g, 20, 1, GLYPH.bang, R); bits(g, 23, 1, GLYPH.bang, R); }
+    // shaking lines on both sides
+    const k = f % 2;
+    [[0, 9 + k], [0, 14 - k], [26, 9 - k + 1], [26, 14 + k]].forEach(([x, y]) => rect(g, x, y, 2, 1, Y));
+  }
 }
 
 function frame(key, mood, f, count) {
@@ -253,8 +261,10 @@ function frame(key, mood, f, count) {
   if (mood === 'alert') oy = [0, -1][f % 2];
   if (mood === 'joy') oy = -Math.round(5 * Math.abs(Math.sin((f % 12) / 12 * Math.PI)));
   if (mood === 'think') oy = [0, 0, 0, -1][f % 4];
+  if (mood === 'nudged') oy = [0, -2, 0, -1][f % 4];
   if (key === 'nimbo') oy += [-2, -3, -3, -2][Math.floor(f / 3) % 4];
   g = shift(g, oy);
+  if (mood === 'nudged') g = shiftX(g, [-2, 2, -1, 1][f % 4]);
   effects(g, mood, f, count);
   const shadow = blank();
   ell(shadow, 13, 26.5, (12 - (oy < 0 ? -oy : 0) * 1.1) / 2, 1, 'shadow');
