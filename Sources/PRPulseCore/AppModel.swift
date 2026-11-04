@@ -16,6 +16,12 @@ public enum LoadState: Equatable, Sendable {
 
 public protocol NotificationSink: Sendable {
     func deliver(_ items: [PendingKey], summary: Summary) async
+    /// A reviewer asked again: the nudge's own notification, quiet when `isFresh` is false.
+    func deliver(nudge: IncomingNudge) async
+}
+
+extension NotificationSink {
+    public func deliver(nudge: IncomingNudge) async {}
 }
 
 @MainActor
@@ -31,9 +37,14 @@ public final class AppModel: ObservableObject {
     @Published public private(set) var freshUntil: Date?
     @Published public private(set) var isRefreshing = false
     @Published public private(set) var arrival: Arrival?
+    /// Nudges the viewer has not looked at yet, newest last.
+    @Published public private(set) var pendingNudges: [IncomingNudge] = []
+    /// The login the lists were built for, known after the first refresh.
+    public private(set) var viewerLogin: String?
 
     private let settings: SettingsStore
     private let notified: NotifiedStore
+    private let nudges: NudgeStore
     private let makeProvider: @Sendable () async throws -> any PullRequestProvider
     private let sink: NotificationSink
     private let clock: Clock
@@ -45,12 +56,14 @@ public final class AppModel: ObservableObject {
     public init(
         settings: SettingsStore,
         notified: NotifiedStore,
+        nudges: NudgeStore = NudgeStore(),
         makeProvider: @escaping @Sendable () async throws -> any PullRequestProvider,
         sink: NotificationSink,
         clock: Clock
     ) {
         self.settings = settings
         self.notified = notified
+        self.nudges = nudges
         self.makeProvider = makeProvider
         self.sink = sink
         self.clock = clock
@@ -121,6 +134,7 @@ public final class AppModel: ObservableObject {
         let client = try await makeProvider()
         for org in current.orgs { try await client.verifyOrganization(org) }
         let login = try await client.viewer().login
+        viewerLogin = login
         var minePRs: [PullRequestSnapshot] = []
         var reviewPRs: [PullRequestSnapshot] = []
         for org in current.orgs {
@@ -144,12 +158,36 @@ public final class AppModel: ObservableObject {
 
     private func apply(_ summary: Summary) async {
         show(summary)
+        let received = receiveNudges(in: summary)
         let plan = NotificationPlanner.plan(current: summary.pendingKeys, notified: notified.keys)
         notified.replace(with: plan.notified)
-        guard settings.settings.notificationsEnabled, !plan.toNotify.isEmpty else { return }
-        await sink.deliver(plan.toNotify, summary: summary)
-        arrival = Arrival.make(from: plan.toNotify, in: summary, at: clock.now)
+        for nudge in received { await sink.deliver(nudge: nudge) }
+        let nudged = Set(received.map(\.ref))
+        let toNotify = plan.toNotify.filter { !nudged.contains($0.ref) }
+        guard settings.settings.notificationsEnabled, !toNotify.isEmpty else { return }
+        await sink.deliver(toNotify, summary: summary)
+        arrival = Arrival.make(from: toNotify, in: summary, at: clock.now)
         freshUntil = clock.now.addingTimeInterval(Self.freshDuration)
+    }
+
+    /// The nudges to tell the viewer about now. Every one that arrived is remembered, so it is never played twice, even when
+    /// nudges are off or paused: then the pull request is still on the list, and the usual notification covers it.
+    private func receiveNudges(in summary: Summary) -> [IncomingNudge] {
+        pendingNudges = pendingNudges.filter { pending in summary.review.contains { $0.pr.ref == pending.ref } }
+        guard let viewer = viewerLogin else { return [] }
+        let arrived = NudgePlanner.incoming(in: summary, viewer: viewer, seen: nudges.seen, now: clock.now)
+        nudges.remember(arrived.map(\.id), at: clock.now)
+        let current = settings.settings
+        guard current.nudgesEnabled, !current.areNudgesPaused(at: clock.now) else { return [] }
+        let fresh = arrived.filter(\.isFresh)
+        pendingNudges = pendingNudges.filter { old in !fresh.contains { $0.ref == old.ref } } + fresh
+        return arrived
+    }
+
+    /// The viewer opened the pull request: its nudge has done its job.
+    public func acknowledgeNudges(openedURL url: URL) {
+        let remaining = pendingNudges.filter { $0.url != url }
+        if remaining != pendingNudges { pendingNudges = remaining }
     }
 
     private func show(_ summary: Summary) {

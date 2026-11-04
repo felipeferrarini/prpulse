@@ -215,8 +215,13 @@ public struct GitHubClient: PullRequestProvider {
         return pullRequests.filter { seen.insert($0.ref).inserted }
     }
 
-    private func execute(_ query: String, _ variables: [String: Any]) async throws -> JSONObject {
+    func execute(_ query: String, _ variables: [String: Any]) async throws -> JSONObject {
         try GraphQLResponse.data(from: try await transport.send(query: query, variables: variables))
+    }
+
+    /// A mutation that reports any error: unlike a search, a half answer here means the change was not made.
+    func mutate(_ query: String, _ variables: [String: Any]) async throws -> JSONObject {
+        try GraphQLResponse.mutation(from: try await transport.send(query: query, variables: variables))
     }
 }
 

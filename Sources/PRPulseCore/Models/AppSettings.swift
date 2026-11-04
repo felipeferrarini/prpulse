@@ -1,3 +1,5 @@
+import Foundation
+
 public enum AuthSource: String, Codable, Sendable {
     case ghCli
     case personalToken
@@ -64,6 +66,15 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var lastSeenVersion: String
     /// The client id of the OAuth App the team registered, for signing in from the browser; empty when there is none.
     public var oauthClientID: String
+    /// Reacts when an author nudges the viewer to review again.
+    public var nudgesEnabled: Bool
+    public var nudgeSoundEnabled: Bool
+    /// Nudges that arrive before this are not played.
+    public var nudgesPausedUntil: Date?
+
+    public func areNudgesPaused(at date: Date) -> Bool {
+        nudgesPausedUntil.map { date < $0 } ?? false
+    }
 
     public static let defaults = AppSettings(
         orgs: [],
@@ -93,7 +104,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
         popoverLayout: .single,
         showNewsAfterUpdate: true,
         lastSeenVersion: "",
-        oauthClientID: ""
+        oauthClientID: "",
+        nudgesEnabled: true,
+        nudgeSoundEnabled: true,
+        nudgesPausedUntil: nil
     )
 
     public init(
@@ -124,7 +138,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
         popoverLayout: PopoverLayout = .single,
         showNewsAfterUpdate: Bool = true,
         lastSeenVersion: String = "",
-        oauthClientID: String = ""
+        oauthClientID: String = "",
+        nudgesEnabled: Bool = true,
+        nudgeSoundEnabled: Bool = true,
+        nudgesPausedUntil: Date? = nil
     ) {
         self.orgs = orgs
         self.authSource = authSource
@@ -154,6 +171,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.showNewsAfterUpdate = showNewsAfterUpdate
         self.lastSeenVersion = lastSeenVersion
         self.oauthClientID = oauthClientID
+        self.nudgesEnabled = nudgesEnabled
+        self.nudgeSoundEnabled = nudgeSoundEnabled
+        self.nudgesPausedUntil = nudgesPausedUntil
     }
 
     public init(from decoder: Decoder) throws {
@@ -188,6 +208,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         showNewsAfterUpdate = try values.decodeIfPresent(Bool.self, forKey: .showNewsAfterUpdate) ?? base.showNewsAfterUpdate
         lastSeenVersion = try values.decodeIfPresent(String.self, forKey: .lastSeenVersion) ?? base.lastSeenVersion
         oauthClientID = try values.decodeIfPresent(String.self, forKey: .oauthClientID) ?? base.oauthClientID
+        nudgesEnabled = try values.decodeIfPresent(Bool.self, forKey: .nudgesEnabled) ?? base.nudgesEnabled
+        nudgeSoundEnabled = try values.decodeIfPresent(Bool.self, forKey: .nudgeSoundEnabled) ?? base.nudgeSoundEnabled
+        nudgesPausedUntil = try values.decodeIfPresent(Date.self, forKey: .nudgesPausedUntil)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -196,6 +219,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case mascotEnabled, mascotPack, mascotScale, mascotIntroduced, mascotAnchor
         case reviewAgentEnabled, reviewSkill, reviewApproval, reviewPrompt, reviewFolders, reviewOrgFolders
         case showNewsAfterUpdate, lastSeenVersion, oauthClientID
+        case nudgesEnabled, nudgeSoundEnabled, nudgesPausedUntil
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -228,6 +252,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try values.encode(showNewsAfterUpdate, forKey: .showNewsAfterUpdate)
         try values.encode(lastSeenVersion, forKey: .lastSeenVersion)
         try values.encode(oauthClientID, forKey: .oauthClientID)
+        try values.encode(nudgesEnabled, forKey: .nudgesEnabled)
+        try values.encode(nudgeSoundEnabled, forKey: .nudgeSoundEnabled)
+        try values.encodeIfPresent(nudgesPausedUntil, forKey: .nudgesPausedUntil)
     }
 
     /// Settings saved before 0.4 hold a single `org`.

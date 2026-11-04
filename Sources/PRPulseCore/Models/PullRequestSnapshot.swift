@@ -17,6 +17,8 @@ public struct PullRequestSnapshot: Equatable, Sendable {
     public let reviews: [ReviewSnapshot]
     public let requestedReviewers: [String]
     public let stack: StackMembership?
+    /// The nudges found among the comments, oldest first.
+    public let nudges: [NudgeSnapshot]
 
     public init(
         ref: PullRequestRef,
@@ -34,7 +36,8 @@ public struct PullRequestSnapshot: Equatable, Sendable {
         commits: [CommitSnapshot],
         reviews: [ReviewSnapshot],
         requestedReviewers: [String],
-        stack: StackMembership? = nil
+        stack: StackMembership? = nil,
+        nudges: [NudgeSnapshot] = []
     ) {
         self.ref = ref
         self.title = title
@@ -52,6 +55,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
         self.reviews = reviews
         self.requestedReviewers = requestedReviewers
         self.stack = stack
+        self.nudges = nudges
     }
 
     public func with(requestedReviewers: [String]) -> PullRequestSnapshot {
@@ -59,7 +63,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
             ref: ref, title: title, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
             reviewDecision: reviewDecision, mergeable: mergeable, mergeState: mergeState, checks: checks,
             threads: threads, comments: comments, commits: commits, reviews: reviews,
-            requestedReviewers: requestedReviewers, stack: stack
+            requestedReviewers: requestedReviewers, stack: stack, nudges: nudges
         )
     }
 
@@ -68,7 +72,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
             ref: ref, title: title, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
             reviewDecision: reviewDecision, mergeable: mergeable, mergeState: mergeState, checks: checks,
             threads: threads, comments: comments, commits: commits, reviews: reviews,
-            requestedReviewers: requestedReviewers, stack: stack
+            requestedReviewers: requestedReviewers, stack: stack, nudges: nudges
         )
     }
 
@@ -77,7 +81,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
             ref: ref, title: title, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
             reviewDecision: reviewDecision, mergeable: mergeable, mergeState: mergeState, checks: checks,
             threads: threads, comments: comments, commits: commits, reviews: reviews,
-            requestedReviewers: requestedReviewers, stack: stack
+            requestedReviewers: requestedReviewers, stack: stack, nudges: nudges
         )
     }
 }

@@ -24,7 +24,7 @@ public enum ReviewClassifier {
 
     private static func needsViewerReview(_ pr: PullRequestSnapshot, viewer: String, ignored: Set<String>) -> Bool {
         guard !pr.author.isSame(as: viewer) else { return false }
-        guard !hasSubmittedReview(pr, by: viewer) else { return false }
+        guard isRequested(pr, viewer: viewer) || !hasSubmittedReview(pr, by: viewer) else { return false }
         return !isHiddenByRepo(pr, viewer: viewer, ignored: ignored)
     }
 

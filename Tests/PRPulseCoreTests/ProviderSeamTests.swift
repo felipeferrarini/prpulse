@@ -57,25 +57,36 @@ private final class StillClock: Clock, @unchecked Sendable {
     var now = Date(timeIntervalSince1970: 1_793_000_000)
 }
 
-private final class Mute: NotificationSink, @unchecked Sendable {
-    func deliver(_ items: [PendingKey], summary: Summary) async {}
+private final class RecordingSink: NotificationSink, @unchecked Sendable {
+    private let lock = NSLock()
+    private var recordedKeys: [PendingKey] = []
+    private var recordedNudges: [IncomingNudge] = []
+
+    var keys: [PendingKey] { lock.withLock { recordedKeys } }
+    var nudges: [IncomingNudge] { lock.withLock { recordedNudges } }
+
+    func deliver(_ items: [PendingKey], summary: Summary) async { lock.withLock { recordedKeys += items } }
+    func deliver(nudge: IncomingNudge) async { lock.withLock { recordedNudges.append(nudge) } }
 }
 
 @MainActor
 private struct Rig {
     let provider = FakeProvider()
     let clock = StillClock()
+    let sink = RecordingSink()
+    let settings: SettingsStore
     let model: AppModel
 
     init() {
         let store = SettingsStore(defaults: UserDefaults(suiteName: "prpulse-seam-\(UUID().uuidString)")!)
         store.settings.orgs = ["org"]
+        settings = store
         let provider = provider
         model = AppModel(
             settings: store,
             notified: NotifiedStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("prpulse-\(UUID().uuidString)/n.json")),
             makeProvider: { provider },
-            sink: Mute(),
+            sink: sink,
             clock: clock
         )
     }
@@ -119,4 +130,88 @@ private struct Rig {
     await rig.model.refresh()
 
     #expect(rig.model.state == .failed(.organizationNotAccessible("org")))
+}
+
+// MARK: Nudges
+
+private let ana = Actor(login: "ana", isBot: false)
+
+@MainActor private func nudged(_ rig: Rig, id: String = "n1", agoSeconds: Double = 60) -> PullRequestSnapshot {
+    let sentAt = rig.clock.now.addingTimeInterval(-agoSeconds)
+    let nudge = NudgeSnapshot(id: id, recipient: "me", tone: 1, message: "pushed the fix", author: ana, createdAt: sentAt)
+    return .fixture(number: 5, author: ana, requestedReviewers: [viewer], nudges: [nudge])
+}
+
+@MainActor @Test func aNudgeIsPlayedOnceAndReplacesTheUsualNotification() async {
+    let rig = Rig()
+    rig.provider.review = [nudged(rig)]
+
+    await rig.model.refresh()
+
+    #expect(rig.sink.nudges.map(\.id) == ["n1"])
+    #expect(rig.model.pendingNudges.map(\.id) == ["n1"])
+    #expect(rig.sink.keys.isEmpty)
+
+    await rig.model.refresh()
+    #expect(rig.sink.nudges.count == 1)
+    #expect(rig.model.pendingNudges.count == 1)
+}
+
+@MainActor @Test func openingThePullRequestEndsTheNudge() async {
+    let rig = Rig()
+    let pr = nudged(rig)
+    rig.provider.review = [pr]
+    await rig.model.refresh()
+
+    rig.model.acknowledgeNudges(openedURL: pr.url)
+
+    #expect(rig.model.pendingNudges.isEmpty)
+}
+
+@MainActor @Test func aNudgeEndsWhenThePullRequestLeavesTheList() async {
+    let rig = Rig()
+    rig.provider.review = [nudged(rig)]
+    await rig.model.refresh()
+
+    rig.provider.review = []
+    await rig.model.refresh()
+
+    #expect(rig.model.pendingNudges.isEmpty)
+}
+
+@MainActor @Test func withNudgesOffTheUsualNotificationStillComesAndNothingReplaysLater() async {
+    let rig = Rig()
+    rig.settings.settings.nudgesEnabled = false
+    rig.provider.review = [nudged(rig)]
+
+    await rig.model.refresh()
+
+    #expect(rig.sink.nudges.isEmpty)
+    #expect(rig.model.pendingNudges.isEmpty)
+    #expect(rig.sink.keys.map(\.ref.number) == [5])
+
+    rig.settings.settings.nudgesEnabled = true
+    await rig.model.refresh()
+    #expect(rig.sink.nudges.isEmpty)
+}
+
+@MainActor @Test func pausedNudgesAreSkippedUntilThePauseEnds() async {
+    let rig = Rig()
+    rig.settings.settings.nudgesPausedUntil = rig.clock.now.addingTimeInterval(3600)
+    rig.provider.review = [nudged(rig)]
+
+    await rig.model.refresh()
+
+    #expect(rig.sink.nudges.isEmpty)
+    #expect(rig.model.pendingNudges.isEmpty)
+}
+
+@MainActor @Test func aNudgeSeenLateIsDeliveredQuietlyAndLeavesTheMascotAlone() async {
+    let rig = Rig()
+    rig.provider.review = [nudged(rig, agoSeconds: 5 * 3600)]
+
+    await rig.model.refresh()
+
+    #expect(rig.sink.nudges.first?.isFresh == false)
+    #expect(rig.model.pendingNudges.isEmpty)
 }

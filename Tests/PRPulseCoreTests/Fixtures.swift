@@ -26,7 +26,8 @@ extension PullRequestSnapshot {
         comments: [CommentSnapshot] = [],
         commits: [CommitSnapshot] = [],
         reviews: [ReviewSnapshot] = [],
-        requestedReviewers: [String] = []
+        requestedReviewers: [String] = [],
+        nudges: [NudgeSnapshot] = []
     ) -> PullRequestSnapshot {
         PullRequestSnapshot(
             ref: PullRequestRef(owner: "org", repo: repo, number: number),
@@ -43,7 +44,8 @@ extension PullRequestSnapshot {
             comments: comments,
             commits: commits,
             reviews: reviews,
-            requestedReviewers: requestedReviewers
+            requestedReviewers: requestedReviewers,
+            nudges: nudges
         )
     }
 }

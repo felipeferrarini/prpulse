@@ -13,6 +13,16 @@ enum GraphQLResponse {
         return data
     }
 
+    static func mutation(from raw: Data) throws -> JSONObject {
+        guard let root = try? JSONSerialization.jsonObject(with: raw) as? JSONObject else {
+            throw ProviderError.malformed("response is not a JSON object")
+        }
+        let errors = root.array("errors")
+        try throwBlockingError(in: errors)
+        if let first = errors.first { throw ProviderError.malformed(first.string("message") ?? "the change was refused") }
+        return root.object("data") ?? [:]
+    }
+
     private static func throwBlockingError(in errors: [JSONObject]) throws {
         if errors.contains(where: { $0.string("type") == "RATE_LIMITED" }) {
             throw ProviderError.rateLimited(retryAfter: nil)

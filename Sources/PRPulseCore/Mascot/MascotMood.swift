@@ -2,7 +2,7 @@ import Foundation
 
 /// What the mascot is feeling. Every mascot pack animates these.
 public enum MascotMood: String, CaseIterable, Codable, Sendable {
-    case calm, sleep, alert, joy, worried, think, sad
+    case calm, sleep, alert, joy, worried, think, sad, nudged
 }
 
 /// Everything that decides the mascot's mood.
@@ -14,6 +14,8 @@ public struct MascotSituation: Sendable {
     public var isRefreshing: Bool
     /// Since when nothing has needed the viewer, if that is the case.
     public var upToDateSince: Date?
+    /// An author nudged the viewer and the viewer has not looked yet.
+    public var isNudged: Bool
 
     public init(
         state: LoadState = .idle,
@@ -21,7 +23,8 @@ public struct MascotSituation: Sendable {
         summary: Summary? = nil,
         freshUntil: Date? = nil,
         isRefreshing: Bool = false,
-        upToDateSince: Date? = nil
+        upToDateSince: Date? = nil,
+        isNudged: Bool = false
     ) {
         self.state = state
         self.isOffline = isOffline
@@ -29,6 +32,7 @@ public struct MascotSituation: Sendable {
         self.freshUntil = freshUntil
         self.isRefreshing = isRefreshing
         self.upToDateSince = upToDateSince
+        self.isNudged = isNudged
     }
 }
 
@@ -38,10 +42,11 @@ public enum MascotMoodResolver {
     /// A request, or one of the viewer's own PRs, that waits this long worries the mascot.
     public static let worriedAfterHours = 72.0
 
-    /// The first that applies: trouble, something new, a refresh in flight, an old PR, something to do, sleep, calm.
+    /// The first that applies: trouble, a nudge, something new, a refresh in flight, an old PR, something to do, sleep, calm.
     public static func mood(for situation: MascotSituation, now: Date) -> MascotMood {
         if case .failed = situation.state { return .sad }
         if situation.isOffline { return .sad }
+        if situation.isNudged { return .nudged }
         if let fresh = situation.freshUntil, fresh > now { return .joy }
         if situation.isRefreshing { return .think }
         guard let summary = situation.summary else { return .calm }

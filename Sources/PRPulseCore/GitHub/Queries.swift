@@ -56,6 +56,25 @@ enum Queries {
         """
     }
 
+    static let nudgeTargets = """
+    query($owner: String!, $repo: String!, $number: Int!, $login: String!) {
+      repository(owner: $owner, name: $repo) { pullRequest(number: $number) { id } }
+      user(login: $login) { id }
+    }
+    """
+
+    static let requestReviews = """
+    mutation($pullRequest: ID!, $users: [ID!]) {
+      requestReviews(input: { pullRequestId: $pullRequest, userIds: $users, union: true }) { clientMutationId }
+    }
+    """
+
+    static let addComment = """
+    mutation($subject: ID!, $body: String!) {
+      addComment(input: { subjectId: $subject, body: $body }) { clientMutationId }
+    }
+    """
+
     private static let stackFields = """
 
     stack { number size baseRefName }
@@ -103,7 +122,7 @@ enum Queries {
               pageInfo { hasNextPage endCursor }
               nodes { isResolved comments(first: 1) { nodes { author { login __typename } } } }
             }
-            comments(last: 50) { nodes { createdAt author { login __typename } } }
+            comments(last: 50) { nodes { createdAt body author { login __typename } } }
             reviews(last: 50) { nodes { state body submittedAt author { login __typename } } }
             commits(last: 100) { nodes { commit { authoredDate author { user { login } } } } }
             """
@@ -111,6 +130,7 @@ enum Queries {
             identity + """
 
             reviews(last: 50) { nodes { state submittedAt author { login __typename } } }
+            comments(last: 10) { nodes { createdAt body author { login __typename } } }
             """
         }
     }

@@ -26,7 +26,8 @@ enum SnapshotMapper {
             commits: commits(from: node),
             reviews: reviews(from: node),
             requestedReviewers: requestedReviewers(from: node),
-            stack: stack(from: node)
+            stack: stack(from: node),
+            nudges: nudges(from: node)
         )
     }
 
@@ -63,11 +64,22 @@ enum SnapshotMapper {
         return Actor(login: login, isBot: node?.string("__typename") == "Bot")
     }
 
+    /// A nudge is not a conversation: it never counts as the author's reply to a comment.
     private static func comments(from node: JSONObject) -> [CommentSnapshot] {
         node.nodes("comments").compactMap { comment in
-            guard let createdAt = parseDate(comment.string("createdAt")) else { return nil }
+            guard let createdAt = parseDate(comment.string("createdAt")), nudge(in: comment, createdAt: createdAt) == nil else { return nil }
             return CommentSnapshot(author: actor(comment.object("author")), createdAt: createdAt, isReviewBody: false)
         }
+    }
+
+    private static func nudges(from node: JSONObject) -> [NudgeSnapshot] {
+        node.nodes("comments")
+            .compactMap { comment in parseDate(comment.string("createdAt")).flatMap { nudge(in: comment, createdAt: $0) } }
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    private static func nudge(in comment: JSONObject, createdAt: Date) -> NudgeSnapshot? {
+        comment.string("body").flatMap { NudgeCodec.parse($0, author: actor(comment.object("author")), createdAt: createdAt) }
     }
 
     private static func reviewBodies(from node: JSONObject) -> [CommentSnapshot] {
