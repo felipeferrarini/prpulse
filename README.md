@@ -227,7 +227,7 @@ When you pushed the changes someone asked for and they have not looked again, ri
 
 It goes through GitHub: PRPulse asks for a new review from that person and leaves a comment with a hidden marker. People who do not use PRPulse see an ordinary mention. It needs no server, and it is the only thing PRPulse ever writes to GitHub.
 
-On the receiving side it is on by default (Settings → General → **React to nudges** and **Nudge sound**). The mascot's right click menu has **Pause nudges**, for an hour or until tomorrow morning. The sound is Sosumi unless you pick another: Settings → General → **Sound** lists the macOS sounds and has a play button. To use your own, click **Open the sounds folder** and drop a `.wav`, `.caf`, `.aiff`, `.m4a` or `.mp3` file in it (`~/Library/Application Support/PRPulse/Sounds`); it shows up in the list, and anything over three seconds is cut short. If the file goes away, Sosumi plays.
+On the receiving side it is on by default (Settings → **Notifications**: **React to nudges** and **Nudge sound**). The mascot's right click menu has **Pause nudges**, for an hour or until tomorrow morning. The sound is Sosumi unless you pick another: the **Sound** row in the same page lists the macOS sounds and has a play button. To use your own, click **Open the sounds folder** and drop a `.wav`, `.caf`, `.aiff`, `.m4a` or `.mp3` file in it (`~/Library/Application Support/PRPulse/Sounds`); it shows up in the list, and anything over three seconds is cut short. If the file goes away, Sosumi plays.
 
 ### Quiet by design
 
@@ -345,8 +345,9 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 | **Organizations** | which organizations to watch |
 | **Exceptions** | repositories to ignore, your list of bot accounts, and two switches: ignore comments from bots, ignore PRs opened by bots |
 | **Mascot** | show it or not, which character, its size, where it sits, and your own characters |
+| **Notifications** | alerts for new pull requests, and for nudges: react or not, play a sound or not, which sound (a macOS one, or a file in the sounds folder) |
 | **Agents** | turn "Review with Claude" on or off, check Claude Desktop and Claude Code, choose who approves (Automatic or Ask me), pick the review skill, set a default project folder per organization, edit the request, and the folders chosen for single repositories |
-| **General** | refresh interval (1 to 30 minutes), popover layout, days before a PR counts as waiting for review, notifications, open at login, global shortcut, whether to react to nudges and their sound, automatic updates, run the setup again |
+| **General** | refresh interval (1 to 30 minutes), popover layout, days before a PR counts as waiting for review, open at login, global shortcut, automatic updates, run the setup again |
 | **Diagnostics** | version, last sync, GitHub request budget, and a button that copies all of it for a bug report (no token, organization or PR names) |
 | **What's new** | what changed in each version of PRPulse, from the changelog that ships with the app |
 

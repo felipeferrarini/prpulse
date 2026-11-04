@@ -2,7 +2,7 @@ import PRPulseCore
 import SwiftUI
 
 enum SettingsPage: CaseIterable, Hashable {
-    case connection, organization, exceptions, general, mascot, agents, diagnostics, news
+    case connection, organization, exceptions, general, notifications, mascot, agents, diagnostics, news
 
     var symbol: String {
         switch self {
@@ -10,6 +10,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .organization: "arrow.triangle.branch"
         case .exceptions: "eye"
         case .general: "slider.horizontal.3"
+        case .notifications: "bell"
         case .mascot: "face.smiling"
         case .agents: "sparkles"
         case .diagnostics: "stethoscope"
@@ -23,6 +24,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .organization: tr("settings.section.organization")
         case .exceptions: tr("settings.section.exceptions")
         case .general: tr("settings.section.general")
+        case .notifications: tr("settings.section.notifications")
         case .mascot: tr("settings.section.mascot")
         case .agents: tr("settings.section.agents")
         case .diagnostics: tr("settings.section.diagnostics")
@@ -36,6 +38,7 @@ enum SettingsPage: CaseIterable, Hashable {
         case .organization: tr("settings.lead.organization")
         case .exceptions: tr("settings.lead.exceptions")
         case .general: tr("settings.lead.general")
+        case .notifications: tr("settings.lead.notifications")
         case .mascot: tr("settings.lead.mascot")
         case .agents: tr("settings.lead.agents")
         case .diagnostics: tr("settings.lead.diagnostics")
@@ -60,13 +63,13 @@ struct SettingsChanges {
         if draft.ignoreBotPullRequests != saved.ignoreBotPullRequests { pages.append(.exceptions) }
         if draft.refreshMinutes != saved.refreshMinutes { pages.append(.general) }
         if draft.popoverLayout != saved.popoverLayout { pages.append(.general) }
-        if draft.notificationsEnabled != saved.notificationsEnabled { pages.append(.general) }
+        if draft.notificationsEnabled != saved.notificationsEnabled { pages.append(.notifications) }
         if draft.launchAtLogin != saved.launchAtLogin { pages.append(.general) }
         if draft.automaticUpdates != saved.automaticUpdates { pages.append(.general) }
         if draft.globalShortcut != saved.globalShortcut { pages.append(.general) }
-        if draft.nudgesEnabled != saved.nudgesEnabled { pages.append(.general) }
-        if draft.nudgeSoundEnabled != saved.nudgeSoundEnabled { pages.append(.general) }
-        if draft.nudgeSound != saved.nudgeSound { pages.append(.general) }
+        if draft.nudgesEnabled != saved.nudgesEnabled { pages.append(.notifications) }
+        if draft.nudgeSoundEnabled != saved.nudgeSoundEnabled { pages.append(.notifications) }
+        if draft.nudgeSound != saved.nudgeSound { pages.append(.notifications) }
         if draft.waitingReviewDays != saved.waitingReviewDays { pages.append(.general) }
         if draft.mascotEnabled != saved.mascotEnabled { pages.append(.mascot) }
         if draft.mascotPack != saved.mascotPack { pages.append(.mascot) }
@@ -238,6 +241,7 @@ struct SettingsView: View {
                 case .organization: OrganizationContent(model: model)
                 case .exceptions: ExceptionsContent(model: model)
                 case .general: GeneralContent(model: model, onRedoSetup: onRedoSetup, onCheckForUpdates: onCheckForUpdates)
+                case .notifications: NotificationsContent(model: model)
                 case .mascot: MascotContent(model: model, onResetPosition: onResetMascotPosition)
                 case .agents: AgentsContent(model: model, availability: agentAvailability, cliStatus: cliStatus, onTest: onTestReviewAgent)
                 case .diagnostics: DiagnosticsContent(report: diagnostics)

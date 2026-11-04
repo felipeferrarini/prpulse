@@ -183,7 +183,7 @@
 "settings.lead.connection" = "Como o PRPulse fala com a sua conta do GitHub.";
 "settings.lead.organization" = "As organizações que o PRPulse acompanha.";
 "settings.lead.exceptions" = "O que fica de fora da lista e das notificações.";
-"settings.lead.general" = "Frequência, layout e avisos.";
+"settings.lead.general" = "Frequência e layout.";
 "settings.account.gh" = "gh conectado";
 "settings.account.token" = "token conectado";
 "settings.account.problem" = "problema na conexão";
@@ -254,6 +254,9 @@
 "settings.waiting.days" = "%dd";
 "row.actions" = "Mais ações";
 "setup.org.unavailable" = "Seu token não enxerga";
+"settings.section.notifications" = "Notificações";
+"settings.lead.notifications" = "Avisos de PRs novas e de cutucadas.";
+"settings.notifications.nudges" = "Cutucadas";
 "settings.section.mascot" = "Mascote";
 "settings.lead.mascot" = "Um amiguinho que vive na sua tela e reage às suas PRs.";
 "mascot.show" = "Mostrar na tela";
