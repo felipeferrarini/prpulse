@@ -4,6 +4,14 @@ All notable changes to PRPulse. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Added
+
+- **Nudge a reviewer.** Right click one of your pull requests and pick **Nudge** to ask someone who commented or asked for changes to look again. Their mascot shakes (a new `nudged` mood, drawn for every built-in mascot), a sound plays and a notification shows, until they open the pull request; a second notification follows after 15 minutes. You can add a line of up to 140 characters. It needs a commit after their last activity, is spaced three hours apart and capped at three per person per pull request, and each nudge is louder than the last. It goes through GitHub (a new review request and a comment with a hidden marker), so it needs no server; it is the only thing PRPulse writes to GitHub. It is on by default for the person who receives it: Settings → General has **React to nudges** and **Nudge sound**, and the mascot's menu can pause them.
+
+### Fixed
+
+- A pull request you were asked to review again shows in the list again. It used to stay hidden once you had reviewed it, even when the author asked for a new review.
+
 ## [0.10.0] - 2026-10-31
 
 ### Added

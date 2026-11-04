@@ -167,7 +167,7 @@ Six characters come with the app. To add your own, drop a folder with a `sprites
 }
 ```
 
-The moods are `calm`, `sleep`, `alert`, `joy`, `worried`, `think` and `sad`. Only `calm` is required; a mood you leave out plays `calm`. `make mascots` redraws the built-in ones.
+The moods are `calm`, `sleep`, `alert`, `joy`, `worried`, `think`, `sad` and `nudged`. Only `calm` is required; a mood you leave out plays `calm`, except `nudged`, which plays `alert` first. `make mascots` redraws the built-in ones.
 
 ### Review pull requests with Claude
 
@@ -215,6 +215,19 @@ For pull requests that belong together without being a stack, for example one in
     </td>
   </tr>
 </table>
+
+### Nudge a reviewer
+
+When you pushed the changes someone asked for and they have not looked again, right click your pull request and pick **Nudge**. On their Mac the mascot jumps and shakes, a sound plays and a notification shows. It is meant to be noticed, so it has rules:
+
+- **Only people who took part.** You can nudge someone who commented or asked for changes on that pull request, and only once you pushed a commit after their last activity: until then there is nothing new for them to read. Bots and you are never listed. Someone who only approved is not listed either.
+- **Spaced and capped.** At least three hours between nudges to the same person on the same pull request, and at most three. Each one is stronger than the last: the sound plays once, then twice, then three times.
+- **A line of your own, or none.** **Nudge rita** is one click. **Nudge rita with a message…** adds up to 140 characters, which show in the notification and in a comment on the pull request, where everyone can read them.
+- **It stops when they look.** The mascot stays restless until they open the pull request (or send the review), and a second notification comes after 15 minutes if they have not. The nudge arrives on their next refresh, so it can take up to their refresh interval (1 to 30 minutes).
+
+It goes through GitHub: PRPulse asks for a new review from that person and leaves a comment with a hidden marker. People who do not use PRPulse see an ordinary mention. It needs no server, and it is the only thing PRPulse ever writes to GitHub.
+
+On the receiving side it is on by default (Settings → General → **React to nudges** and **Nudge sound**). The mascot's right click menu has **Pause nudges**, for an hour or until tomorrow morning. The sound is a file in `Sources/PRPulse/Resources` named `nudge` (`.wav`, `.caf`, `.aiff`, `.m4a` or `.mp3`); without one, a macOS system sound plays.
 
 ### Quiet by design
 
@@ -319,6 +332,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 - PRPulse talks **only to GitHub** (`api.github.com` and `github.com`) with your own credentials. There is no server of ours, no analytics and no telemetry.
 - A personal token is stored in the **macOS Keychain**. With the `gh` option, the token is read from `gh` on demand and never stored by PRPulse.
 - **Review with Claude** runs Claude Code on your Mac, or hands the request to Claude Desktop. PRPulse sends nothing anywhere for it: only the PR's address and number go in the request, what Claude does with it follows its own terms, and a background review uses your Claude plan like any other session. In the Automatic mode its commands run in a sandbox that cannot write to your repository and reaches only GitHub. The reviews are kept in `~/Library/Application Support/PRPulse/` (the latest twenty), and nothing else is stored.
+- The only thing PRPulse writes to GitHub is a **nudge**, and only when you ask for one: a request for a new review from that person and a comment on your own pull request. Nothing else is created, edited or deleted.
 - Update checks read one small feed file from your releases page on `github.com`. Nothing about you or your Mac is sent.
 - Updates are signed with a key only the maintainer holds, and the app refuses anything that doesn't match.
 - The app is open source (MIT), so all of this is checkable.
@@ -332,7 +346,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 | **Exceptions** | repositories to ignore, your list of bot accounts, and two switches: ignore comments from bots, ignore PRs opened by bots |
 | **Mascot** | show it or not, which character, its size, where it sits, and your own characters |
 | **Agents** | turn "Review with Claude" on or off, check Claude Desktop and Claude Code, choose who approves (Automatic or Ask me), pick the review skill, set a default project folder per organization, edit the request, and the folders chosen for single repositories |
-| **General** | refresh interval (1 to 30 minutes), popover layout, days before a PR counts as waiting for review, notifications, open at login, global shortcut, automatic updates, run the setup again |
+| **General** | refresh interval (1 to 30 minutes), popover layout, days before a PR counts as waiting for review, notifications, open at login, global shortcut, whether to react to nudges and their sound, automatic updates, run the setup again |
 | **Diagnostics** | version, last sync, GitHub request budget, and a button that copies all of it for a bug report (no token, organization or PR names) |
 | **What's new** | what changed in each version of PRPulse, from the changelog that ships with the app |
 
