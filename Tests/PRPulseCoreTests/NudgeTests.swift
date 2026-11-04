@@ -325,6 +325,29 @@ private let accepted = json(["data": ["x": ["clientMutationId": NSNull()]]])
     #expect(settings.nudgesEnabled && settings.nudgeSoundEnabled)
     #expect(settings.nudgesPausedUntil == nil)
     #expect(!settings.areNudgesPaused(at: now))
+    #expect(settings.nudgeSound == "system:Sosumi")
+}
+
+@Test func nudgeSoundChoiceSurvivesSaving() throws {
+    var settings = AppSettings.defaults
+    settings.nudgeSound = NudgeSoundChoice.user("fah.mp3").id
+    let saved = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
+
+    #expect(saved.nudgeSound == "user:fah.mp3")
+}
+
+@Test func soundIDsNameASystemSoundOrAFile() {
+    #expect(NudgeSoundChoice(id: "system:Glass") == .system("Glass"))
+    #expect(NudgeSoundChoice(id: "user:fah.mp3") == .user("fah.mp3"))
+    #expect(NudgeSoundChoice.system("Glass").id == "system:Glass")
+    #expect(NudgeSoundChoice.user("fah.mp3").name == "fah")
+    #expect(NudgeSoundChoice.defaultID == "system:Sosumi")
+}
+
+@Test func soundIDsCannotLeaveTheirFolder() {
+    for id in ["", "Glass", "system:", "user:", "user:../secret.mp3", "user:a/b.mp3", "user:..", "system:/etc/passwd", "other:x"] {
+        #expect(NudgeSoundChoice(id: id) == nil, "\(id)")
+    }
 }
 
 @Test func pausedNudgesResumeByThemselves() {

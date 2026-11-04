@@ -227,7 +227,7 @@ When you pushed the changes someone asked for and they have not looked again, ri
 
 It goes through GitHub: PRPulse asks for a new review from that person and leaves a comment with a hidden marker. People who do not use PRPulse see an ordinary mention. It needs no server, and it is the only thing PRPulse ever writes to GitHub.
 
-On the receiving side it is on by default (Settings → General → **React to nudges** and **Nudge sound**). The mascot's right click menu has **Pause nudges**, for an hour or until tomorrow morning. The sound is a file in `Sources/PRPulse/Resources` named `nudge` (`.wav`, `.caf`, `.aiff`, `.m4a` or `.mp3`); without one, a macOS system sound plays.
+On the receiving side it is on by default (Settings → General → **React to nudges** and **Nudge sound**). The mascot's right click menu has **Pause nudges**, for an hour or until tomorrow morning. The sound is Sosumi unless you pick another: Settings → General → **Sound** lists the macOS sounds and has a play button. To use your own, click **Open the sounds folder** and drop a `.wav`, `.caf`, `.aiff`, `.m4a` or `.mp3` file in it (`~/Library/Application Support/PRPulse/Sounds`); it shows up in the list, and anything over three seconds is cut short. If the file goes away, Sosumi plays.
 
 ### Quiet by design
 

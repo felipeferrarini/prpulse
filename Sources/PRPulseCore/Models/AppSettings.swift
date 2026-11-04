@@ -69,6 +69,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     /// Reacts when an author nudges the viewer to review again.
     public var nudgesEnabled: Bool
     public var nudgeSoundEnabled: Bool
+    /// A `NudgeSoundChoice` id; an id that no longer resolves plays the default sound.
+    public var nudgeSound: String
     /// Nudges that arrive before this are not played.
     public var nudgesPausedUntil: Date?
 
@@ -107,6 +109,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         oauthClientID: "",
         nudgesEnabled: true,
         nudgeSoundEnabled: true,
+        nudgeSound: NudgeSoundChoice.defaultID,
         nudgesPausedUntil: nil
     )
 
@@ -141,6 +144,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         oauthClientID: String = "",
         nudgesEnabled: Bool = true,
         nudgeSoundEnabled: Bool = true,
+        nudgeSound: String = NudgeSoundChoice.defaultID,
         nudgesPausedUntil: Date? = nil
     ) {
         self.orgs = orgs
@@ -173,6 +177,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.oauthClientID = oauthClientID
         self.nudgesEnabled = nudgesEnabled
         self.nudgeSoundEnabled = nudgeSoundEnabled
+        self.nudgeSound = nudgeSound
         self.nudgesPausedUntil = nudgesPausedUntil
     }
 
@@ -210,6 +215,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         oauthClientID = try values.decodeIfPresent(String.self, forKey: .oauthClientID) ?? base.oauthClientID
         nudgesEnabled = try values.decodeIfPresent(Bool.self, forKey: .nudgesEnabled) ?? base.nudgesEnabled
         nudgeSoundEnabled = try values.decodeIfPresent(Bool.self, forKey: .nudgeSoundEnabled) ?? base.nudgeSoundEnabled
+        nudgeSound = try values.decodeIfPresent(String.self, forKey: .nudgeSound) ?? base.nudgeSound
         nudgesPausedUntil = try values.decodeIfPresent(Date.self, forKey: .nudgesPausedUntil)
     }
 
@@ -219,7 +225,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case mascotEnabled, mascotPack, mascotScale, mascotIntroduced, mascotAnchor
         case reviewAgentEnabled, reviewSkill, reviewApproval, reviewPrompt, reviewFolders, reviewOrgFolders
         case showNewsAfterUpdate, lastSeenVersion, oauthClientID
-        case nudgesEnabled, nudgeSoundEnabled, nudgesPausedUntil
+        case nudgesEnabled, nudgeSoundEnabled, nudgeSound, nudgesPausedUntil
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -254,6 +260,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try values.encode(oauthClientID, forKey: .oauthClientID)
         try values.encode(nudgesEnabled, forKey: .nudgesEnabled)
         try values.encode(nudgeSoundEnabled, forKey: .nudgeSoundEnabled)
+        try values.encode(nudgeSound, forKey: .nudgeSound)
         try values.encodeIfPresent(nudgesPausedUntil, forKey: .nudgesPausedUntil)
     }
 

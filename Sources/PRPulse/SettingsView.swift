@@ -66,6 +66,7 @@ struct SettingsChanges {
         if draft.globalShortcut != saved.globalShortcut { pages.append(.general) }
         if draft.nudgesEnabled != saved.nudgesEnabled { pages.append(.general) }
         if draft.nudgeSoundEnabled != saved.nudgeSoundEnabled { pages.append(.general) }
+        if draft.nudgeSound != saved.nudgeSound { pages.append(.general) }
         if draft.waitingReviewDays != saved.waitingReviewDays { pages.append(.general) }
         if draft.mascotEnabled != saved.mascotEnabled { pages.append(.mascot) }
         if draft.mascotPack != saved.mascotPack { pages.append(.mascot) }

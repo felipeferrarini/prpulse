@@ -454,6 +454,10 @@
 "settings.nudges.detail" = "Quando o autor pede para você olhar uma PR de novo, o mascote pula e aparece uma notificação.";
 "settings.nudges.sound.title" = "Som da cutucada";
 "settings.nudges.sound.detail" = "Toca um som, uma vez a mais para cada cutucada da mesma pessoa.";
+"settings.nudges.choice.title" = "Som";
+"settings.nudges.choice.detail" = "Escolha um som do macOS ou use o seu: coloque um arquivo de áudio na pasta de sons.";
+"settings.nudges.choice.preview" = "Ouvir o som";
+"settings.nudges.choice.folder" = "Abrir a pasta de sons";
 "mascot.menu.pauseNudges" = "Pausar cutucadas";
 "mascot.menu.pause.hour" = "Por uma hora";
 "mascot.menu.pause.tomorrow" = "Até amanhã de manhã";

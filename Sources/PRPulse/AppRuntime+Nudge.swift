@@ -81,7 +81,7 @@ extension AppRuntime {
     func receiveNudge(from model: AppModel) {
         guard let nudge = model.pendingNudges.last, nudge.id != lastNudgeID else { return }
         lastNudgeID = nudge.id
-        if settings.settings.nudgeSoundEnabled { NudgeSound.play(tone: nudge.nudge.tone) }
+        if settings.settings.nudgeSoundEnabled { NudgeSound.play(tone: nudge.nudge.tone, id: settings.settings.nudgeSound) }
         let title = tr("nudge.bubble.title", nudge.nudge.author.login)
         showMascotBubble(title: title, detail: nudge.nudge.message ?? nudge.title, seconds: 12)
         scheduleReminder(for: nudge)

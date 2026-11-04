@@ -454,6 +454,10 @@
 "settings.nudges.detail" = "When an author asks you to look at a pull request again, the mascot jumps and a notification shows.";
 "settings.nudges.sound.title" = "Nudge sound";
 "settings.nudges.sound.detail" = "Plays a sound, once more for each nudge the same person sends.";
+"settings.nudges.choice.title" = "Sound";
+"settings.nudges.choice.detail" = "Pick a macOS sound, or add your own: drop an audio file into the sounds folder.";
+"settings.nudges.choice.preview" = "Play the sound";
+"settings.nudges.choice.folder" = "Open the sounds folder";
 "mascot.menu.pauseNudges" = "Pause nudges";
 "mascot.menu.pause.hour" = "For one hour";
 "mascot.menu.pause.tomorrow" = "Until tomorrow morning";

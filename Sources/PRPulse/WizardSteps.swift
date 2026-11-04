@@ -398,6 +398,8 @@ struct GeneralContent: View {
     @ObservedObject var model: SetupModel
     var onRedoSetup: (() -> Void)?
     var onCheckForUpdates: (() -> Void)?
+    @LocalState private var systemSounds: [NudgeSoundOption] = []
+    @LocalState private var userSounds: [NudgeSoundOption] = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -419,6 +421,9 @@ struct GeneralContent: View {
                     .staggered(8)
                     .opacity(model.draft.nudgesEnabled ? 1 : 0.45)
                     .allowsHitTesting(model.draft.nudgesEnabled)
+                nudgeSoundChoiceRow.staggered(8)
+                    .opacity(model.draft.nudgesEnabled && model.draft.nudgeSoundEnabled ? 1 : 0.45)
+                    .allowsHitTesting(model.draft.nudgesEnabled && model.draft.nudgeSoundEnabled)
             }
             if let onCheckForUpdates { updatesRow(onCheckForUpdates).staggered(9) }
             if let onRedoSetup { redoRow(onRedoSetup).staggered(10) }
@@ -546,6 +551,77 @@ struct GeneralContent: View {
         }
         .padding(.vertical, 14)
         .overlay(alignment: .bottom) { Rectangle().fill(WizardPalette.line).frame(height: 1) }
+    }
+
+    private var nudgeSoundChoiceRow: some View {
+        HStack(alignment: .top, spacing: 14) {
+            label(tr("settings.nudges.choice.title"), detail: tr("settings.nudges.choice.detail"))
+            Spacer()
+            VStack(alignment: .trailing, spacing: 10) {
+                HStack(spacing: 10) {
+                    soundMenu
+                    Button { NudgeSound.play(tone: 1, id: model.draft.nudgeSound) } label: {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(WizardPalette.accent)
+                            .frame(width: 32, height: 32)
+                            .background(WizardPalette.card, in: RoundedRectangle(cornerRadius: 9))
+                            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(WizardPalette.line))
+                    }
+                    .buttonStyle(.plain)
+                    .help(tr("settings.nudges.choice.preview"))
+                    .accessibilityLabel(tr("settings.nudges.choice.preview"))
+                }
+                Button(action: NudgeSoundLibrary.openFolder) {
+                    Label(tr("settings.nudges.choice.folder"), systemImage: "folder")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(WizardPalette.accent)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) { Rectangle().fill(WizardPalette.line).frame(height: 1) }
+        .onAppear(perform: reloadSounds)
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in reloadSounds() }
+    }
+
+    private var soundMenu: some View {
+        Menu {
+            ForEach(systemSounds) { soundItem($0) }
+            if !userSounds.isEmpty {
+                Divider()
+                ForEach(userSounds) { soundItem($0) }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text((NudgeSoundChoice(id: model.draft.nudgeSound) ?? .fallback).name)
+                    .font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundStyle(WizardPalette.ink)
+            .padding(.horizontal, 12)
+            .frame(height: 32)
+            .background(WizardPalette.card, in: RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(WizardPalette.line))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    private func soundItem(_ option: NudgeSoundOption) -> some View {
+        Button {
+            model.draft.nudgeSound = option.id
+            NudgeSound.play(tone: 1, id: option.id)
+        } label: {
+            if model.draft.nudgeSound == option.id { Label(option.name, systemImage: "checkmark") } else { Text(option.name) }
+        }
+    }
+
+    private func reloadSounds() {
+        systemSounds = NudgeSoundLibrary.system()
+        userSounds = NudgeSoundLibrary.user()
     }
 
     private func switchRow(_ title: String, detail: String, isOn: Binding<Bool>) -> some View {
