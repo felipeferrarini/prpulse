@@ -106,7 +106,7 @@ enum Queries {
     }
 
     private static let identity = """
-    number title url isDraft createdAt
+    number title url isDraft createdAt headRefName
     repository { name owner { login } }
     author { login __typename }
     reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } } } }

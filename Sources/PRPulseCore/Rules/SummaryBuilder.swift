@@ -8,27 +8,16 @@ public enum SummaryBuilder {
         ignoredBots: Set<String>,
         ignoredRepos: Set<String>,
         ignoresBotComments: Bool = true,
-        skipsBotPullRequests: Bool = false,
-        waitingDays: Int = 0,
-        now: Date = Date()
+        skipsBotPullRequests: Bool = false
     ) -> Summary {
-        let mine = mineItems(minePRs, viewer: viewer, ignoredBots: ignoredBots, ignoresBotComments: ignoresBotComments)
-        let actionable = Set(mine.map(\.pr.ref))
-        return Summary(
-            mine: mine,
+        Summary(
+            mine: mineItems(minePRs, viewer: viewer, ignoredBots: ignoredBots, ignoresBotComments: ignoresBotComments),
             review: ReviewClassifier.items(
                 from: reviewPRs,
                 viewer: viewer,
                 ignoredRepos: ignoredRepos,
                 ignoredBots: ignoredBots,
                 skipsBotAuthors: skipsBotPullRequests
-            ),
-            waiting: WaitingClassifier.items(
-                from: minePRs.filter { !actionable.contains($0.ref) },
-                viewer: viewer,
-                ignoredBots: ignoredBots,
-                minimumDays: waitingDays,
-                now: now
             )
         )
     }
@@ -39,17 +28,10 @@ public enum SummaryBuilder {
         ignoredBots: Set<String>,
         ignoresBotComments: Bool
     ) -> [MineItem] {
-        prs
-            .map {
-                MineItem(
-                    pr: $0,
-                    reasons: MineClassifier.reasons(for: $0, viewer: viewer, ignoredBots: ignoredBots, ignoresBotComments: ignoresBotComments)
-                )
-            }
-            .filter { !$0.reasons.isEmpty }
-            .sorted { a, b in
-                if a.primary.urgencyRank != b.primary.urgencyRank { return a.primary.urgencyRank < b.primary.urgencyRank }
-                return a.pr.createdAt < b.pr.createdAt
-            }
+        let items = prs.map { pr in
+            let reasons = MineClassifier.reasons(for: pr, viewer: viewer, ignoredBots: ignoredBots, ignoresBotComments: ignoresBotComments)
+            return MineItem(pr: pr, reasons: reasons, quiet: MineClassifier.quietState(of: pr, viewer: viewer, ignoredBots: ignoredBots))
+        }
+        return ListOrder.sorted(items, by: .priority)
     }
 }

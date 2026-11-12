@@ -58,7 +58,7 @@ public enum MascotMoodResolver {
 
     private static func hasOldPullRequest(_ summary: Summary, now: Date) -> Bool {
         let requested = summary.review.filter(\.isRequested).map(\.pr.createdAt)
-        let waiting = summary.waiting.map(\.pr.createdAt)
+        let waiting = summary.mine.filter(\.isWaitingForReview).map(\.pr.createdAt)
         return (requested + waiting).contains { Waiting(since: $0, now: now).hours >= worriedAfterHours }
     }
 }

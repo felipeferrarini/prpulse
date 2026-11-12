@@ -1,6 +1,6 @@
 /// The kind of action a pull request asks of the viewer. Reasons that call for the same action share a lane.
 public enum ActionLane: CaseIterable, Hashable, Sendable {
-    case review, changes, respond, ci, conflict, merge
+    case review, conflict, changes, respond, ci, merge
 }
 
 extension MineReason {

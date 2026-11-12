@@ -7,10 +7,9 @@ private let now = at(100 * 24 * hour)
 
 private func summary(
     review: [ReviewItem] = [],
-    mine: [MineItem] = [],
-    waiting: [WaitingItem] = []
+    mine: [MineItem] = []
 ) -> Summary {
-    Summary(mine: mine, review: review, waiting: waiting)
+    Summary(mine: mine, review: review)
 }
 
 private func requested(_ number: Int, hoursAgo: Double) -> ReviewItem {
@@ -37,8 +36,11 @@ private func mood(_ situation: MascotSituation) -> MascotMood {
     let old = summary(review: [requested(1, hoursAgo: 73)])
     #expect(mood(MascotSituation(summary: old)) == .worried)
 
-    let waiting = summary(waiting: [WaitingItem(pr: .fixture(number: 2, createdAt: now.addingTimeInterval(-80 * hour)))])
+    let waiting = summary(mine: [MineItem(pr: .fixture(number: 2, createdAt: now.addingTimeInterval(-80 * hour)), reasons: [], quiet: .noReview)])
     #expect(mood(MascotSituation(summary: waiting)) == .worried)
+
+    let reviewed = summary(mine: [MineItem(pr: .fixture(number: 4, createdAt: now.addingTimeInterval(-80 * hour)), reasons: [], quiet: .inReview)])
+    #expect(mood(MascotSituation(summary: reviewed)) == .calm)
 
     let almost = summary(review: [requested(3, hoursAgo: 70)])
     #expect(mood(MascotSituation(summary: almost)) == .alert)

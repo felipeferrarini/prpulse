@@ -6,7 +6,7 @@ import SwiftUI
 enum PopoverChrome {
     static let cornerRadius: CGFloat = 12
     static let screenMargin: CGFloat = 6
-    static let gapBelowStatusItem: CGFloat = 4
+    static let gapBelowStatusItem: CGFloat = 2
 }
 
 /// The window of the menu bar popover. It can take key focus without activating the app.
@@ -30,6 +30,8 @@ struct PopoverRoot: View {
         PopoverView(
             data: runtime.data,
             layout: Binding(get: { runtime.popoverLayout }, set: { runtime.setPopoverLayout($0) }),
+            sorts: Binding(get: { runtime.listSorts }, set: { runtime.setListSorts($0) }),
+            showsBorder: false,
             openToken: runtime.openCount,
             onMute: { runtime.muteRepository(of: $0) },
             onReview: runtime.canReview ? { runtime.requestReview(of: $0) } : nil,
@@ -56,11 +58,18 @@ struct PopoverRoot: View {
 final class PopoverController: NSObject, NSWindowDelegate {
     private let runtime: AppRuntime
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    private var panel: PopoverPanel!
+    var panel: PopoverPanel!
     /// Holds the popover only while the panel is open: a long list of rows is worth tens of megabytes.
     private var hosting: NSHostingView<AnyView>!
+    /// What the panel is made of, from the back: the blurred background cut to the outline, the content and the hairline.
+    var shell: NSView!
+    private var backdrop: NSVisualEffectView!
+    private var border: PopoverBorderView!
     private var anchorMaxX: CGFloat = 0
     private var anchorTop: CGFloat = 0
+    /// Where the menu bar icon is, so the arrow points at it however the panel had to be moved to fit the screen.
+    var iconMidX: CGFloat = 0
+    private var isClosing = false
     private var cancellables = Set<AnyCancellable>()
     private var outsideClick: Any?
     private var lastHide = Date.distantPast
@@ -83,17 +92,25 @@ final class PopoverController: NSObject, NSWindowDelegate {
     private func buildPanel() {
         hosting = NSHostingView(rootView: Self.emptyRoot)
 
-        let backdrop = NSVisualEffectView()
+        backdrop = NSVisualEffectView()
         backdrop.material = .popover
         backdrop.blendingMode = .behindWindow
         backdrop.state = .active
-        backdrop.maskImage = Self.roundedMask(radius: PopoverChrome.cornerRadius)
-        hosting.autoresizingMask = [.width, .height]
-        hosting.frame = backdrop.bounds
         backdrop.addSubview(hosting)
 
+        border = PopoverBorderView()
+        border.radius = PopoverChrome.cornerRadius
+
+        shell = NSView()
+        shell.wantsLayer = true
+        shell.addSubview(backdrop)
+        shell.addSubview(border)
+
+        let root = NSView()
+        root.addSubview(shell)
+
         panel = PopoverPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
-        panel.contentView = backdrop
+        panel.contentView = root
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
@@ -102,6 +119,24 @@ final class PopoverController: NSObject, NSWindowDelegate {
         panel.isReleasedWhenClosed = false
         panel.delegate = self
         panel.onCancel = { [weak self] in self?.hide() }
+    }
+
+    /// Fits the layers to the panel and cuts the background to the outline, with the arrow where the icon is.
+    private func layoutShell() {
+        let size = panel.frame.size
+        let caretX = iconMidX - panel.frame.minX
+        shell.frame = NSRect(origin: .zero, size: size)
+        backdrop.frame = shell.bounds
+        border.frame = shell.bounds
+        hosting.frame = NSRect(x: 0, y: 0, width: size.width, height: max(0, size.height - PopoverShape.arrowHeight))
+        border.caretX = caretX
+        backdrop.maskImage = PopoverShape.mask(size: size, caretX: caretX, radius: PopoverChrome.cornerRadius)
+        panel.invalidateShadow()
+    }
+
+    private func setPanelFrame(_ frame: NSRect, display: Bool) {
+        panel.setFrame(frame, display: display)
+        layoutShell()
     }
 
     private static let emptyRoot = AnyView(EmptyView())
@@ -193,6 +228,7 @@ final class PopoverController: NSObject, NSWindowDelegate {
     }
 
     private func togglePanel() {
+        if isClosing { return }
         if panel.isVisible {
             hide()
         } else if Date().timeIntervalSince(lastHide) > 0.2 {
@@ -205,11 +241,13 @@ final class PopoverController: NSObject, NSWindowDelegate {
         runtime.popoverOpened()
         hosting.rootView = makeRoot()
         hosting.layoutSubtreeIfNeeded()
-        let size = hosting.fittingSize
+        let size = panelSize(for: hosting.fittingSize)
         let buttonFrame = buttonWindow.frame
         anchorTop = buttonFrame.minY - PopoverChrome.gapBelowStatusItem
+        iconMidX = buttonFrame.midX
         anchorMaxX = buttonFrame.midX + size.width / 2
-        panel.setFrame(frame(for: size, on: buttonWindow.screen), display: false)
+        setPanelFrame(frame(for: size, on: buttonWindow.screen), display: false)
+        prepareEntrance()
         panel.makeKeyAndOrderFront(nil)
         panel.invalidateShadow()
         followContentSize()
@@ -222,14 +260,19 @@ final class PopoverController: NSObject, NSWindowDelegate {
     }
 
     private func hide() {
-        guard panel.isVisible else { return }
-        panel.orderOut(nil)
+        guard panel.isVisible, !isClosing else { return }
+        isClosing = true
+        lastHide = Date()
         sizeCheckTimer?.invalidate()
         sizeCheckTimer = nil
-        hosting.rootView = Self.emptyRoot
-        lastHide = Date()
         if let outsideClick { NSEvent.removeMonitor(outsideClick) }
         outsideClick = nil
+        playExit { [weak self] in
+            guard let self else { return }
+            panel.orderOut(nil)
+            hosting.rootView = Self.emptyRoot
+            isClosing = false
+        }
     }
 
     func windowDidResignKey(_ notification: Notification) {
@@ -238,12 +281,16 @@ final class PopoverController: NSObject, NSWindowDelegate {
 
     private func applyIdealSize() {
         guard panel.isVisible else { return }
-        let size = hosting.fittingSize
-        guard size.width > 0, size.height > 0 else { return }
-        let target = frame(for: size, on: panel.screen)
+        let content = hosting.fittingSize
+        guard content.width > 0, content.height > 0 else { return }
+        let target = frame(for: panelSize(for: content), on: panel.screen)
         guard target != panel.frame else { return }
-        panel.setFrame(target, display: true)
-        panel.invalidateShadow()
+        setPanelFrame(target, display: true)
+    }
+
+    /// The panel is the content with room above it for the arrow.
+    private func panelSize(for content: NSSize) -> NSSize {
+        NSSize(width: content.width, height: content.height + PopoverShape.arrowHeight)
     }
 
     /// A frame of the given size hanging from the anchored top right corner, kept inside the screen.
@@ -254,18 +301,6 @@ final class PopoverController: NSObject, NSWindowDelegate {
             x = max(visible.minX + margin, min(x, visible.maxX - size.width - margin))
         }
         return NSRect(x: x, y: anchorTop - size.height, width: size.width, height: size.height)
-    }
-
-    private static func roundedMask(radius: CGFloat) -> NSImage {
-        let edge = radius * 2 + 1
-        let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
-            NSColor.black.setFill()
-            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
-            return true
-        }
-        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
-        image.resizingMode = .stretch
-        return image
     }
 }
 
@@ -357,5 +392,72 @@ extension PopoverController {
 
     @objc private func openGitHub(_ sender: NSMenuItem) {
         if let link = sender.representedObject as? String, let url = URL(string: link) { NSWorkspace.shared.open(url) }
+    }
+}
+
+// MARK: - Entrance and exit
+
+extension PopoverController {
+    /// The popover comes out of the icon: it grows from a point under the arrow, with a little give, while it fades in.
+    func prepareEntrance() {
+        guard let layer = shell.layer, !Self.reducesMotion else { return }
+        layer.removeAllAnimations()
+        let spring = CASpringAnimation(keyPath: "transform")
+        spring.fromValue = NSValue(caTransform3D: scaled(0.55, in: layer))
+        spring.toValue = NSValue(caTransform3D: CATransform3DIdentity)
+        spring.mass = 1
+        spring.stiffness = 360
+        spring.damping = 25
+        spring.duration = spring.settlingDuration
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = 0
+        fade.toValue = 1
+        fade.duration = 0.14
+        fade.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        layer.add(spring, forKey: "enter")
+        layer.add(fade, forKey: "fadeIn")
+        DispatchQueue.main.asyncAfter(deadline: .now() + spring.duration) { [weak self] in self?.panel.invalidateShadow() }
+    }
+
+    /// The way back is quicker than the way out: a small shrink toward the icon and a fade.
+    func playExit(completion: @escaping () -> Void) {
+        guard let layer = shell.layer, !Self.reducesMotion else {
+            completion()
+            return
+        }
+        CATransaction.begin()
+        CATransaction.setCompletionBlock {
+            layer.removeAllAnimations()
+            layer.opacity = 1
+            layer.transform = CATransform3DIdentity
+            completion()
+        }
+        layer.opacity = 0
+        layer.transform = scaled(0.9, in: layer)
+        let shrink = CABasicAnimation(keyPath: "transform")
+        shrink.fromValue = NSValue(caTransform3D: CATransform3DIdentity)
+        shrink.toValue = NSValue(caTransform3D: scaled(0.9, in: layer))
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = 1
+        fade.toValue = 0
+        for animation in [shrink, fade] {
+            animation.duration = 0.12
+            animation.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            layer.add(animation, forKey: animation.keyPath)
+        }
+        CATransaction.commit()
+    }
+
+    private static var reducesMotion: Bool {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    }
+
+    /// A scale about the tip of the arrow, which is where the popover comes from: the layer scales about its centre, so the
+    /// shift puts the tip back in place.
+    private func scaled(_ scale: CGFloat, in layer: CALayer) -> CATransform3D {
+        let size = layer.bounds.size
+        let tip = CGPoint(x: min(max(iconMidX - panel.frame.minX, 0), size.width), y: size.height)
+        let shift = CATransform3DMakeTranslation((1 - scale) * (tip.x - size.width / 2), (1 - scale) * (tip.y - size.height / 2), 0)
+        return CATransform3DScale(shift, scale, scale, 1)
     }
 }

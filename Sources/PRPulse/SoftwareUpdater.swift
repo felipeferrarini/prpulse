@@ -11,6 +11,7 @@ final class SoftwareUpdater {
 
     private let controller: SPUStandardUpdaterController?
     private let reminders = UpdateReminders()
+    private var checkedAtLaunch = false
 
     init(enabled: Bool) {
         let hasFeed = Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil
@@ -27,6 +28,15 @@ final class SoftwareUpdater {
         guard let updater = controller?.updater else { return }
         updater.automaticallyChecksForUpdates = automatic
         updater.automaticallyDownloadsUpdates = automatic
+        checkAtLaunch(updater, automatic: automatic)
+    }
+
+    /// Sparkle checks once a day by its own clock, so an app that is opened now and then could go days without looking. It also
+    /// looks every time the app starts, when updates are on, and says nothing if there is nothing new.
+    private func checkAtLaunch(_ updater: SPUUpdater, automatic: Bool) {
+        guard automatic, !checkedAtLaunch else { return }
+        checkedAtLaunch = true
+        updater.checkForUpdatesInBackground()
     }
 
     func checkForUpdates() {

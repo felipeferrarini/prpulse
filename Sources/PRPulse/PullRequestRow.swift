@@ -73,7 +73,7 @@ struct PullRequestRow: View {
             }
             Spacer(minLength: 6)
             Group {
-                if model.kind == .waiting, isHovering || copied {
+                if model.offersCopy, isHovering || copied {
                     copyButton
                 } else {
                     HStack(spacing: 4) {
@@ -203,8 +203,8 @@ struct PullRequestRow: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(lane.tone)
                 .accessibilityHidden(true)
-        case .waiting:
-            Image(systemName: "hourglass")
+        case .symbol(let name):
+            Image(systemName: name)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)

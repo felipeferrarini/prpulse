@@ -13,6 +13,7 @@ enum SnapshotMapper {
         return PullRequestSnapshot(
             ref: PullRequestRef(owner: owner, repo: repoName, number: number),
             title: node.string("title") ?? "",
+            branch: node.string("headRefName") ?? "",
             url: url,
             author: actor(node.object("author")),
             isDraft: node.bool("isDraft") ?? false,

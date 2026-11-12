@@ -90,11 +90,10 @@ struct PopoverFooter: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            button("arrow.clockwise", help: tr("popover.refresh")) {
+            FooterButton(symbol: "arrow.clockwise", help: tr("popover.refresh"), turns: turns) {
                 withAnimation(.easeOut(duration: 0.8)) { turns += 360 }
                 onRefresh()
             }
-            .rotationEffect(.degrees(turns))
             .keyboardShortcut("r")
             button("slider.horizontal.3", help: tr("popover.settings"), action: onSettings)
             button("power", help: tr("popover.quit")) { NSApplication.shared.terminate(nil) }
@@ -112,6 +111,8 @@ struct PopoverFooter: View {
 private struct FooterButton: View {
     let symbol: String
     let help: String
+    /// Degrees the symbol has turned: only the symbol spins, around its own centre, and the box behind it stays.
+    var turns: Double = 0
     let action: () -> Void
 
     @LocalState private var isHovering = false
@@ -120,6 +121,8 @@ private struct FooterButton: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 13))
+                .frame(width: 16, height: 16)
+                .rotationEffect(.degrees(turns))
                 .foregroundStyle(isHovering ? Color.primary : .secondary)
                 .frame(width: 30, height: 28)
                 .background(isHovering ? Color.primary.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 7))

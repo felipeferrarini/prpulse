@@ -15,6 +15,8 @@ extension PullRequestSnapshot {
     static func fixture(
         number: Int = 1,
         repo: String = "app",
+        title: String? = nil,
+        branch: String = "",
         author: Actor = Actor(login: viewer, isBot: false),
         isDraft: Bool = false,
         createdAt: Date = at(0),
@@ -31,7 +33,8 @@ extension PullRequestSnapshot {
     ) -> PullRequestSnapshot {
         PullRequestSnapshot(
             ref: PullRequestRef(owner: "org", repo: repo, number: number),
-            title: "PR \(number)",
+            title: title ?? "PR \(number)",
+            branch: branch,
             url: URL(string: "https://github.com/org/\(repo)/pull/\(number)")!,
             author: author,
             isDraft: isDraft,

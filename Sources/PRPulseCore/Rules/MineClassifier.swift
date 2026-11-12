@@ -19,6 +19,19 @@ public enum MineClassifier {
         return found.sorted { $0.urgencyRank < $1.urgencyRank }
     }
 
+    /// Why a pull request that asks nothing of the viewer is quiet: a draft, no review yet, or reviewed. A review from the
+    /// viewer or from an ignored bot does not count.
+    public static func quietState(of pr: PullRequestSnapshot, viewer: String, ignoredBots: Set<String>) -> QuietState {
+        if pr.isDraft { return .draft }
+        let bots = Set(ignoredBots.map { $0.lowercased() })
+        let reviewed = pr.reviews.contains { review in
+            review.state != .pending
+                && review.authorLogin.caseInsensitiveCompare(viewer) != .orderedSame
+                && !bots.contains(review.authorLogin.lowercased())
+        }
+        return reviewed ? .inReview : .noReview
+    }
+
     private static func workflowReasons(_ pr: PullRequestSnapshot) -> [MineReason] {
         var found: [MineReason] = []
         if pr.checks == .failing { found.append(.ciFailed) }

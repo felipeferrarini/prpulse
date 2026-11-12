@@ -403,7 +403,6 @@ struct GeneralContent: View {
         VStack(spacing: 0) {
             intervalRow.staggered(2)
             if onRedoSetup != nil { layoutRow.staggered(3) }
-            if onRedoSetup != nil { waitingRow.staggered(3) }
             if onCheckForUpdates == nil {
                 switchRow(tr("setup.general.notifications"), detail: tr("wizard.general.notifications.detail"), isOn: $model.draft.notificationsEnabled)
                     .staggered(4)
@@ -426,36 +425,6 @@ struct GeneralContent: View {
             HStack(spacing: 2) {
                 layoutOption(.single, symbol: "rectangle", title: tr("settings.layout.single"))
                 layoutOption(.split, symbol: "rectangle.split.2x1", title: tr("settings.layout.split"))
-            }
-            .padding(3)
-            .background(WizardPalette.card, in: RoundedRectangle(cornerRadius: 11))
-            .overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(WizardPalette.line))
-        }
-        .padding(.vertical, 14)
-        .overlay(alignment: .bottom) { Rectangle().fill(WizardPalette.line).frame(height: 1) }
-    }
-
-    private var waitingRow: some View {
-        HStack {
-            label(tr("settings.waiting.title"), detail: tr("settings.waiting.detail"))
-            Spacer()
-            HStack(spacing: 2) {
-                ForEach(WaitingClassifier.dayOptions, id: \.self) { days in
-                    let selected = model.draft.waitingReviewDays == days
-                    Button { withAnimation(.easeOut(duration: 0.2)) { model.draft.waitingReviewDays = days } } label: {
-                        Text(days == 0 ? tr("settings.waiting.off") : tr("settings.waiting.days", days))
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(selected ? WizardPalette.ink : WizardPalette.ink2)
-                            .frame(minWidth: 34)
-                            .frame(height: 32)
-                            .padding(.horizontal, 4)
-                            .background(selected ? WizardPalette.card2 : .clear, in: RoundedRectangle(cornerRadius: 8))
-                            .shadow(color: .black.opacity(selected ? 0.18 : 0), radius: 1.5, y: 1)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(selected ? .isSelected : [])
-                }
             }
             .padding(3)
             .background(WizardPalette.card, in: RoundedRectangle(cornerRadius: 11))

@@ -70,7 +70,6 @@ struct SettingsChanges {
         if draft.nudgesEnabled != saved.nudgesEnabled { pages.append(.notifications) }
         if draft.nudgeSoundEnabled != saved.nudgeSoundEnabled { pages.append(.notifications) }
         if draft.nudgeSound != saved.nudgeSound { pages.append(.notifications) }
-        if draft.waitingReviewDays != saved.waitingReviewDays { pages.append(.general) }
         if draft.mascotEnabled != saved.mascotEnabled { pages.append(.mascot) }
         if draft.mascotPack != saved.mascotPack { pages.append(.mascot) }
         if draft.mascotScale != saved.mascotScale { pages.append(.mascot) }

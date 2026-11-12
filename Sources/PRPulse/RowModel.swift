@@ -7,13 +7,14 @@ struct RowModel: Identifiable {
     enum Lead {
         case avatar(String)
         case lane(ActionLane)
-        case waiting
+        /// A pull request that asks nothing of the viewer: the symbol says whose turn it is.
+        case symbol(String)
         /// A whole stack of pull requests.
         case stack
     }
 
     enum Kind {
-        case review, mine, waiting
+        case review, mine
     }
 
     struct Chip: Identifiable {
@@ -36,6 +37,8 @@ struct RowModel: Identifiable {
     /// `2/7` on a pull request that is in a stack.
     var stackBadge: String?
     var titleOverride: String?
+    /// A pull request nobody has reviewed offers a button to copy its link, to ask someone.
+    var offersCopy = false
 
     var id: PullRequestRef { pr.ref }
     var title: String { titleOverride ?? pr.title }
@@ -63,25 +66,9 @@ struct RowModel: Identifiable {
         )
     }
 
-    static func waiting(_ item: WaitingItem, showsOwner: Bool = false) -> RowModel {
-        let pr = item.pr
-        let who = pr.requestedReviewers.isEmpty
-            ? tr("reason.waiting.nobody")
-            : tr("reason.waiting.on", pr.requestedReviewers.prefix(2).joined(separator: ", "))
-        return RowModel(
-            pr: pr,
-            lead: .waiting,
-            subtitle: "\(repository(pr, showsOwner: showsOwner)) #\(pr.ref.number), \(who)",
-            chips: [Chip(id: "noreview", text: tr("chip.noReview"), tone: nil)],
-            lanes: [],
-            kind: .waiting,
-            canMute: false
-        )
-    }
-
     static func mine(_ item: MineItem, showsOwner: Bool = false) -> RowModel {
+        guard let primary = item.primary else { return quiet(item, showsOwner: showsOwner) }
         let pr = item.pr
-        let primary = item.primary
         var chips = [Chip(id: "primary", text: primary.lane.chipTitle, tone: primary.lane.tone)]
         if item.reasons.count > 1 { chips.append(Chip(id: "more", text: "+\(item.reasons.count - 1)", tone: nil)) }
         return RowModel(
@@ -94,6 +81,34 @@ struct RowModel: Identifiable {
             canMute: false,
             stackBadge: badge(of: pr)
         )
+    }
+
+    /// One of the viewer's pull requests that asks nothing of them: a draft, one nobody reviewed, or one in review.
+    private static func quiet(_ item: MineItem, showsOwner: Bool) -> RowModel {
+        let pr = item.pr
+        let (symbol, detail, chip): (String, String, String) = switch item.quiet {
+        case .noReview: ("hourglass", waitingText(pr), tr("chip.noReview"))
+        case .inReview: ("ellipsis.bubble", tr("reason.inReview"), tr("chip.inReview"))
+        case .draft: ("pencil", tr("reason.draft"), tr("chip.draft"))
+        }
+        var row = RowModel(
+            pr: pr,
+            lead: .symbol(symbol),
+            subtitle: "\(repository(pr, showsOwner: showsOwner)) #\(pr.ref.number), \(detail)",
+            chips: [Chip(id: "quiet", text: chip, tone: nil)],
+            lanes: [],
+            kind: .mine,
+            canMute: false,
+            stackBadge: badge(of: pr)
+        )
+        row.offersCopy = item.quiet == .noReview
+        return row
+    }
+
+    private static func waitingText(_ pr: PullRequestSnapshot) -> String {
+        pr.requestedReviewers.isEmpty
+            ? tr("reason.waiting.nobody")
+            : tr("reason.waiting.on", pr.requestedReviewers.prefix(2).joined(separator: ", "))
     }
 
     /// The row of a stack: its first pull request gives the title, and it says how many there are and what asks for the viewer.

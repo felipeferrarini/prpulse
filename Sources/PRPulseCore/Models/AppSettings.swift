@@ -38,8 +38,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var launchAtLogin: Bool
     public var automaticUpdates: Bool
     public var globalShortcut: Bool
-    /// Days without a review before one of my PRs shows as waiting; 0 hides the list.
-    public var waitingReviewDays: Int
     public var mascotEnabled: Bool
     public var mascotPack: String
     /// How many screen points one sprite pixel takes: 3, 4 or 6.
@@ -60,6 +58,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var reviewOrgFolders: [String: String]
     public var hasCompletedSetup: Bool
     public var popoverLayout: PopoverLayout
+    /// How each list in the popover is ordered.
+    public var reviewSort: PullRequestSort
+    public var mineSort: PullRequestSort
     /// Opens the list of changes after the app was updated.
     public var showNewsAfterUpdate: Bool
     /// The version whose changes the viewer was last shown; empty until the app has announced one.
@@ -90,7 +91,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
         launchAtLogin: false,
         automaticUpdates: true,
         globalShortcut: true,
-        waitingReviewDays: 2,
         mascotEnabled: true,
         mascotPack: "brasa",
         mascotScale: 4,
@@ -104,6 +104,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         reviewOrgFolders: [:],
         hasCompletedSetup: false,
         popoverLayout: .single,
+        reviewSort: .priority,
+        mineSort: .priority,
         showNewsAfterUpdate: true,
         lastSeenVersion: "",
         oauthClientID: "",
@@ -125,7 +127,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
         launchAtLogin: Bool,
         automaticUpdates: Bool = true,
         globalShortcut: Bool = true,
-        waitingReviewDays: Int = 2,
         mascotEnabled: Bool = true,
         mascotPack: String = "brasa",
         mascotScale: Int = 4,
@@ -139,6 +140,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         reviewOrgFolders: [String: String] = [:],
         hasCompletedSetup: Bool,
         popoverLayout: PopoverLayout = .single,
+        reviewSort: PullRequestSort = .priority,
+        mineSort: PullRequestSort = .priority,
         showNewsAfterUpdate: Bool = true,
         lastSeenVersion: String = "",
         oauthClientID: String = "",
@@ -158,7 +161,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.launchAtLogin = launchAtLogin
         self.automaticUpdates = automaticUpdates
         self.globalShortcut = globalShortcut
-        self.waitingReviewDays = waitingReviewDays
         self.mascotEnabled = mascotEnabled
         self.mascotPack = mascotPack
         self.mascotScale = mascotScale
@@ -172,6 +174,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.reviewOrgFolders = reviewOrgFolders
         self.hasCompletedSetup = hasCompletedSetup
         self.popoverLayout = popoverLayout
+        self.reviewSort = reviewSort
+        self.mineSort = mineSort
         self.showNewsAfterUpdate = showNewsAfterUpdate
         self.lastSeenVersion = lastSeenVersion
         self.oauthClientID = oauthClientID
@@ -196,7 +200,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
         launchAtLogin = try values.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? base.launchAtLogin
         automaticUpdates = try values.decodeIfPresent(Bool.self, forKey: .automaticUpdates) ?? base.automaticUpdates
         globalShortcut = try values.decodeIfPresent(Bool.self, forKey: .globalShortcut) ?? base.globalShortcut
-        waitingReviewDays = try values.decodeIfPresent(Int.self, forKey: .waitingReviewDays) ?? base.waitingReviewDays
         mascotEnabled = try values.decodeIfPresent(Bool.self, forKey: .mascotEnabled) ?? base.mascotEnabled
         mascotPack = try values.decodeIfPresent(String.self, forKey: .mascotPack) ?? base.mascotPack
         mascotScale = try values.decodeIfPresent(Int.self, forKey: .mascotScale) ?? base.mascotScale
@@ -210,6 +213,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         reviewOrgFolders = try values.decodeIfPresent([String: String].self, forKey: .reviewOrgFolders) ?? base.reviewOrgFolders
         hasCompletedSetup = try values.decodeIfPresent(Bool.self, forKey: .hasCompletedSetup) ?? base.hasCompletedSetup
         popoverLayout = try values.decodeIfPresent(PopoverLayout.self, forKey: .popoverLayout) ?? base.popoverLayout
+        reviewSort = try values.decodeIfPresent(PullRequestSort.self, forKey: .reviewSort) ?? base.reviewSort
+        mineSort = try values.decodeIfPresent(PullRequestSort.self, forKey: .mineSort) ?? base.mineSort
         showNewsAfterUpdate = try values.decodeIfPresent(Bool.self, forKey: .showNewsAfterUpdate) ?? base.showNewsAfterUpdate
         lastSeenVersion = try values.decodeIfPresent(String.self, forKey: .lastSeenVersion) ?? base.lastSeenVersion
         oauthClientID = try values.decodeIfPresent(String.self, forKey: .oauthClientID) ?? base.oauthClientID
@@ -221,7 +226,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case orgs, org, authSource, refreshMinutes, ignoredRepos, ignoredBots, ignoreBotComments, ignoreBotPullRequests, notificationsEnabled
-        case launchAtLogin, automaticUpdates, globalShortcut, waitingReviewDays, hasCompletedSetup, popoverLayout
+        case launchAtLogin, automaticUpdates, globalShortcut, hasCompletedSetup, popoverLayout, reviewSort, mineSort
         case mascotEnabled, mascotPack, mascotScale, mascotIntroduced, mascotAnchor
         case reviewAgentEnabled, reviewSkill, reviewApproval, reviewPrompt, reviewFolders, reviewOrgFolders
         case showNewsAfterUpdate, lastSeenVersion, oauthClientID
@@ -241,7 +246,6 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try values.encode(launchAtLogin, forKey: .launchAtLogin)
         try values.encode(automaticUpdates, forKey: .automaticUpdates)
         try values.encode(globalShortcut, forKey: .globalShortcut)
-        try values.encode(waitingReviewDays, forKey: .waitingReviewDays)
         try values.encode(mascotEnabled, forKey: .mascotEnabled)
         try values.encode(mascotPack, forKey: .mascotPack)
         try values.encode(mascotScale, forKey: .mascotScale)
@@ -255,6 +259,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try values.encode(reviewOrgFolders, forKey: .reviewOrgFolders)
         try values.encode(hasCompletedSetup, forKey: .hasCompletedSetup)
         try values.encode(popoverLayout, forKey: .popoverLayout)
+        try values.encode(reviewSort, forKey: .reviewSort)
+        try values.encode(mineSort, forKey: .mineSort)
         try values.encode(showNewsAfterUpdate, forKey: .showNewsAfterUpdate)
         try values.encode(lastSeenVersion, forKey: .lastSeenVersion)
         try values.encode(oauthClientID, forKey: .oauthClientID)

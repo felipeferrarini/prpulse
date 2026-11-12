@@ -101,15 +101,16 @@ private func freshDefaults() -> UserDefaults {
     #expect(decoded.ignoredRepositories(in: "other").isEmpty)
 }
 
-@Test func waitingReviewDaysDefaultToTwoAndSurvive() throws {
-    #expect(AppSettings.defaults.waitingReviewDays == 2)
-    let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"org":"acme"}"#.utf8))
-    #expect(old.waitingReviewDays == 2)
+@Test func listSortsDefaultToPriorityAndSurvive() throws {
+    #expect(AppSettings.defaults.reviewSort == .priority && AppSettings.defaults.mineSort == .priority)
+    let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"org":"acme","waitingReviewDays":3}"#.utf8))
+    #expect(old.reviewSort == .priority && old.mineSort == .priority)
 
     var settings = AppSettings.defaults
-    settings.waitingReviewDays = 0
+    settings.reviewSort = .newest
+    settings.mineSort = .repository
     let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
-    #expect(decoded.waitingReviewDays == 0)
+    #expect(decoded.reviewSort == .newest && decoded.mineSort == .repository)
 }
 
 @Test func botPullRequestsAreIgnoredByDefaultAlsoForSettingsSavedByEarlierVersions() throws {

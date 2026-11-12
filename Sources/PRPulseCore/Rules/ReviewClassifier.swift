@@ -10,11 +10,11 @@ public enum ReviewClassifier {
     ) -> [ReviewItem] {
         let ignored = Set(ignoredRepos.map { $0.lowercased() })
         let bots = Set(ignoredBots.map { $0.lowercased() })
-        return prs
+        let items = prs
             .filter { !skipsBotAuthors || !isBotAuthored($0, bots: bots) }
             .filter { needsViewerReview($0, viewer: viewer, ignored: ignored) }
             .map { ReviewItem(pr: $0, isRequested: isRequested($0, viewer: viewer)) }
-            .sorted(by: listOrder)
+        return ListOrder.sorted(items, by: .priority)
     }
 
     /// An account GitHub marks as a bot, or one the viewer listed as such.
@@ -42,13 +42,5 @@ public enum ReviewClassifier {
 
     private static func isRequested(_ pr: PullRequestSnapshot, viewer: String) -> Bool {
         pr.requestedReviewers.contains { $0.caseInsensitiveCompare(viewer) == .orderedSame }
-    }
-
-    /// Requests to the viewer first, then ready PRs before drafts, then the one waiting longest.
-    private static func listOrder(_ a: ReviewItem, _ b: ReviewItem) -> Bool {
-        if a.isRequested != b.isRequested { return a.isRequested }
-        if a.pr.isDraft != b.pr.isDraft { return !a.pr.isDraft }
-        if a.pr.createdAt != b.pr.createdAt { return a.pr.createdAt < b.pr.createdAt }
-        return a.pr.ref.number < b.pr.ref.number
     }
 }

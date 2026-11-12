@@ -35,6 +35,10 @@ enum DemoData {
             item(377, "web", "Adjust the filter tooltip", hoursAgo: 200, reasons: [.readyToMerge]),
             item(410, "web", "Checkout: split the payment step (1/2)", hoursAgo: 60, reasons: [.ciFailed], stack: (4, 2, 1)),
             item(411, "web", "Checkout: add the retry screen (2/2)", hoursAgo: 58, reasons: [.unansweredComment], stack: (4, 2, 2)),
+            item(402, "api", "Cache the exchange rates", hoursAgo: 134, reasons: [], quiet: .noReview, reviewers: ["mia", "sam"]),
+            item(407, "web", "Lazy load the settings page", hoursAgo: 71, reasons: [], quiet: .noReview),
+            item(390, "api", "Move the invoice job to the queue", hoursAgo: 100, reasons: [], quiet: .inReview),
+            item(415, "web", "Spike: server components for the dashboard", hoursAgo: 6, reasons: [], quiet: .draft),
         ],
         review: [
             review(412, "web", "Per-tenant session cache", author: "sam", hoursAgo: 76, requested: true),
@@ -47,49 +51,51 @@ enum DemoData {
             review(303, "api", "Pagination: document the new limits (3/3)", author: "mia", hoursAgo: 38, stack: (7, 3, 3)),
             review(55, "mobile", "Offline queue: persist the retries (2/4)", author: "ivan", hoursAgo: 20, stack: (3, 4, 2)),
         ],
-        waiting: [
-            waiting(402, "api", "Cache the exchange rates", hoursAgo: 134, reviewers: ["mia", "sam"]),
-            waiting(407, "web", "Lazy load the settings page", hoursAgo: 71, reviewers: []),
-        ]
     )
 
     /// Ninety pull requests, to see how the panel behaves with a long list.
     static let crowded = Summary(
         mine: (0 ..< 40).map { index in
             item(1000 + index, "api", "Change number \(index)", hoursAgo: Double(index) * 3 + 2, reasons: [[.ciFailed, .conflict, .readyToMerge, .unansweredComment][index % 4]])
+        } + (0 ..< 5).map { index in
+            item(3000 + index, "infra", "Waiting number \(index)", hoursAgo: Double(index) * 20 + 60, reasons: [], quiet: .noReview, reviewers: index % 2 == 0 ? ["mia"] : [])
         },
         review: (0 ..< 45).map { index in
             review(2000 + index, "web", "Review number \(index)", author: ["sam", "mia", "ivan", "leo"][index % 4], hoursAgo: Double(index) * 2 + 1, requested: index % 5 == 0)
-        },
-        waiting: (0 ..< 5).map { index in
-            waiting(3000 + index, "infra", "Waiting number \(index)", hoursAgo: Double(index) * 20 + 60, reviewers: index % 2 == 0 ? ["mia"] : [])
         }
     )
 
     private static func snapshot(
-        _ number: Int, _ repo: String, _ title: String, author: String, hoursAgo: Double, draft: Bool, stack: (Int, Int, Int)? = nil
+        _ number: Int, _ repo: String, _ title: String, author: String, hoursAgo: Double, draft: Bool, stack: (Int, Int, Int)? = nil,
+        reviewers: [String] = []
     ) -> PullRequestSnapshot {
         PullRequestSnapshot(
             ref: PullRequestRef(owner: "acme", repo: repo, number: number),
             title: title,
+            branch: branch(number, title),
             url: URL(string: "https://github.com/acme/\(repo)/pull/\(number)")!,
             author: Actor(login: author, isBot: false),
             isDraft: draft,
             createdAt: Date().addingTimeInterval(-hoursAgo * 3600 - 60),
             reviewDecision: nil, mergeable: .mergeable, mergeState: .blocked, checks: .none,
-            threads: [], comments: [], commits: [], reviews: [], requestedReviewers: [],
+            threads: [], comments: [], commits: [], reviews: [], requestedReviewers: reviewers,
             stack: stack.map { StackMembership(number: $0.0, size: $0.1, position: $0.2, baseRef: "main") }
         )
     }
 
-    private static func item(
-        _ number: Int, _ repo: String, _ title: String, hoursAgo: Double, reasons: [MineReason], stack: (Int, Int, Int)? = nil
-    ) -> MineItem {
-        MineItem(pr: snapshot(number, repo, title, author: "me", hoursAgo: hoursAgo, draft: false, stack: stack), reasons: reasons)
+    /// `feat/412-per-tenant-session-cache`: enough of a branch name to try the search.
+    private static func branch(_ number: Int, _ title: String) -> String {
+        let words = title.lowercased().split { !$0.isLetter && !$0.isNumber }.prefix(4).joined(separator: "-")
+        return "feat/\(number)-\(words)"
     }
 
-    private static func waiting(_ number: Int, _ repo: String, _ title: String, hoursAgo: Double, reviewers: [String]) -> WaitingItem {
-        WaitingItem(pr: snapshot(number, repo, title, author: "me", hoursAgo: hoursAgo, draft: false).with(requestedReviewers: reviewers))
+    private static func item(
+        _ number: Int, _ repo: String, _ title: String, hoursAgo: Double, reasons: [MineReason], quiet: QuietState = .inReview,
+        reviewers: [String] = [], stack: (Int, Int, Int)? = nil
+    ) -> MineItem {
+        let draft = quiet == .draft && reasons.isEmpty
+        let pr = snapshot(number, repo, title, author: "me", hoursAgo: hoursAgo, draft: draft, stack: stack, reviewers: reviewers)
+        return MineItem(pr: pr, reasons: reasons, quiet: quiet)
     }
 
     private static func review(

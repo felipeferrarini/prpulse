@@ -20,6 +20,12 @@ enum DemoSnapshot {
                     write(popover(mode.viewData, scheme, layout: .split), named: "\(name)-split", to: directory)
                     write(popover(mode.viewData, scheme, layout: .single, tab: .mine, filter: .ci), named: "\(name)-mine-filtered", to: directory)
                     write(popover(mode.viewData, scheme, layout: .split, filter: .merge), named: "\(name)-split-filtered", to: directory)
+                    write(popover(mode.viewData, scheme, layout: .single, tab: .mine), named: "\(name)-mine", to: directory)
+                    write(popover(mode.viewData, scheme, layout: .single, reviewFilter: ReviewFilter(author: "mia", repository: "acme/api"), sorts: ListSorts(review: .oldest, mine: .priority)), named: "\(name)-review-author", to: directory)
+                    write(popover(mode.viewData, scheme, layout: .single, reviewFilter: ReviewFilter(query: "zzz")), named: "\(name)-review-nomatch", to: directory)
+                    write(selecting(mode.viewData, scheme, picked: []), named: "\(name)-review-select", to: directory)
+                    write(selecting(mode.viewData, scheme, picked: nil), named: "\(name)-review-selectable", to: directory)
+                    write(popover(mode.viewData, scheme, layout: .split, reviewFilter: ReviewFilter(repository: "acme/api", query: "pagination"), sorts: ListSorts(review: .newest, mine: .oldest)), named: "\(name)-split-search", to: directory)
                 }
             }
         }
@@ -89,11 +95,25 @@ enum DemoSnapshot {
     }
 
     static func popover(
-        _ data: ViewData, _ scheme: ColorScheme, layout: PopoverLayout, tab: PopoverTab = .review, filter: ActionLane? = nil
+        _ data: ViewData, _ scheme: ColorScheme, layout: PopoverLayout, tab: PopoverTab = .review, filter: ActionLane? = nil,
+        reviewFilter: ReviewFilter = ReviewFilter(), sorts: ListSorts = ListSorts()
     ) -> some View {
-        PopoverView(data: data, layout: .constant(layout), initialTab: tab, initialFilter: filter, onRefresh: {}, onSettings: {})
+        PopoverView(
+            data: data, layout: .constant(layout), sorts: .constant(sorts), initialTab: tab, initialFilter: filter,
+            initialReviewFilter: reviewFilter, onRefresh: {}, onSettings: {}
+        )
             .background(Color(nsColor: .windowBackgroundColor))
             .environment(\.colorScheme, scheme)
+    }
+
+    /// The list to review with the button that picks several, switched on or off.
+    static func selecting(_ data: ViewData, _ scheme: ColorScheme, picked: Set<PullRequestRef>?) -> some View {
+        PopoverView(
+            data: data, layout: .constant(.single), onReviewGroup: { _, _ in }, onReviewEach: { _ in },
+            initialSelection: picked, onRefresh: {}, onSettings: {}
+        )
+        .background(Color(nsColor: .windowBackgroundColor))
+        .environment(\.colorScheme, scheme)
     }
 
     /// The reviews of the agents: one going on, one ready and one that failed.

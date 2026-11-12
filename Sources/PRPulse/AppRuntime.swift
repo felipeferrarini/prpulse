@@ -13,6 +13,7 @@ final class AppRuntime: ObservableObject {
     @Published private(set) var iconState = IconState.upToDate
     @Published private(set) var pulsePhase = 0.0
     @Published private(set) var popoverLayout = PopoverLayout.single
+    @Published private(set) var listSorts = ListSorts()
     @Published private(set) var openCount = 0
     @Published private(set) var mascotConfig: MascotConfig
     @Published private(set) var mascotState = MascotState(mood: .calm, count: 0)
@@ -44,6 +45,7 @@ final class AppRuntime: ObservableObject {
 
     init() {
         popoverLayout = settings.settings.popoverLayout
+        listSorts = ListSorts(review: settings.settings.reviewSort, mine: settings.settings.mineSort)
         mascotConfig = MascotConfig(settings.settings)
         updater = SoftwareUpdater(enabled: DemoMode.current == nil)
         updater.apply(automatic: settings.settings.automaticUpdates)
@@ -189,6 +191,13 @@ final class AppRuntime: ObservableObject {
         settings.settings.popoverLayout = layout
     }
 
+    func setListSorts(_ sorts: ListSorts) {
+        guard sorts != listSorts else { return }
+        listSorts = sorts
+        settings.settings.reviewSort = sorts.review
+        settings.settings.mineSort = sorts.mine
+    }
+
     func refresh() {
         guard let model else { return }
         Task { await model.refresh() }
@@ -271,6 +280,8 @@ final class AppRuntime: ObservableObject {
         guard let model else { return nil }
         var chosen = draft
         chosen.popoverLayout = popoverLayout
+        chosen.reviewSort = listSorts.review
+        chosen.mineSort = listSorts.mine
         chosen.mascotAnchor = settings.settings.mascotAnchor
         chosen.mascotIntroduced = true
         chosen.lastSeenVersion = settings.settings.lastSeenVersion
@@ -299,6 +310,8 @@ final class AppRuntime: ObservableObject {
     private func save(_ draft: AppSettings) {
         var chosen = draft
         popoverLayout = chosen.popoverLayout
+        chosen.reviewSort = listSorts.review
+        chosen.mineSort = listSorts.mine
         chosen.hasCompletedSetup = true
         chosen.mascotAnchor = settings.settings.mascotAnchor
         chosen.mascotIntroduced = settings.settings.mascotIntroduced

@@ -4,6 +4,9 @@ import SwiftUI
 struct PopoverView: View {
     let data: ViewData
     @Binding var layout: PopoverLayout
+    @Binding var sorts: ListSorts
+    /// The live popover draws its own outline around the arrow; the pictures draw this one.
+    var showsBorder = true
     var openToken = 0
     var onMute: (PullRequestRef) -> Void = { _ in }
     /// Set when an agent can be asked to review the pull requests waiting for the viewer.
@@ -29,6 +32,7 @@ struct PopoverView: View {
 
     @LocalState private var tab: PopoverTab
     @LocalState private var filter: ActionLane?
+    @LocalState private var reviewFilter = ReviewFilter()
     @LocalState private var entered = true
     @LocalState private var showsAgents = false
     @LocalState private var openRun: UUID?
@@ -36,6 +40,8 @@ struct PopoverView: View {
     init(
         data: ViewData,
         layout: Binding<PopoverLayout>,
+        sorts: Binding<ListSorts> = .constant(ListSorts()),
+        showsBorder: Bool = true,
         openToken: Int = 0,
         onMute: @escaping (PullRequestRef) -> Void = { _ in },
         onReview: ((PullRequestSnapshot) -> Void)? = nil,
@@ -52,11 +58,14 @@ struct PopoverView: View {
         initialAgentRun: UUID? = nil,
         initialTab: PopoverTab = .review,
         initialFilter: ActionLane? = nil,
+        initialReviewFilter: ReviewFilter = ReviewFilter(),
         onRefresh: @escaping () -> Void,
         onSettings: @escaping () -> Void
     ) {
         self.data = data
         _layout = layout
+        _sorts = sorts
+        self.showsBorder = showsBorder
         self.openToken = openToken
         self.onMute = onMute
         self.onReview = onReview
@@ -74,6 +83,7 @@ struct PopoverView: View {
         self.onSettings = onSettings
         _tab = LocalState(initialValue: initialTab)
         _filter = LocalState(initialValue: initialFilter)
+        _reviewFilter = LocalState(initialValue: initialReviewFilter)
         _entered = LocalState(initialValue: !entersOnAppear)
         _showsAgents = LocalState(initialValue: initialAgentRun != nil)
         _openRun = LocalState(initialValue: initialAgentRun)
@@ -91,7 +101,7 @@ struct PopoverView: View {
         }
         .frame(width: width)
         .clipShape(RoundedRectangle(cornerRadius: PopoverChrome.cornerRadius, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: PopoverChrome.cornerRadius, style: .continuous).strokeBorder(Palette.line))
+        .overlay { if showsBorder { RoundedRectangle(cornerRadius: PopoverChrome.cornerRadius, style: .continuous).strokeBorder(Palette.line) } }
         .focusEffectDisabled()
         .onChange(of: openToken) { _, _ in popoverOpened() }
         .onChange(of: agentFocus.token) { _, _ in applyAgentFocus() }
@@ -134,7 +144,7 @@ struct PopoverView: View {
                 .padding(.bottom, 12)
             if showsAgents, let agentActions {
                 AgentsPane(runs: agentRuns, actions: agentActions, openRun: $openRun)
-            } else if summary.total == 0 && summary.waiting.isEmpty {
+            } else if summary.total == 0 && summary.mine.isEmpty {
                 EmptyStateView()
             } else {
                 TabSegment(tab: $tab, reviewCount: summary.review.count, mineCount: summary.mine.count)
@@ -143,7 +153,7 @@ struct PopoverView: View {
                     .folded(!isSingle, height: 50)
                 LaneFilterBar(lanes: summary.activeLanes, summary: summary, selection: laneSelection(summary))
                     .padding(.bottom, 12)
-                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, entered: entered, showsOwner: data.showsOwner, onMute: onMute, onReview: onReview, onReviewInDesktop: onReviewInDesktop, onReviewGroup: onReviewGroup, onReviewEach: onReviewEach, initialStack: initialStack, initialSelection: initialSelection, onContentChange: onContentChange)
+                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, sorts: $sorts, reviewFilter: $reviewFilter, entered: entered, showsOwner: data.showsOwner, onMute: onMute, onReview: onReview, onReviewInDesktop: onReviewInDesktop, onReviewGroup: onReviewGroup, onReviewEach: onReviewEach, initialStack: initialStack, initialSelection: initialSelection, onContentChange: onContentChange)
             }
         }
     }
@@ -161,7 +171,7 @@ struct PopoverView: View {
 
     private var hasMineContent: Bool {
         guard let summary = data.summary else { return false }
-        return !summary.mine.isEmpty || !summary.waiting.isEmpty
+        return !summary.mine.isEmpty
     }
 
     private func popoverOpened() {
@@ -170,6 +180,7 @@ struct PopoverView: View {
         withTransaction(instant) {
             entered = false
             filter = nil
+            reviewFilter = ReviewFilter()
             tab = (data.summary?.review.isEmpty ?? true) && hasMineContent ? .mine : .review
             showsAgents = false
             openRun = nil
@@ -202,6 +213,8 @@ private struct SummaryPanes: View {
     let layout: PopoverLayout
     let tab: PopoverTab
     let filter: ActionLane?
+    @Binding var sorts: ListSorts
+    @Binding var reviewFilter: ReviewFilter
     let entered: Bool
     let showsOwner: Bool
     let onMute: (PullRequestRef) -> Void
@@ -234,7 +247,7 @@ private struct SummaryPanes: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(alignment: .top, spacing: 0) {
             pane(.review).frame(width: paneWidth)
             pane(.mine).frame(width: paneWidth).background(alignment: .leading) {
                 if !isSingle { Rectangle().fill(Palette.line).frame(width: 1) }
@@ -269,7 +282,7 @@ private struct SummaryPanes: View {
                 stackActions(open, kind)
             } else {
                 paneHeader(kind).folded(isSingle, height: Self.paneHeaderHeight)
-                if isSingle && kind == .review && canSelect && !summary.review.isEmpty { selectRow }
+                controls(kind)
             }
             ScrollView {
                 LazyVStack(spacing: 0) {
@@ -280,7 +293,8 @@ private struct SummaryPanes: View {
                     Color.clear.preference(key: PaneHeightKey.self, value: [kind: proxy.size.height])
                 })
             }
-            .frame(height: listHeight)
+            .frame(height: max(listHeight - chipsHeight(for: kind, showsStack: open != nil), Self.minListHeight / 2))
+            .animation(.easeOut(duration: 0.2), value: chipsHeight(for: kind, showsStack: open != nil))
             if kind == .review && selecting { selectionBar }
         }
         .accessibilityHidden(hidden)
@@ -294,8 +308,7 @@ private struct SummaryPanes: View {
             case .stack(let group): stackRow(group, index: index, kind: kind)
             }
         }
-        if kind == .mine && !summary.waiting.isEmpty { waitingSection(startIndex: entries.count) }
-        if entries.isEmpty && !(kind == .mine && !summary.waiting.isEmpty) { PaneEmptyText() }
+        if entries.isEmpty { emptyList(kind) }
     }
 
     private func singleRow(_ row: RowModel, index: Int, kind: PopoverTab) -> some View {
@@ -421,8 +434,13 @@ private struct SummaryPanes: View {
         if !selection.insert(ref).inserted { selection.remove(ref) }
     }
 
+    /// The pull requests to review that the filter lets through, in the order chosen.
+    private var visibleReview: [ReviewItem] {
+        reviewFilter.apply(to: ListOrder.sorted(summary.review, by: sorts.review))
+    }
+
     private func chosenPullRequests() -> [PullRequestSnapshot] {
-        summary.review.map(\.pr).filter { selection.contains($0.ref) }
+        visibleReview.map(\.pr).filter { selection.contains($0.ref) }
     }
 
     private func endSelecting() {
@@ -457,22 +475,33 @@ private struct SummaryPanes: View {
 
     // MARK: Headers and the rest
 
-    private func waitingSection(startIndex: Int) -> some View {
-        let rows = summary.waiting.map { RowModel.waiting($0, showsOwner: showsOwner) }
-        return VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Image(systemName: "hourglass").font(.system(size: 11, weight: .semibold))
-                Text(tr("popover.waiting.title")).font(.system(size: 12, weight: .semibold))
-                Text("\(rows.count)").font(.system(size: 12)).foregroundStyle(.tertiary)
-                Spacer()
-            }
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 14)
-            .padding(.top, startIndex == 0 ? 6 : 14)
-            .padding(.bottom, 4)
-            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                PullRequestRow(model: row, isDimmed: isDimmed(row), entranceIndex: startIndex + index, entered: entered)
-            }
+    /// The chips of the filters make the list below them shorter instead of the pane taller, so the popover keeps its height and
+    /// the other pane stays where it is.
+    private func chipsHeight(for kind: PopoverTab, showsStack: Bool) -> CGFloat {
+        guard kind == .review, !showsStack, !summary.review.isEmpty else { return 0 }
+        return ReviewControls.showsChips(filter: reviewFilter, sort: sorts.review) ? ReviewControls.chipsHeight : 0
+    }
+
+    @ViewBuilder private func controls(_ kind: PopoverTab) -> some View {
+        switch kind {
+        case .review where !summary.review.isEmpty:
+            ReviewControls(
+                items: summary.review, shown: visibleReview.count, filter: $reviewFilter, sort: $sorts.review, showsOwner: showsOwner,
+                select: isSingle && canSelect ? SelectControl(isOn: selecting, toggle: toggleSelecting) : nil
+            )
+                .padding(.bottom, 4)
+        case .mine where !summary.mine.isEmpty:
+            MineControls(sort: $sorts.mine).padding(.bottom, 4)
+        default:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder private func emptyList(_ kind: PopoverTab) -> some View {
+        if kind == .review && reviewFilter.isActive && !summary.review.isEmpty {
+            NoMatchesView { withAnimation(PopoverMotion.spring) { reviewFilter = ReviewFilter() } }
+        } else {
+            PaneEmptyText()
         }
     }
 
@@ -491,20 +520,12 @@ private struct SummaryPanes: View {
         .frame(height: Self.paneHeaderHeight, alignment: .center)
     }
 
-    /// Where the button to choose several sits when the header of the pane is folded into the tabs.
-    private var selectRow: some View {
-        HStack {
-            Spacer(minLength: 0)
-            selectButton
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 26)
+    private func toggleSelecting() {
+        if selecting { endSelecting() } else { withAnimation(PopoverMotion.spring) { selecting = true } }
     }
 
     private var selectButton: some View {
-        Button {
-            if selecting { endSelecting() } else { withAnimation(PopoverMotion.spring) { selecting = true } }
-        } label: {
+        Button(action: toggleSelecting) {
             Label(selecting ? tr("batch.cancel") : tr("batch.select"), systemImage: selecting ? "xmark" : "checklist")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Palette.review)
@@ -516,8 +537,8 @@ private struct SummaryPanes: View {
 
     private func rows(for kind: PopoverTab) -> [RowModel] {
         switch kind {
-        case .review: summary.review.map { RowModel.review($0, showsOwner: showsOwner) }
-        case .mine: summary.mine.map { RowModel.mine($0, showsOwner: showsOwner) }
+        case .review: visibleReview.map { RowModel.review($0, showsOwner: showsOwner) }
+        case .mine: ListOrder.sorted(summary.mine, by: sorts.mine).map { RowModel.mine($0, showsOwner: showsOwner) }
         }
     }
 
@@ -555,5 +576,17 @@ private struct PaneEmptyText: View {
             .font(.system(size: 12.5))
             .foregroundStyle(.tertiary)
             .frame(maxWidth: .infinity, minHeight: 100)
+    }
+}
+
+private struct NoMatchesView: View {
+    let onClear: () -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(tr("filter.empty")).font(.system(size: 12.5)).foregroundStyle(.tertiary)
+            PillButton(title: tr("filter.clear"), symbol: "xmark", action: onClear)
+        }
+        .frame(maxWidth: .infinity, minHeight: 100)
     }
 }

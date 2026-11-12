@@ -37,9 +37,9 @@ O PRPulse consulta o GitHub a cada poucos minutos, mantém **duas listas curtas*
 ## O que você recebe
 
 - **Para revisar:** toda PR aberta da organização que você ainda não revisou, mesmo que ninguém tenha pedido. As que pediram você vêm primeiro, e cada linha mostra há quanto tempo a PR espera (âmbar depois de 1 dia, vermelho depois de 3).
-- **Minhas PRs:** as suas PRs que exigem uma ação, cada uma com o verbo que resolve: *Ajustar*, *Responder*, *Corrigir CI*, *Conflito*, *Merge*.
+- **Minhas PRs:** todas as suas PRs abertas, as mais urgentes primeiro: *Conflito*, depois o que precisa de resposta (*Ajustar*, *Responder*), depois *Corrigir CI* e *Merge*, depois as que ninguém revisou ainda, as em review e os rascunhos. Cada uma traz o verbo que resolve. Só as que pedem algo de você contam no ícone.
 - **Filtros por ação** e dois layouts, visão única ou lado a lado. A escolha fica salva.
-- **Esperando review:** uma seção mais discreta em *Minhas PRs* com as suas PRs que passaram alguns dias (você escolhe quantos) sem nenhum review. Elas não pedem nada de você e não mudam o ícone, mas cada uma tem o botão *Copiar link* para você cobrar a pessoa certa.
+- **Ordenar e filtrar:** toda lista tem um menu de ordem (prioridade, a padrão, mais antigas, mais novas, atividade recente, projeto e, em *Para revisar*, autor), e a escolha fica salva. Em *Para revisar* você também busca por título e branch e filtra por autor e projeto; esses filtros zeram a cada abertura do popover. Uma PR que ninguém revisou ganha o botão *Copiar link* (ao passar o mouse) para você cobrar a pessoa certa.
 - **Menu ⋯ em cada linha:** abrir no GitHub, copiar o link e, na lista de revisão, *Revisar com o Claude* e *Silenciar o repositório*, sem abrir os Ajustes.
 - **Uma ou várias organizações**, e um **atalho global**, ⌥⌘P, que abre e fecha o painel de qualquer lugar.
 - **Um ícone que avisa antes de você olhar:** um glifo de pull request que acompanha o tema da barra quando está tudo em dia, vira uma pílula laranja com o número quando algo precisa de você, faz um anel de pulso quando chega um item novo e fica vermelho se não conseguir atualizar.
@@ -189,18 +189,18 @@ Um perfil de configuração (MDM) pode definir a mesma chave `OAuthClientID` nes
 
 | Ação | Quando aparece |
 | --- | --- |
+| **Conflito** | a PR não pode ser integrada por causa de conflitos |
 | **Ajustar** | um reviewer pediu alterações |
 | **Responder** (threads abertas) | há threads de review sem resolver; resolva para limpar |
 | **Responder** (comentário) | o último comentário de outra pessoa é mais novo que o seu último commit e o seu último comentário (aprovações com um "LGTM" no corpo não contam) |
 | **Corrigir CI** | um check obrigatório está falhando (se o repositório não define nenhum, qualquer check que falhar) |
-| **Conflito** | a PR não pode ser integrada por causa de conflitos |
 | **Merge** | o botão de merge está habilitado |
 
 Uma PR com vários motivos aparece uma vez, com o mais urgente em destaque e um `+1` para os demais, na ordem acima. As suas próprias PRs em rascunho só mostram motivos de feedback.
 
 ### Para revisar
 
-PRs abertas de outras pessoas na organização em que você não enviou review. Os pedidos a você vêm primeiro, rascunhos por último e as mais antigas esperam na frente. A PR sai da lista assim que você envia um review, e não volta quando chegam commits novos.
+PRs abertas de outras pessoas na organização em que você não enviou review. Por padrão, os pedidos a você vêm primeiro, rascunhos por último e as mais antigas esperam na frente. A PR sai da lista assim que você envia um review, e não volta quando chegam commits novos.
 
 ## Privacidade
 

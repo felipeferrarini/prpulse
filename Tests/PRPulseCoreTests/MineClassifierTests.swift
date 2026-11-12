@@ -7,9 +7,9 @@ private func reasons(_ pr: PullRequestSnapshot) -> [MineReason] {
     MineClassifier.reasons(for: pr, viewer: viewer, ignoredBots: ignoredBots)
 }
 
-@Test func changesRequestedComesFirst() {
+@Test func conflictComesFirstThenChangesRequested() {
     let pr = PullRequestSnapshot.fixture(reviewDecision: .changesRequested, mergeable: .conflicting)
-    #expect(reasons(pr) == [.changesRequested, .conflict])
+    #expect(reasons(pr) == [.conflict, .changesRequested])
 }
 
 @Test func openThreadsCountsOnlyUnresolvedHumanThreads() {
@@ -85,7 +85,7 @@ private func reasons(_ pr: PullRequestSnapshot) -> [MineReason] {
         comments: [comment(by: human, at: 10)]
     )
     #expect(reasons(pr) == [
-        .changesRequested, .openThreads(1), .unansweredComment, .ciFailed, .conflict, .readyToMerge,
+        .conflict, .changesRequested, .openThreads(1), .unansweredComment, .ciFailed, .readyToMerge,
     ])
 }
 

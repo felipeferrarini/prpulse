@@ -44,11 +44,13 @@ PRPulse polls GitHub every few minutes, keeps **two short lists** in your menu b
 
 ### Two lists, ordered by what to do first
 
-**To review** has every open PR in the organization that you haven't reviewed yet, even when nobody asked you. The ones that requested you come first, and each row shows how long it has been waiting, in amber after a day and red after three. **My PRs** has your own PRs that need an action from you, each tagged with the verb that clears it: *Update*, *Reply*, *Fix CI*, *Conflict*, *Merge*.
+**To review** has every open PR in the organization that you haven't reviewed yet, even when nobody asked you. The ones that requested you come first, and each row shows how long it has been waiting, in amber after a day and red after three. **My PRs** has all of your own open PRs, the most urgent first: a *Conflict*, then what needs an answer (*Update*, *Reply*), then *Fix CI* and *Merge*, then the ones nobody has reviewed yet, the ones in review, and drafts. Each is tagged with the verb that clears it. Only the ones that ask something of you count in the icon.
 
 Tap the action filters to dim everything else, or switch between a single view and a side by side one. The choice is remembered.
 
-Under **My PRs** there is a quieter section, **Waiting for review**: your own PRs that went a couple of days (you choose how many) without a single review. They ask nothing of you and never change the icon, but each one has a *Copy link* button so you can nudge the right person.
+A PR nobody has reviewed has a *Copy link* button (on hover), so you can nudge the right person.
+
+Every list has a sort menu: priority (the default), oldest first, newest first, recent activity, project and, for the PRs to review, author. The choice is remembered. In **To review** you can also search the title and the branch, and filter by author and by project; those reset every time the popover opens.
 
 Every row has a **⋯** menu: open on GitHub, copy the link and, on the review list, *Review with Claude* and *Mute this repository* so it stops showing without opening Settings.
 
@@ -310,18 +312,18 @@ A configuration profile (MDM) can set the same `OAuthClientID` key for that doma
 
 | Action | When it shows |
 | --- | --- |
+| **Conflict** | the PR can't merge because of conflicts |
 | **Update** | a reviewer requested changes |
 | **Reply** (open threads) | there are unresolved review threads; resolve them to clear |
 | **Reply** (comment) | the last comment from someone else is newer than your last commit and your last comment (approvals with an "LGTM" body don't count) |
 | **Fix CI** | a required check is failing (if the repository defines none, any failed check) |
-| **Conflict** | the PR can't merge because of conflicts |
 | **Merge** | the merge button is enabled |
 
 A PR with several reasons appears once, with the most urgent one highlighted and a `+1` for the rest, in the order above. Your own drafts only show feedback reasons.
 
 ### To review
 
-Open PRs from other people in the organization where you have no submitted review. Requests to you come first, drafts go last, and the oldest wait first. A PR leaves the list as soon as you submit a review, and it doesn't come back when new commits arrive.
+Open PRs from other people in the organization where you have no submitted review. By default, requests to you come first, drafts go last, and the oldest wait first. A PR leaves the list as soon as you submit a review, and it doesn't come back when new commits arrive.
 
 ### Waiting time
 
@@ -347,7 +349,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 | **Mascot** | show it or not, which character, its size, where it sits, and your own characters |
 | **Notifications** | alerts for new pull requests, and for nudges: react or not, play a sound or not, which sound (a macOS one, or a file in the sounds folder) |
 | **Agents** | turn "Review with Claude" on or off, check Claude Desktop and Claude Code, choose who approves (Automatic or Ask me), pick the review skill, set a default project folder per organization, edit the request, and the folders chosen for single repositories |
-| **General** | refresh interval (1 to 30 minutes), popover layout, days before a PR counts as waiting for review, open at login, global shortcut, automatic updates, run the setup again |
+| **General** | refresh interval (1 to 30 minutes), popover layout, open at login, global shortcut, automatic updates, run the setup again |
 | **Diagnostics** | version, last sync, GitHub request budget, and a button that copies all of it for a bug report (no token, organization or PR names) |
 | **What's new** | what changed in each version of PRPulse, from the changelog that ships with the app |
 

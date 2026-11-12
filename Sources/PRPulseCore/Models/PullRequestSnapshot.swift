@@ -3,6 +3,8 @@ import Foundation
 public struct PullRequestSnapshot: Equatable, Sendable {
     public let ref: PullRequestRef
     public let title: String
+    /// The branch the pull request comes from; empty when the provider did not say.
+    public let branch: String
     public let url: URL
     public let author: Actor
     public let isDraft: Bool
@@ -23,6 +25,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
     public init(
         ref: PullRequestRef,
         title: String,
+        branch: String = "",
         url: URL,
         author: Actor,
         isDraft: Bool,
@@ -41,6 +44,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
     ) {
         self.ref = ref
         self.title = title
+        self.branch = branch
         self.url = url
         self.author = author
         self.isDraft = isDraft
@@ -60,7 +64,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
 
     public func with(requestedReviewers: [String]) -> PullRequestSnapshot {
         PullRequestSnapshot(
-            ref: ref, title: title, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
+            ref: ref, title: title, branch: branch, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
             reviewDecision: reviewDecision, mergeable: mergeable, mergeState: mergeState, checks: checks,
             threads: threads, comments: comments, commits: commits, reviews: reviews,
             requestedReviewers: requestedReviewers, stack: stack, nudges: nudges
@@ -69,7 +73,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
 
     public func with(threads: [ThreadSnapshot]) -> PullRequestSnapshot {
         PullRequestSnapshot(
-            ref: ref, title: title, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
+            ref: ref, title: title, branch: branch, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
             reviewDecision: reviewDecision, mergeable: mergeable, mergeState: mergeState, checks: checks,
             threads: threads, comments: comments, commits: commits, reviews: reviews,
             requestedReviewers: requestedReviewers, stack: stack, nudges: nudges
@@ -78,7 +82,7 @@ public struct PullRequestSnapshot: Equatable, Sendable {
 
     public func with(checks: ChecksState) -> PullRequestSnapshot {
         PullRequestSnapshot(
-            ref: ref, title: title, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
+            ref: ref, title: title, branch: branch, url: url, author: author, isDraft: isDraft, createdAt: createdAt,
             reviewDecision: reviewDecision, mergeable: mergeable, mergeState: mergeState, checks: checks,
             threads: threads, comments: comments, commits: commits, reviews: reviews,
             requestedReviewers: requestedReviewers, stack: stack, nudges: nudges

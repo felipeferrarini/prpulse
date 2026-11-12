@@ -1,14 +1,13 @@
 public struct Summary: Equatable, Sendable {
+    /// Every pull request the viewer has open, the most urgent first. Only the ones with reasons ask something of the viewer.
     public let mine: [MineItem]
     public let review: [ReviewItem]
-    /// The viewer's PRs waiting for a review. They are not counted in `total`: nothing is asked of the viewer.
-    public let waiting: [WaitingItem]
 
-    public init(mine: [MineItem], review: [ReviewItem], waiting: [WaitingItem] = []) {
+    public init(mine: [MineItem], review: [ReviewItem]) {
         self.mine = mine
         self.review = review
-        self.waiting = waiting
     }
 
-    public var total: Int { mine.count + review.count }
+    /// What asks something of the viewer: the number on the icon. Pull requests that wait on someone else are not in it.
+    public var total: Int { mine.filter(\.needsAction).count + review.count }
 }
