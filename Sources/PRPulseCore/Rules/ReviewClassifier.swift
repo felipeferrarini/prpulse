@@ -12,8 +12,8 @@ public enum ReviewClassifier {
         let bots = Set(ignoredBots.map { $0.lowercased() })
         let items = prs
             .filter { !skipsBotAuthors || !isBotAuthored($0, bots: bots) }
-            .filter { needsViewerReview($0, viewer: viewer, ignored: ignored) }
-            .map { ReviewItem(pr: $0, isRequested: isRequested($0, viewer: viewer)) }
+            .filter { isListed($0, viewer: viewer, ignored: ignored) }
+            .map { ReviewItem(pr: $0, isRequested: isRequested($0, viewer: viewer), hasReviewed: hasSubmittedReview($0, by: viewer)) }
         return ListOrder.sorted(items, by: .priority)
     }
 
@@ -22,9 +22,9 @@ public enum ReviewClassifier {
         pr.author.isBot || bots.contains(pr.author.login.lowercased())
     }
 
-    private static func needsViewerReview(_ pr: PullRequestSnapshot, viewer: String, ignored: Set<String>) -> Bool {
+    /// Every open pull request of someone else, the ones the viewer reviewed too, except those of a repository the viewer hid.
+    private static func isListed(_ pr: PullRequestSnapshot, viewer: String, ignored: Set<String>) -> Bool {
         guard !pr.author.isSame(as: viewer) else { return false }
-        guard isRequested(pr, viewer: viewer) || !hasSubmittedReview(pr, by: viewer) else { return false }
         return !isHiddenByRepo(pr, viewer: viewer, ignored: ignored)
     }
 

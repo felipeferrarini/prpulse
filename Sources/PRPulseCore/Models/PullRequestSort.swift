@@ -36,10 +36,10 @@ public enum ListOrder {
         return age(a.pr, b.pr)
     }
 
-    /// Requests to the viewer first, then ready pull requests before drafts, then the one waiting longest.
+    /// Requests to the viewer, then the pull requests that wait for the team, then the ones the viewer reviewed (the mergeable
+    /// first), then drafts; the one waiting longest first within each.
     private static func priority(_ a: ReviewItem, _ b: ReviewItem) -> Bool {
-        if a.isRequested != b.isRequested { return a.isRequested }
-        if a.pr.isDraft != b.pr.isDraft { return !a.pr.isDraft }
+        if a.status != b.status { return a.status.rawValue < b.status.rawValue }
         return age(a.pr, b.pr)
     }
 

@@ -25,15 +25,15 @@ public enum NudgePlanner {
 
     /// The nudges the viewer has not been told about, at most one per pull request (the latest).
     ///
-    /// A nudge counts only when the author of the pull request wrote it to the viewer, and when it keeps to the rules the
-    /// sender follows: at most `NudgeEligibility.maxNudges`, `NudgeEligibility.minimumInterval` apart. The sender's app
-    /// checks the same, so a hand-made comment cannot make noise.
+    /// On a pull request of someone else that waits for the viewer's review, a nudge counts when its author wrote it to the
+    /// viewer. On the viewer's own pull request, when a person who reviewed it wrote that it can be merged. Either keeps to
+    /// the rules the sender follows: at most `NudgeEligibility.maxNudges`, `NudgeEligibility.minimumInterval` apart. The
+    /// sender's app checks the same, so a hand-made comment cannot make noise.
     public static func incoming(in summary: Summary, viewer: String, seen: Set<String>, now: Date) -> [IncomingNudge] {
-        summary.review.compactMap { item in
-            let pr = item.pr
-            guard let latest = valid(pr.nudges, author: pr.author.login, viewer: viewer).last, !seen.contains(latest.id) else {
-                return nil
-            }
+        let toReview = summary.review.filter(\.needsAction).map(\.pr)
+        let toMerge = summary.mine.map(\.pr)
+        return (toReview + toMerge).compactMap { pr in
+            guard let latest = latest(in: pr, viewer: viewer), !seen.contains(latest.id) else { return nil }
             return IncomingNudge(
                 ref: pr.ref,
                 title: pr.title,
@@ -44,12 +44,30 @@ public enum NudgePlanner {
         }
     }
 
-    private static func valid(_ nudges: [NudgeSnapshot], author: String, viewer: String) -> [NudgeSnapshot] {
+    private static func latest(in pr: PullRequestSnapshot, viewer: String) -> NudgeSnapshot? {
+        if pr.author.isSame(as: viewer) { return mergeNudges(in: pr, viewer: viewer).last }
+        let fromAuthor = pr.nudges.filter {
+            $0.kind == .review && $0.author.isSame(as: pr.author.login) && $0.recipient.caseInsensitiveCompare(viewer) == .orderedSame
+        }
+        return valid(fromAuthor).last
+    }
+
+    /// Each person who reviewed the pull request has a budget of their own.
+    private static func mergeNudges(in pr: PullRequestSnapshot, viewer: String) -> [NudgeSnapshot] {
+        let toViewer = pr.nudges.filter {
+            $0.kind == .merge
+                && $0.recipient.caseInsensitiveCompare(viewer) == .orderedSame
+                && !$0.author.isSame(as: viewer)
+                && !$0.author.isBot
+                && MinimumReviews.latestState(of: $0.author.login, in: pr) != nil
+        }
+        let bySender = Dictionary(grouping: toViewer) { $0.author.login.lowercased() }
+        return bySender.values.flatMap(valid).sorted { $0.createdAt < $1.createdAt }
+    }
+
+    private static func valid(_ nudges: [NudgeSnapshot]) -> [NudgeSnapshot] {
         var accepted: [NudgeSnapshot] = []
-        let toViewer = nudges
-            .filter { $0.author.isSame(as: author) && $0.recipient.caseInsensitiveCompare(viewer) == .orderedSame }
-            .sorted { $0.createdAt < $1.createdAt }
-        for nudge in toViewer where accepted.count < NudgeEligibility.maxNudges {
+        for nudge in nudges.sorted(by: { $0.createdAt < $1.createdAt }) where accepted.count < NudgeEligibility.maxNudges {
             if let last = accepted.last, nudge.createdAt < last.createdAt.addingTimeInterval(NudgeEligibility.minimumInterval) { continue }
             accepted.append(nudge)
         }

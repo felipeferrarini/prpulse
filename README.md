@@ -44,7 +44,7 @@ PRPulse polls GitHub every few minutes, keeps **two short lists** in your menu b
 
 ### Two lists, ordered by what to do first
 
-**To review** has every open PR in the organization that you haven't reviewed yet, even when nobody asked you. The ones that requested you come first, and each row shows how long it has been waiting, in amber after a day and red after three. **My PRs** has all of your own open PRs, the most urgent first: a *Conflict*, then what needs an answer (*Update*, *Reply*), then *Fix CI* and *Merge*, then the ones nobody has reviewed yet, the ones in review, and drafts. Each is tagged with the verb that clears it. Only the ones that ask something of you count in the icon.
+**To review** has every open PR of someone else in the organization, the ones you already reviewed too. By default the ones that wait for you come first (those that requested you, then those nobody has reviewed yet), then the ones you reviewed (the mergeable first), then drafts. A small warning marks any PR that has a merge conflict. Each row shows how long it has been waiting, in amber after a day and red after three. Only the ones that wait for your review count in the icon and in the notifications. **My PRs** has all of your own open PRs, the most urgent first: a *Conflict*, then what needs an answer (*Update*, *Reply*), then *Fix CI* and *Merge*, then the ones nobody has reviewed yet, the ones in review, and drafts. Each is tagged with the verb that clears it. Only the ones that ask something of you count in the icon.
 
 Tap the action filters to dim everything else, or switch between a single view and a side by side one. The choice is remembered.
 
@@ -218,16 +218,19 @@ For pull requests that belong together without being a stack, for example one in
   </tr>
 </table>
 
-### Nudge a reviewer
+### Nudge
 
-When you pushed the changes someone asked for and they have not looked again, right click your pull request and pick **Nudge**. On their Mac the mascot jumps and shakes, a sound plays and a notification shows. It is meant to be noticed, so it has rules:
+Two nudges, both started from the right click menu of a pull request. On the other person's Mac the mascot jumps and shakes, a sound plays and a notification shows. It is meant to be noticed, so it has rules.
 
-- **Only people who took part.** You can nudge someone who commented or asked for changes on that pull request, and only once you pushed a commit after their last activity: until then there is nothing new for them to read. Bots and you are never listed. Someone who only approved is not listed either.
-- **Spaced and capped.** At least three hours between nudges to the same person on the same pull request, and at most three. Each one is stronger than the last: the sound plays once, then twice, then three times.
-- **A line of your own, or none.** **Nudge rita** is one click. **Nudge rita with a message…** adds up to 140 characters, which show in the notification and in a comment on the pull request, where everyone can read them.
-- **It stops when they look.** The mascot stays restless until they open the pull request (or send the review), and a second notification comes after 15 minutes if they have not. The nudge arrives on their next refresh, so it can take up to their refresh interval (1 to 30 minutes).
+**To get a review.** On a pull request of yours that lacks reviews, **Nudge** lists anyone on the team (whoever shows up in the pull requests PRPulse reads) who has not reviewed it. People who took part in it stay listed once you pushed a commit after their last activity.
 
-It goes through GitHub: PRPulse asks for a new review from that person and leaves a comment with a hidden marker. People who do not use PRPulse see an ordinary mention. It needs no server, and it is the only thing PRPulse ever writes to GitHub.
+**To merge.** On a pull request of someone else that you reviewed and that already has the reviews it needs, **Tell rita it can be merged** nudges its author. Only the reviews are looked at: failing checks or a conflict do not stop it. If the repository asks for no reviews, your own approval is what counts.
+
+- **A budget per person and per pull request.** At least three hours between nudges to the same person about the same pull request, and at most three, each stronger than the last: the sound plays once, then twice, then three times. Nudging the same person about another pull request starts over. The menu is the same people with their reasons when one is not allowed yet.
+- **A line of your own, or none.** **Nudge** is one click per person. **Nudge with a message…** adds up to 140 characters, which show in the notification and in a comment on the pull request, where everyone can read them.
+- **It stops when it is done.** The mascot stays restless until they open the pull request, and a second notification comes after 15 minutes if they have not. The nudge arrives on their next refresh, so it can take up to their refresh interval (1 to 30 minutes).
+
+It goes through GitHub: a nudge to get a review asks for the review again and leaves a comment with a hidden marker; a nudge to merge only leaves the comment. People who do not use PRPulse see an ordinary mention. It needs no server, and the nudge is the only thing PRPulse ever writes to GitHub.
 
 On the receiving side it is on by default (Settings → **Notifications**: **React to nudges** and **Nudge sound**). The mascot's right click menu has **Pause nudges**, for an hour or until tomorrow morning. The sound is Sosumi unless you pick another: the **Sound** row in the same page lists the macOS sounds and has a play button. To use your own, click **Open the sounds folder** and drop a `.wav`, `.caf`, `.aiff`, `.m4a` or `.mp3` file in it (`~/Library/Application Support/PRPulse/Sounds`); it shows up in the list, and anything over three seconds is cut short. If the file goes away, Sosumi plays.
 
@@ -323,7 +326,7 @@ A PR with several reasons appears once, with the most urgent one highlighted and
 
 ### To review
 
-Open PRs from other people in the organization where you have no submitted review. By default, requests to you come first, drafts go last, and the oldest wait first. A PR leaves the list as soon as you submit a review, and it doesn't come back when new commits arrive.
+Every open PR from other people in the organization, in this order by default: requests to you, PRs nobody has reviewed yet, PRs you reviewed that can be merged, PRs you reviewed that cannot yet, and drafts; the oldest wait first within each. Only the first two groups need you, so only they count in the icon and in the notifications. A PR you reviewed stays in the list (tagged *Reviewed*, or *Ready to merge* when it can go), and it needs you again only if you are asked for a new review. A PR with a merge conflict has a small warning.
 
 ### Waiting time
 
@@ -334,7 +337,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 - PRPulse talks **only to GitHub** (`api.github.com` and `github.com`) with your own credentials. There is no server of ours, no analytics and no telemetry.
 - A personal token is stored in the **macOS Keychain**. With the `gh` option, the token is read from `gh` on demand and never stored by PRPulse.
 - **Review with Claude** runs Claude Code on your Mac, or hands the request to Claude Desktop. PRPulse sends nothing anywhere for it: only the PR's address and number go in the request, what Claude does with it follows its own terms, and a background review uses your Claude plan like any other session. In the Automatic mode its commands run in a sandbox that cannot write to your repository and reaches only GitHub. The reviews are kept in `~/Library/Application Support/PRPulse/` (the latest twenty), and nothing else is stored.
-- The only thing PRPulse writes to GitHub is a **nudge**, and only when you ask for one: a request for a new review from that person and a comment on your own pull request. Nothing else is created, edited or deleted.
+- The only thing PRPulse writes to GitHub is a **nudge**, and only when you ask for one: a comment on a pull request and, when the nudge is to get a review, a request for a new review from that person. Nothing else is created, edited or deleted.
 - Update checks read one small feed file from your releases page on `github.com`. Nothing about you or your Mac is sent.
 - Updates are signed with a key only the maintainer holds, and the app refuses anything that doesn't match.
 - The app is open source (MIT), so all of this is checkable.

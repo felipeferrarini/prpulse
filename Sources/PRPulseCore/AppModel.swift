@@ -171,7 +171,9 @@ public final class AppModel: ObservableObject {
     /// The nudges to tell the viewer about now. Every one that arrived is remembered, so it is never played twice, even when
     /// nudges are off or paused: then the pull request is still on the list, and the usual notification covers it.
     private func receiveNudges(in summary: Summary) -> [IncomingNudge] {
-        pendingNudges = pendingNudges.filter { pending in summary.review.contains { $0.pr.ref == pending.ref } }
+        pendingNudges = pendingNudges.filter { pending in
+            summary.review.contains { $0.pr.ref == pending.ref } || summary.mine.contains { $0.pr.ref == pending.ref }
+        }
         guard let viewer = viewerLogin else { return [] }
         let arrived = NudgePlanner.incoming(in: summary, viewer: viewer, seen: nudges.seen, now: clock.now)
         nudges.remember(arrived.map(\.id), at: clock.now)

@@ -77,6 +77,7 @@ struct PullRequestRow: View {
                     copyButton
                 } else {
                     HStack(spacing: 4) {
+                        if model.hasConflict { conflictFlag }
                         if let badge = model.stackBadge { chip(RowModel.Chip(id: "position", text: badge, tone: nil)) }
                         ForEach(model.chips) { chip($0) }
                     }
@@ -120,7 +121,7 @@ struct PullRequestRow: View {
             Button(action: onReviewInDesktop) { Label(tr("row.reviewDesktop"), systemImage: "bubble.left.and.text.bubble.right") }
         }
         Button(action: copyLink) { Label(tr("row.copyLink"), systemImage: "link") }
-        if model.kind == .mine { nudgeMenu }
+        nudgeMenu
         if model.canMute, let onMute {
             Divider()
             Button(action: onMute) { Label(tr("row.mute", model.pr.ref.repo), systemImage: "eye.slash") }
@@ -128,7 +129,13 @@ struct PullRequestRow: View {
     }
 
     @ViewBuilder private var nudgeMenu: some View {
+        if model.kind == .mine { reviewNudgeMenu } else { mergeNudgeItems }
+    }
+
+    /// On one of the viewer's own pull requests: whoever may be asked to review it, with a click or with a line of text.
+    @ViewBuilder private var reviewNudgeMenu: some View {
         let candidates = nudging.candidates(model.pr)
+        let allowed = candidates.filter(\.isAllowed)
         if model.pr.isDraft || candidates.isEmpty {
             Button {} label: { Label(model.pr.isDraft ? tr("row.nudge.draft") : tr("row.nudge.empty"), systemImage: "hand.wave") }
                 .disabled(true)
@@ -138,12 +145,36 @@ struct PullRequestRow: View {
                     if let block = candidate.block {
                         Button {} label: { Text(Self.blockText(block, login: candidate.login)) }.disabled(true)
                     } else {
-                        Button { nudging.send(model.pr, candidate, false) } label: { Text(tr("row.nudge.person", candidate.login)) }
-                        Button { nudging.send(model.pr, candidate, true) } label: { Text(tr("row.nudge.personMessage", candidate.login)) }
+                        Button { nudging.send(model.pr, candidate, false) } label: { Text(candidate.login) }
                     }
                 }
             } label: {
                 Label(tr("row.nudge"), systemImage: "hand.wave")
+            }
+            if !allowed.isEmpty {
+                Menu {
+                    ForEach(allowed) { candidate in
+                        Button { nudging.send(model.pr, candidate, true) } label: { Text(candidate.login) }
+                    }
+                } label: {
+                    Label(tr("row.nudge.withMessage"), systemImage: "hand.wave")
+                }
+            }
+        }
+    }
+
+    /// On a pull request of someone else that the viewer reviewed and that has the reviews it needs: tell its author.
+    @ViewBuilder private var mergeNudgeItems: some View {
+        if let candidate = nudging.candidates(model.pr).first(where: { $0.kind == .merge }) {
+            if let block = candidate.block {
+                Button {} label: { Label(Self.blockText(block, login: candidate.login), systemImage: "arrow.triangle.merge") }.disabled(true)
+            } else {
+                Button { nudging.send(model.pr, candidate, false) } label: {
+                    Label(tr("row.nudge.merge", candidate.login), systemImage: "arrow.triangle.merge")
+                }
+                Button { nudging.send(model.pr, candidate, true) } label: {
+                    Label(tr("row.nudge.mergeMessage", candidate.login), systemImage: "arrow.triangle.merge")
+                }
             }
         }
     }
@@ -168,6 +199,16 @@ struct PullRequestRow: View {
         .menuIndicator(.hidden)
         .fixedSize()
         .accessibilityLabel(tr("row.actions"))
+    }
+
+    /// A small warning, in the colour of the conflict action, that the pull request cannot be merged as it is.
+    private var conflictFlag: some View {
+        Image(systemName: ActionLane.conflict.symbol)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(ActionLane.conflict.tone.opacity(0.85))
+            .help(tr("row.conflict"))
+            .accessibilityLabel(tr("row.conflict"))
+            .padding(.trailing, 2)
     }
 
     private var copyButton: some View {

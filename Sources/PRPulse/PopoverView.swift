@@ -144,10 +144,10 @@ struct PopoverView: View {
                 .padding(.bottom, 12)
             if showsAgents, let agentActions {
                 AgentsPane(runs: agentRuns, actions: agentActions, openRun: $openRun)
-            } else if summary.total == 0 && summary.mine.isEmpty {
+            } else if summary.total == 0 && summary.mine.isEmpty && summary.review.isEmpty {
                 EmptyStateView()
             } else {
-                TabSegment(tab: $tab, reviewCount: summary.review.count, mineCount: summary.mine.count)
+                TabSegment(tab: $tab, reviewCount: summary.awaitingReviewCount, mineCount: summary.mine.count)
                     .padding(.horizontal, 14)
                     .padding(.bottom, 12)
                     .folded(!isSingle, height: 50)
@@ -181,7 +181,7 @@ struct PopoverView: View {
             entered = false
             filter = nil
             reviewFilter = ReviewFilter()
-            tab = (data.summary?.review.isEmpty ?? true) && hasMineContent ? .mine : .review
+            tab = (data.summary?.awaitingReviewCount ?? 0) == 0 && hasMineContent ? .mine : .review
             showsAgents = false
             openRun = nil
         }

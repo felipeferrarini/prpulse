@@ -261,7 +261,8 @@ private func theirPR(_ nudges: [NudgeSnapshot], author: String = "ana") -> PullR
 
     let items = ReviewClassifier.items(from: [reviewed, notAsked], viewer: viewer, ignoredRepos: [])
 
-    #expect(items.map(\.pr.ref.number) == [1])
+    #expect(items.map(\.pr.ref.number) == [1, 2])
+    #expect(items.map(\.needsAction) == [true, false])
 }
 
 // MARK: Sending

@@ -84,8 +84,8 @@ public struct GitHubClient: PullRequestProvider {
         ignoredRepos: Set<String>
     ) async throws -> [PullRequestSnapshot] {
         let exclusions = ignoredRepos.sorted().map { " -repo:\(org)/\($0)" }.joined()
-        let base = "org:\(org) is:pr is:open archived:false -author:\(viewer) -reviewed-by:\(viewer)\(exclusions)"
-        let listed = try await fetchWindow(base: base, fragment: .review, size: 50, window: fullWindow)
+        let base = "org:\(org) is:pr is:open archived:false -author:\(viewer)\(exclusions)"
+        let listed = try await fetchWindow(base: base, fragment: .review, size: 25, window: fullWindow)
 
         let requestedBase = "org:\(org) is:pr is:open archived:false -author:\(viewer) review-requested:\(viewer)"
         let requested = try await fetchWindow(base: requestedBase, fragment: .review, size: 50, window: fullWindow)

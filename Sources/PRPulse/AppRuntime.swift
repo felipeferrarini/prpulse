@@ -131,7 +131,7 @@ final class AppRuntime: ObservableObject {
             refreshMinutes: current.refreshMinutes,
             lastSync: model.lastUpdated,
             status: Self.syncStatus(model),
-            reviewCount: model.lastSummary?.review.count ?? 0,
+            reviewCount: model.lastSummary?.awaitingReviewCount ?? 0,
             mineCount: model.lastSummary?.mine.count ?? 0,
             rateLimit: ClientFactory.rateLimits.latest,
             shortcutActive: shortcut?.isRegistered ?? false,

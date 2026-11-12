@@ -34,12 +34,14 @@ final class Notifier: NSObject, NotificationSink, UNUserNotificationCenterDelega
 
     /// The author nudged the viewer. The sound and the mascot are the app's own; this is the banner.
     func deliver(nudge: IncomingNudge) async {
-        await post(nudge, title: tr("nudge.notification.title", nudge.nudge.author.login))
+        let sender = nudge.nudge.author.login
+        await post(nudge, title: nudge.nudge.kind == .merge ? tr("nudge.merge.notification.title", sender) : tr("nudge.notification.title", sender))
     }
 
     /// The nudge was not looked at for a while.
     func remind(_ nudge: IncomingNudge) async {
-        await post(nudge, title: tr("nudge.reminder.title", nudge.nudge.author.login))
+        let sender = nudge.nudge.author.login
+        await post(nudge, title: nudge.nudge.kind == .merge ? tr("nudge.merge.reminder.title", sender) : tr("nudge.reminder.title", sender))
     }
 
     private func post(_ nudge: IncomingNudge, title: String) async {

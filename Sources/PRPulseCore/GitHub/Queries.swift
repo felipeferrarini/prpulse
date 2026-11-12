@@ -129,6 +129,7 @@ enum Queries {
         case .review:
             identity + """
 
+            reviewDecision mergeable mergeStateStatus
             reviews(last: 50) { nodes { state submittedAt author { login __typename } } }
             comments(last: 10) { nodes { createdAt body author { login __typename } } }
             """

@@ -8,6 +8,10 @@ public struct Summary: Equatable, Sendable {
         self.review = review
     }
 
-    /// What asks something of the viewer: the number on the icon. Pull requests that wait on someone else are not in it.
-    public var total: Int { mine.filter(\.needsAction).count + review.count }
+    /// The pull requests of others that wait for the viewer's review.
+    public var awaitingReviewCount: Int { review.filter(\.needsAction).count }
+
+    /// What asks something of the viewer: the number on the icon. Pull requests that wait on someone else, or that the viewer
+    /// already reviewed, are not in it.
+    public var total: Int { mine.filter(\.needsAction).count + awaitingReviewCount }
 }

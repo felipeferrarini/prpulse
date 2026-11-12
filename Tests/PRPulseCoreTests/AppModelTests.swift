@@ -330,8 +330,8 @@ private struct Harness {
     let queries = h.world.seenQueries
     #expect(queries.contains { $0.contains("org:org ") && $0.contains("author:me") })
     #expect(queries.contains { $0.contains("org:other ") && $0.contains("author:me") })
-    let reviewOther = queries.first { $0.contains("org:other ") && $0.contains("-reviewed-by:me") }
-    let reviewOrg = queries.first { $0.contains("org:org ") && $0.contains("-reviewed-by:me") }
+    let reviewOther = queries.first { $0.contains("org:other ") && $0.contains("-author:me") && !$0.contains("review-requested") }
+    let reviewOrg = queries.first { $0.contains("org:org ") && $0.contains("-author:me") && !$0.contains("review-requested") }
     #expect(reviewOther?.contains("-repo:other/docs") == true)
     #expect(reviewOther?.contains("infra") == false)
     #expect(reviewOrg?.contains("-repo:org/infra") == true)

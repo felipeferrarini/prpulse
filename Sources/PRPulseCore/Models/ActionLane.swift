@@ -23,13 +23,13 @@ extension MineItem {
 
 extension ReviewItem {
     public func matches(_ lane: ActionLane) -> Bool {
-        lane == .review
+        lane == .review && needsAction
     }
 }
 
 extension Summary {
     public func count(for lane: ActionLane) -> Int {
-        lane == .review ? review.count : mine.filter { $0.matches(lane) }.count
+        lane == .review ? awaitingReviewCount : mine.filter { $0.matches(lane) }.count
     }
 
     /// Lanes that have something to act on, in the order they are shown.

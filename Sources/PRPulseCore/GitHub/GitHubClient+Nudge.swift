@@ -11,24 +11,29 @@ extension GitHubClient: PullRequestNudger {
               let reviewerID = targets.object("user")?.string("id")
         else { throw ProviderError.malformed("pull request or reviewer not found") }
 
-        let requested: Bool
-        do {
-            _ = try await mutate(Queries.requestReviews, ["pullRequest": pullRequestID, "users": [reviewerID]])
-            requested = true
-        } catch ProviderError.rateLimited(let retryAfter) {
-            throw ProviderError.rateLimited(retryAfter: retryAfter)
-        } catch {
-            requested = false
-        }
+        let requested = request.kind == .merge ? true : try await requestReview(of: pullRequestID, from: reviewerID)
 
         let body = NudgeCodec.body(
             text: request.text,
             recipient: request.reviewer,
             id: UUID().uuidString.lowercased(),
             tone: request.tone,
-            message: request.message
+            message: request.message,
+            kind: request.kind
         )
         _ = try await mutate(Queries.addComment, ["subject": pullRequestID, "body": body])
         return requested ? .sent : .commentOnly
+    }
+
+    /// False when the host refuses: the comment is still worth leaving.
+    private func requestReview(of pullRequestID: String, from reviewerID: String) async throws -> Bool {
+        do {
+            _ = try await mutate(Queries.requestReviews, ["pullRequest": pullRequestID, "users": [reviewerID]])
+            return true
+        } catch ProviderError.rateLimited(let retryAfter) {
+            throw ProviderError.rateLimited(retryAfter: retryAfter)
+        } catch {
+            return false
+        }
     }
 }

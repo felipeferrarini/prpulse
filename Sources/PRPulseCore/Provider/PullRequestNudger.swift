@@ -3,18 +3,21 @@ import Foundation
 /// What the author sends to nudge a reviewer.
 public struct NudgeRequest: Equatable, Sendable {
     public let ref: PullRequestRef
+    /// Who is nudged: a reviewer to review, or the author of the pull request to merge it.
     public let reviewer: String
     public let tone: Int
     public let message: String?
-    /// The line people read in the comment, in the author's language.
+    /// The line people read in the comment, in the sender's language.
     public let text: String
+    public let kind: NudgeKind
 
-    public init(ref: PullRequestRef, reviewer: String, tone: Int, message: String?, text: String) {
+    public init(ref: PullRequestRef, reviewer: String, tone: Int, message: String?, text: String, kind: NudgeKind = .review) {
         self.ref = ref
         self.reviewer = reviewer
         self.tone = tone
         self.message = message
         self.text = text
+        self.kind = kind
     }
 }
 

@@ -429,9 +429,7 @@
 "batch.together" = "Review together";
 "batch.each" = "Review each";
 "row.nudge" = "Nudge";
-"row.nudge.person" = "Nudge %@";
-"row.nudge.personMessage" = "Nudge %@ with a message…";
-"row.nudge.empty" = "Nudge: nobody has reviewed this yet";
+"row.nudge.empty" = "Nudge: no one to nudge right now";
 "row.nudge.draft" = "Nudge: a draft can't be nudged";
 "row.nudge.block.noCommits" = "%@: nothing new since their review";
 "row.nudge.block.soon" = "%@: wait until %@";
@@ -449,7 +447,7 @@
 "nudge.reminder.title" = "Still waiting: %@ nudged you";
 "nudge.bubble.title" = "%@ is nudging you";
 "settings.nudges.title" = "React to nudges";
-"settings.nudges.detail" = "When an author asks you to look at a pull request again, the mascot jumps and a notification shows.";
+"settings.nudges.detail" = "When someone nudges you, to review a pull request or to merge yours, the mascot jumps and a notification shows.";
 "settings.nudges.sound.title" = "Nudge sound";
 "settings.nudges.sound.detail" = "Plays a sound, once more for each nudge the same person sends.";
 "settings.nudges.choice.title" = "Sound";
@@ -480,3 +478,13 @@
 "reason.inReview" = "in review, nothing for you yet";
 "filter.count" = "%d of %d";
 "filter.remove" = "Remove %@";
+"chip.reviewed" = "Reviewed";
+"chip.reviewedReady" = "Ready to merge";
+"row.conflict" = "Has a merge conflict";
+"row.nudge.withMessage" = "Nudge with a message…";
+"row.nudge.merge" = "Tell %@ it can be merged";
+"row.nudge.mergeMessage" = "Tell %@ it can be merged, with a message…";
+"nudge.merge.comment" = "%@ @%@, this pull request has the reviews it needs and can be merged (nudge from PRPulse)";
+"nudge.merge.notification.title" = "%@ says your PR can be merged";
+"nudge.merge.reminder.title" = "Still waiting: %@ says your PR can be merged";
+"nudge.merge.bubble.title" = "%@: your PR can go up";

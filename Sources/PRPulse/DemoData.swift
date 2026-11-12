@@ -42,9 +42,11 @@ enum DemoData {
         ],
         review: [
             review(412, "web", "Per-tenant session cache", author: "sam", hoursAgo: 76, requested: true),
+            review(220, "api", "Tighten the rate limiter", author: "mia", hoursAgo: 30, reviewed: true, mergeState: .clean),
+            review(221, "web", "Migrate the icons to SVG", author: "leo", hoursAgo: 50, reviewed: true, conflicting: true),
             review(208, "api", "Fix pagination on /invoices", author: "mia", hoursAgo: 7, requested: true),
             review(133, "mobile", "Offline upload queue", author: "ivan", hoursAgo: 121),
-            review(419, "web", "Swap the date library for Temporal", author: "leo", hoursAgo: 27),
+            review(419, "web", "Swap the date library for Temporal", author: "leo", hoursAgo: 27, conflicting: true),
             review(77, "docs", "Onboarding guide v2", author: "noor", hoursAgo: 4, draft: true),
             review(301, "api", "Pagination: cursor on (created_at, id) (1/3)", author: "mia", hoursAgo: 40, requested: true, stack: (7, 3, 1)),
             review(302, "api", "Pagination: cap the page size (2/3)", author: "mia", hoursAgo: 39, requested: true, stack: (7, 3, 2)),
@@ -67,7 +69,7 @@ enum DemoData {
 
     private static func snapshot(
         _ number: Int, _ repo: String, _ title: String, author: String, hoursAgo: Double, draft: Bool, stack: (Int, Int, Int)? = nil,
-        reviewers: [String] = []
+        reviewers: [String] = [], mergeable: Mergeable = .mergeable, mergeState: MergeState = .blocked
     ) -> PullRequestSnapshot {
         PullRequestSnapshot(
             ref: PullRequestRef(owner: "acme", repo: repo, number: number),
@@ -77,7 +79,7 @@ enum DemoData {
             author: Actor(login: author, isBot: false),
             isDraft: draft,
             createdAt: Date().addingTimeInterval(-hoursAgo * 3600 - 60),
-            reviewDecision: nil, mergeable: .mergeable, mergeState: .blocked, checks: .none,
+            reviewDecision: nil, mergeable: mergeable, mergeState: mergeState, checks: .none,
             threads: [], comments: [], commits: [], reviews: [], requestedReviewers: reviewers,
             stack: stack.map { StackMembership(number: $0.0, size: $0.1, position: $0.2, baseRef: "main") }
         )
@@ -100,9 +102,13 @@ enum DemoData {
 
     private static func review(
         _ number: Int, _ repo: String, _ title: String, author: String, hoursAgo: Double, requested: Bool = false, draft: Bool = false,
-        stack: (Int, Int, Int)? = nil
+        reviewed: Bool = false, conflicting: Bool = false, mergeState: MergeState = .blocked, stack: (Int, Int, Int)? = nil
     ) -> ReviewItem {
-        ReviewItem(pr: snapshot(number, repo, title, author: author, hoursAgo: hoursAgo, draft: draft, stack: stack), isRequested: requested)
+        let pr = snapshot(
+            number, repo, title, author: author, hoursAgo: hoursAgo, draft: draft, stack: stack,
+            mergeable: conflicting ? .conflicting : .mergeable, mergeState: conflicting ? .dirty : mergeState
+        )
+        return ReviewItem(pr: pr, isRequested: requested, hasReviewed: reviewed)
     }
 }
 

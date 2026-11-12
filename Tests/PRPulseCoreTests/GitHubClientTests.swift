@@ -120,9 +120,10 @@ private func emptySearch() -> Data {
     let prs = try await client(transport).reviewPullRequests(org: "org", viewer: "me", ignoredRepos: ["docs", "infra"])
 
     let windowed = try #require(transport.searchQueries.first { $0.contains("created:") })
-    for part in ["org:org", "is:pr", "is:open", "-author:me", "-reviewed-by:me", "-repo:org/docs", "-repo:org/infra"] {
+    for part in ["org:org", "is:pr", "is:open", "-author:me", "-repo:org/docs", "-repo:org/infra"] {
         #expect(windowed.contains(part), "missing \(part)")
     }
+    #expect(!windowed.contains("-reviewed-by"), "the PRs the viewer reviewed are listed too")
     #expect(transport.searchQueries.contains { $0.contains("review-requested:me") && !$0.contains("-repo:") })
     #expect(prs.map(\.ref.number).sorted() == [7, 8])
 }

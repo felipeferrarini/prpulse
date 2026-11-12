@@ -39,6 +39,8 @@ struct RowModel: Identifiable {
     var titleOverride: String?
     /// A pull request nobody has reviewed offers a button to copy its link, to ask someone.
     var offersCopy = false
+    /// The pull request cannot be merged until its conflict is solved.
+    var hasConflict = false
 
     var id: PullRequestRef { pr.ref }
     var title: String { titleOverride ?? pr.title }
@@ -54,16 +56,18 @@ struct RowModel: Identifiable {
 
     static func review(_ item: ReviewItem, showsOwner: Bool = false) -> RowModel {
         let pr = item.pr
-        return RowModel(
+        var row = RowModel(
             pr: pr,
             lead: .avatar(pr.author.login),
             subtitle: "\(repository(pr, showsOwner: showsOwner)) #\(pr.ref.number), \(pr.author.login)",
             chips: reviewChips(item),
-            lanes: [.review],
+            lanes: item.needsAction ? [.review] : [],
             kind: .review,
             canMute: !item.isRequested,
             stackBadge: badge(of: pr)
         )
+        row.hasConflict = item.hasConflict
+        return row
     }
 
     static func mine(_ item: MineItem, showsOwner: Bool = false) -> RowModel {
@@ -126,7 +130,7 @@ struct RowModel: Identifiable {
         } else if let lane = ActionLane.allCases.first(where: { lane in rows.contains { $0.kind == .mine && $0.lanes.contains(lane) } }) {
             chips.append(Chip(id: "lane", text: lane.chipTitle, tone: lane.tone))
         }
-        return RowModel(
+        var row = RowModel(
             pr: group.oldest,
             lead: .stack,
             subtitle: subtitle,
@@ -138,12 +142,18 @@ struct RowModel: Identifiable {
             memberCount: count,
             titleOverride: bottom.title
         )
+        row.hasConflict = rows.contains { $0.hasConflict }
+        return row
     }
 
     private static func reviewChips(_ item: ReviewItem) -> [Chip] {
-        if item.pr.isDraft { return [Chip(id: "draft", text: tr("chip.draft"), tone: nil)] }
-        if item.isRequested { return [Chip(id: "requested", text: tr("chip.requested"), tone: Palette.review)] }
-        return [Chip(id: "team", text: tr("chip.team"), tone: nil)]
+        switch item.status {
+        case .draft: [Chip(id: "draft", text: tr("chip.draft"), tone: nil)]
+        case .requested: [Chip(id: "requested", text: tr("chip.requested"), tone: Palette.review)]
+        case .team: [Chip(id: "team", text: tr("chip.team"), tone: nil)]
+        case .reviewedReady: [Chip(id: "ready", text: tr("chip.reviewedReady"), tone: Palette.merge)]
+        case .reviewed: [Chip(id: "reviewed", text: tr("chip.reviewed"), tone: nil)]
+        }
     }
 
     private static func reasonText(_ reason: MineReason) -> String {

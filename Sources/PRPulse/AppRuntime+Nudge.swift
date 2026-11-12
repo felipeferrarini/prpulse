@@ -22,7 +22,9 @@ extension AppRuntime {
 
     private func nudgeCandidates(for pr: PullRequestSnapshot) -> [NudgeCandidate] {
         guard let viewer = model?.viewerLogin else { return [] }
-        return NudgeEligibility.candidates(for: pr, viewer: viewer, ignoredBots: Set(settings.settings.ignoredBots), now: Date())
+        let bots = Set(settings.settings.ignoredBots)
+        let team = model?.lastSummary.map { TeamDirectory.members(in: $0, viewer: viewer, ignoredBots: bots) } ?? []
+        return NudgeEligibility.candidates(for: pr, viewer: viewer, team: team, ignoredBots: bots, now: Date())
     }
 
     private func startNudge(_ pr: PullRequestSnapshot, _ candidate: NudgeCandidate, withMessage: Bool) {
@@ -36,7 +38,8 @@ extension AppRuntime {
             reviewer: candidate.login,
             tone: candidate.tone,
             message: message,
-            text: Self.commentText(reviewer: candidate.login, tone: candidate.tone, message: message)
+            text: Self.commentText(reviewer: candidate.login, tone: candidate.tone, message: message, kind: candidate.kind),
+            kind: candidate.kind
         )
         let nudger = ClientFactory.nudger(settings: settings)
         Task { @MainActor in
@@ -50,9 +53,9 @@ extension AppRuntime {
         }
     }
 
-    private static func commentText(reviewer: String, tone: Int, message: String?) -> String {
-        let hands = String(repeating: "👋", count: min(max(tone, 1), NudgeCodec.maxTone))
-        let line = tr("nudge.comment", hands, reviewer)
+    private static func commentText(reviewer: String, tone: Int, message: String?, kind: NudgeKind) -> String {
+        let marks = String(repeating: kind == .merge ? "🚀" : "👋", count: min(max(tone, 1), NudgeCodec.maxTone))
+        let line = kind == .merge ? tr("nudge.merge.comment", marks, reviewer) : tr("nudge.comment", marks, reviewer)
         return message.map { "\(line): \($0)" } ?? line
     }
 
@@ -82,7 +85,8 @@ extension AppRuntime {
         guard let nudge = model.pendingNudges.last, nudge.id != lastNudgeID else { return }
         lastNudgeID = nudge.id
         if settings.settings.nudgeSoundEnabled { NudgeSound.play(tone: nudge.nudge.tone, id: settings.settings.nudgeSound) }
-        let title = tr("nudge.bubble.title", nudge.nudge.author.login)
+        let sender = nudge.nudge.author.login
+        let title = nudge.nudge.kind == .merge ? tr("nudge.merge.bubble.title", sender) : tr("nudge.bubble.title", sender)
         showMascotBubble(title: title, detail: nudge.nudge.message ?? nudge.title, seconds: 12)
         scheduleReminder(for: nudge)
     }

@@ -429,9 +429,7 @@
 "batch.together" = "Revisar juntas";
 "batch.each" = "Revisar cada uma";
 "row.nudge" = "Cutucar";
-"row.nudge.person" = "Cutucar %@";
-"row.nudge.personMessage" = "Cutucar %@ com mensagem…";
-"row.nudge.empty" = "Cutucar: ninguém revisou ainda";
+"row.nudge.empty" = "Cutucar: ninguém para cutucar agora";
 "row.nudge.draft" = "Cutucar: rascunho não pode ser cutucado";
 "row.nudge.block.noCommits" = "%@: nada novo desde a revisão";
 "row.nudge.block.soon" = "%@: espere até %@";
@@ -449,7 +447,7 @@
 "nudge.reminder.title" = "Ainda esperando: %@ cutucou você";
 "nudge.bubble.title" = "%@ está cutucando você";
 "settings.nudges.title" = "Reagir a cutucadas";
-"settings.nudges.detail" = "Quando o autor pede para você olhar uma PR de novo, o mascote pula e aparece uma notificação.";
+"settings.nudges.detail" = "Quando alguém cutuca você, para revisar uma PR ou para subir a sua, o mascote pula e aparece uma notificação.";
 "settings.nudges.sound.title" = "Som da cutucada";
 "settings.nudges.sound.detail" = "Toca um som, uma vez a mais para cada cutucada da mesma pessoa.";
 "settings.nudges.choice.title" = "Som";
@@ -480,3 +478,13 @@
 "reason.inReview" = "em review, nada para você ainda";
 "filter.count" = "%d de %d";
 "filter.remove" = "Remover %@";
+"chip.reviewed" = "Revisada";
+"chip.reviewedReady" = "Pode subir";
+"row.conflict" = "Tem conflito de merge";
+"row.nudge.withMessage" = "Cutucar com mensagem…";
+"row.nudge.merge" = "Avisar %@ que já pode subir";
+"row.nudge.mergeMessage" = "Avisar %@ que já pode subir, com mensagem…";
+"nudge.merge.comment" = "%@ @%@, esta PR já tem os reviews necessários e pode subir (cutucada do PRPulse)";
+"nudge.merge.notification.title" = "%@ avisa que sua PR já pode subir";
+"nudge.merge.reminder.title" = "Ainda esperando: %@ avisa que sua PR já pode subir";
+"nudge.merge.bubble.title" = "%@: sua PR pode subir";
