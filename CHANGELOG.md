@@ -4,6 +4,14 @@ All notable changes to PRPulse. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-12
+
+### Added
+
+- **To review lists every PR.** The PRs you already reviewed stay in the list, after the ones that wait for you: first the requests to you, then the PRs nobody has reviewed, then the ones you reviewed that can be merged, the ones you reviewed that cannot yet, and drafts. A small warning marks a PR with a merge conflict. The icon, the count and the notifications still follow the PRs that wait for your review.
+- **Nudge anyone on the team.** On a PR of yours that lacks reviews, **Nudge** lists everyone on the team who has not reviewed it, each person once per PR (up to three times, three hours apart, stronger each time). The menu has **Nudge** and **Nudge with a message…**.
+- **Nudge to merge.** On a PR of someone else that you reviewed and that already has the reviews it needs, **Tell … it can be merged** nudges its author. Only the reviews are looked at, not the checks. It leaves just a comment, with no new review request.
+
 ## [0.12.0] - 2026-11-11
 
 ### Added
