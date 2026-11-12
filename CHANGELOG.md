@@ -4,6 +4,20 @@ All notable changes to PRPulse. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-11
+
+### Added
+
+- **Sort every list.** A menu above each list orders it by priority (the default), oldest first, newest first, recent activity or project, and **To review** also by author. The choice is remembered.
+- **Search and filter what to review.** **To review** has a search box for the title and the branch, and filters by author and by project. They reset every time the popover opens.
+- **An arrow and an entrance.** The popover has an arrow that points at the menu bar icon, and it grows out of the icon when it opens and shrinks back when it closes (nothing moves if Reduce Motion is on).
+- **It looks for updates every time it starts.** With *Keep PRPulse up to date* on, the app checks when it opens, not only once a day by Sparkle's own clock, and says nothing when there is nothing new.
+
+### Changed
+
+- **The refresh button spins around its own centre.** Before, the whole button turned, hover box included.
+- **My PRs shows all of them.** Every open PR of yours is listed in one section, the most urgent first: conflict, what needs an answer, CI, ready to merge, no review yet, in review, drafts. The icon still counts only the ones that ask something of you. The *Waiting for review* section and its setting are gone, since nothing is hidden any more.
+
 ## [0.11.0] - 2026-11-04
 
 ### Added
