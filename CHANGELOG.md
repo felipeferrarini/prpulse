@@ -4,6 +4,17 @@ All notable changes to PRPulse. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-12
+
+### Changed
+
+- **Review with AI opens the app you choose.** The review no longer runs inside PRPulse: **Review with …** takes the pull request to Claude Desktop, the Codex app, Cursor, a terminal (Claude Code, Codex or Cursor Agent) or a command of your own, with the request, the folder and the skill ready. The terminal is the one macOS uses for `.command` files, and Settings → Agents lets you pick another one. The apps only fill in the message, so you press Enter; the terminals start the agent right away. *Review each* needs a terminal destination.
+- The default request now says to answer in the app and not post on GitHub unless you ask, since you can approve a comment there.
+
+### Removed
+
+- **The background review.** The ✦ button, the list of reviews in progress, the approval of commands inside PRPulse, the follow-up box, the **Approvals** setting and the `agent-runs.json` history are gone (PRPulse deletes it). The review in the background depended on a protocol of the `claude` command that is not documented, and it never had what the apps have (commands to approve, model and effort).
+
 ## [0.13.0] - 2026-11-12
 
 ### Added
