@@ -49,7 +49,12 @@ public struct AppSettings: Codable, Equatable, Sendable {
     /// `ReviewSkillCatalog.automaticChoice`, `noneChoice` or the name of a skill.
     public var reviewSkill: String
     /// Who decides when the agent wants to do more than read.
-    public var reviewApproval: ReviewApproval
+    /// Where "Review with…" takes a pull request: an app or a terminal.
+    public var reviewDestination: ReviewDestination
+    /// The terminal that runs the destinations made of a command: an app's bundle identifier or path, empty for the one macOS uses.
+    public var reviewTerminal: String
+    /// The command of the custom destination.
+    public var reviewCustomCommand: String
     /// The words sent with the request; empty uses the built-in text.
     public var reviewPrompt: String
     /// The folder picked for one repository, by `owner/name`. An empty path means there is no folder to use.
@@ -98,7 +103,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         mascotAnchor: nil,
         reviewAgentEnabled: true,
         reviewSkill: ReviewSkillCatalog.automaticChoice,
-        reviewApproval: .automatic,
+        reviewDestination: .default,
+        reviewTerminal: "",
+        reviewCustomCommand: "",
         reviewPrompt: "",
         reviewFolders: [:],
         reviewOrgFolders: [:],
@@ -134,7 +141,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         mascotAnchor: MascotAnchor? = nil,
         reviewAgentEnabled: Bool = true,
         reviewSkill: String = ReviewSkillCatalog.automaticChoice,
-        reviewApproval: ReviewApproval = .automatic,
+        reviewDestination: ReviewDestination = .default,
+        reviewTerminal: String = "",
+        reviewCustomCommand: String = "",
         reviewPrompt: String = "",
         reviewFolders: [String: String] = [:],
         reviewOrgFolders: [String: String] = [:],
@@ -168,7 +177,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         self.mascotAnchor = mascotAnchor
         self.reviewAgentEnabled = reviewAgentEnabled
         self.reviewSkill = reviewSkill
-        self.reviewApproval = reviewApproval
+        self.reviewDestination = reviewDestination
+        self.reviewTerminal = reviewTerminal
+        self.reviewCustomCommand = reviewCustomCommand
         self.reviewPrompt = reviewPrompt
         self.reviewFolders = reviewFolders
         self.reviewOrgFolders = reviewOrgFolders
@@ -207,7 +218,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         mascotAnchor = try values.decodeIfPresent(MascotAnchor.self, forKey: .mascotAnchor)
         reviewAgentEnabled = try values.decodeIfPresent(Bool.self, forKey: .reviewAgentEnabled) ?? base.reviewAgentEnabled
         reviewSkill = try values.decodeIfPresent(String.self, forKey: .reviewSkill) ?? base.reviewSkill
-        reviewApproval = try values.decodeIfPresent(ReviewApproval.self, forKey: .reviewApproval) ?? base.reviewApproval
+        reviewDestination = (try? values.decodeIfPresent(ReviewDestination.self, forKey: .reviewDestination)).flatMap { $0 } ?? base.reviewDestination
+        reviewTerminal = try values.decodeIfPresent(String.self, forKey: .reviewTerminal) ?? base.reviewTerminal
+        reviewCustomCommand = try values.decodeIfPresent(String.self, forKey: .reviewCustomCommand) ?? base.reviewCustomCommand
         reviewPrompt = try values.decodeIfPresent(String.self, forKey: .reviewPrompt) ?? base.reviewPrompt
         reviewFolders = try values.decodeIfPresent([String: String].self, forKey: .reviewFolders) ?? base.reviewFolders
         reviewOrgFolders = try values.decodeIfPresent([String: String].self, forKey: .reviewOrgFolders) ?? base.reviewOrgFolders
@@ -228,7 +241,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case orgs, org, authSource, refreshMinutes, ignoredRepos, ignoredBots, ignoreBotComments, ignoreBotPullRequests, notificationsEnabled
         case launchAtLogin, automaticUpdates, globalShortcut, hasCompletedSetup, popoverLayout, reviewSort, mineSort
         case mascotEnabled, mascotPack, mascotScale, mascotIntroduced, mascotAnchor
-        case reviewAgentEnabled, reviewSkill, reviewApproval, reviewPrompt, reviewFolders, reviewOrgFolders
+        case reviewAgentEnabled, reviewSkill, reviewDestination, reviewTerminal, reviewCustomCommand, reviewPrompt, reviewFolders, reviewOrgFolders
         case showNewsAfterUpdate, lastSeenVersion, oauthClientID
         case nudgesEnabled, nudgeSoundEnabled, nudgeSound, nudgesPausedUntil
     }
@@ -253,7 +266,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
         try values.encodeIfPresent(mascotAnchor, forKey: .mascotAnchor)
         try values.encode(reviewAgentEnabled, forKey: .reviewAgentEnabled)
         try values.encode(reviewSkill, forKey: .reviewSkill)
-        try values.encode(reviewApproval, forKey: .reviewApproval)
+        try values.encode(reviewDestination, forKey: .reviewDestination)
+        try values.encode(reviewTerminal, forKey: .reviewTerminal)
+        try values.encode(reviewCustomCommand, forKey: .reviewCustomCommand)
         try values.encode(reviewPrompt, forKey: .reviewPrompt)
         try values.encode(reviewFolders, forKey: .reviewFolders)
         try values.encode(reviewOrgFolders, forKey: .reviewOrgFolders)

@@ -564,14 +564,13 @@ struct DoneBody: View {
 
 struct AgentsBody: View {
     @ObservedObject var model: SetupModel
-    let availability: () -> AgentAvailability
-    let cliStatus: () async -> CLIState
+    let status: () -> [ReviewDestination: Bool]
     let onTest: () -> Void
 
     var body: some View {
         StepFrame {
             StepTitle(title: tr("wizard.agents.title"), lead: tr("wizard.agents.lead"))
-            AgentsContent(model: model, availability: availability, cliStatus: cliStatus, onTest: onTest, isCompact: true)
+            AgentsContent(model: model, status: status, onTest: onTest, isCompact: true)
                 .padding(.top, 14)
             Text(tr("wizard.agents.more"))
                 .font(.system(size: 12.5))

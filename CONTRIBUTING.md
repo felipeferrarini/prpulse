@@ -19,7 +19,7 @@ To work on the interface without a GitHub account, run the app with fake data: `
 ## Where things live
 
 ```text
-Sources/PRPulseCore   rules, notification planner, agents, auth (pure, tested)
+Sources/PRPulseCore   rules, notification planner, review destinations, auth (pure, tested)
   Provider/           what the app needs from a forge: PullRequestProvider, ProviderError, token storage
   GitHub/             the GitHub implementation (GraphQL client, mappers) and its sign-in (GitHub/Auth)
 Sources/PRPulse       the macOS shell: status item, popover, wizard, settings

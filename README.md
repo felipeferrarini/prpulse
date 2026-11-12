@@ -20,7 +20,7 @@
 <p align="center">
   <a href="#install">Install</a> ·
   <a href="#what-you-get">What you get</a> ·
-  <a href="#review-pull-requests-with-claude">Claude</a> ·
+  <a href="#review-with-ai">Review with AI</a> ·
   <a href="#what-counts-as-needs-you">What counts</a> ·
   <a href="#privacy">Privacy</a> ·
   <a href="#development">Development</a> ·
@@ -52,7 +52,7 @@ A PR nobody has reviewed has a *Copy link* button (on hover), so you can nudge t
 
 Every list has a sort menu: priority (the default), oldest first, newest first, recent activity, project and, for the PRs to review, author. The choice is remembered. In **To review** you can also search the title and the branch, and filter by author and by project; those reset every time the popover opens.
 
-Every row has a **⋯** menu: open on GitHub, copy the link and, on the review list, *Review with Claude* and *Mute this repository* so it stops showing without opening Settings.
+Every row has a **⋯** menu: open on GitHub, copy the link and, on the review list, *Review with…* and *Mute this repository* so it stops showing without opening Settings.
 
 Pull requests in a GitHub **stack** are put together in one row, and you can tick several to review at once; see [Stacks, and several pull requests at once](#stacks-and-several-pull-requests-at-once).
 
@@ -106,7 +106,7 @@ Right click (or control click) the icon for the things you do without opening th
 
 ### Set up in a minute
 
-A short wizard connects your account, picks the organizations, asks what to leave out and how you want to be told, whether Claude may review for you, and which mascot lives on your screen. A live preview of the popover on the left reacts to every choice, so you see the effect of ignoring a repository before you finish.
+A short wizard connects your account, picks the organizations, asks what to leave out and how you want to be told, where reviews open, and which mascot lives on your screen. A live preview of the popover on the left reacts to every choice, so you see the effect of ignoring a repository before you finish.
 
 <p align="center">
   <picture>
@@ -149,7 +149,6 @@ A little friend lives in the bottom right corner of your screen and reacts to wh
 | Nothing to do | calm, and asleep after half an hour of quiet |
 | Something needs you | alert, with the count on its shoulder |
 | A new item arrived | jumps for joy and says it in a bubble, next to the system notification |
-| A review by Claude is ready, or waits for your OK | says so in a bubble, next to the notification |
 | A request, or one of your PRs, waits for 3 days or more | worried, with a sweat drop |
 | Refreshing | thinking |
 | Can't reach GitHub | sad |
@@ -171,33 +170,29 @@ Six characters come with the app. To add your own, drop a folder with a `sprites
 
 The moods are `calm`, `sleep`, `alert`, `joy`, `worried`, `think`, `sad` and `nudged`. Only `calm` is required; a mood you leave out plays `calm`, except `nudged`, which plays `alert` first. `make mascots` redraws the built-in ones.
 
-### Review pull requests with Claude
+### Review with AI
 
-On a pull request waiting for your review, the `⋯` menu (and a right click) has **Review with Claude**. It needs [Claude Code](https://claude.com/claude-code) installed and signed in (run `claude` once in a terminal and use `/login`), and [`gh`](https://cli.github.com) signed in, because the agent reads the pull request with it.
+On a pull request to review, the `⋯` menu (and a right click) has **Review with …**, with the destination you chose first and the others under **Review with…**. PRPulse does not run the review: it takes the pull request to the app or the terminal where you already work, with the request, the folder and the skill in place, and you go on from there with all the features of that app (approving commands, choosing the model, commenting on the pull request).
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/agents-dark.png">
-    <img src="docs/images/agents-light.png" alt="A review by Claude that is ready, with a box to ask a follow-up" width="520">
-  </picture>
-</p>
+| Destination | How it opens | Starts by itself |
+| --- | --- | --- |
+| **Claude Desktop** | a new Code session, with the request and the folder (`claude://code/new`) | no, you press Enter |
+| **Codex** (app) | a new chat, with the request and the folder as its workspace (`codex://threads/new`) | no, you press Enter |
+| **Cursor** (app) | opens the repository in Cursor, then the request in its chat | no, you press Enter |
+| **Claude Code**, **Codex**, **Cursor Agent** (terminal) | a terminal in the repository's folder running `claude`, `codex` or `agent` with the request | yes |
+| **Custom command** | the command you write, in a terminal | yes |
 
-- **In the background.** Nothing opens. A `✦` button appears in the panel header with the reviews in progress (what the agent is reading right now, and for how long) and the ones done. A notification and the mascot tell you when one is ready.
-- **Ask more.** Under a review that is ready there is a box to **ask a follow-up** in the same conversation. *Stop* interrupts an answer and keeps the review. You can also continue it in Claude Desktop or Terminal, copy it, or try again.
-- **Read-only.** The agent reads the code and the PR on its own (`gh pr view`, `gh pr diff`, `git log`…). Settings → Agents → **Approvals** decides the rest:
-  - **Automatic**, the default, uses Claude Code's [auto mode](https://code.claude.com/docs/en/permission-modes): its classifier decides what is safe, so reviews rarely wait for you. PRPulse keeps it read-only on top of that: commands run in a sandbox where the repository folder cannot be written and only GitHub can be reached (`~/.ssh`, `~/.aws` and `~/.gnupg` cannot be read), and editing files, changing git or writing to GitHub (`gh pr comment`, `gh api`…) is denied. If auto mode is not available to you, Claude Code asks instead.
-  - **Ask me** keeps the review waiting, with the command shown and a notification, until you press Allow or Deny (once, never remembered).
-- **The request.** It holds the pull request's address, the focus (performance, security, code and project conventions) and a note not to post anything on GitHub. Only the address and number go in, never the title or description, which other people wrote. If you have a review skill under `~/.claude` or in a plugin, the request names it; Settings → Agents lets you pick a skill and edit the text (`{url}`, `{urls}`, `{repo}`, `{number}` and `{skill}` are filled in).
-- **The folder.** The session opens in the clone of the repository (PRPulse looks in your usual folders and asks when it cannot find one), or in the **default project** of the organization if you set one: handy when you keep all of an organization's projects under one root folder and run your sessions there.
-- **Claude Desktop.** Without Claude Code, or from the menu's second item, **Open draft in Claude Desktop** opens a session with the request already written (you press Enter to send it). A review that ran in the background does not show in Claude Desktop's list by itself; Help → Troubleshooting → *Import Claude Code CLI sessions* there may bring it, and a note under each review says so.
-
-Cursor and Codex are planned.
+- **The terminal is yours.** Terminal destinations open a `.command` script with the system default, which is the app macOS uses for that kind of file (Terminal unless you changed it). Settings → Agents → **Terminal** lets you pick another one (iTerm, Ghostty and Warp are listed when installed, and **Other app…** takes any app). If an app does not run `.command` files, use a custom command.
+- **A custom command** can use `{prompt}`, `{url}`, `{urls}`, `{repo}`, `{number}` and `{folder}`; each goes in as one quoted word, so nothing a pull request says can become part of the command, and the request is added at the end when `{prompt}` is not there.
+- **The request.** It holds the pull request's address, the focus (performance, security, code and project conventions) and a note not to post anything on GitHub unless you ask. Only the address and number go in, never the title or description, which other people wrote. If you have a review skill under `~/.claude` or in a plugin, the Claude destinations name it; Settings → Agents lets you pick a skill and edit the text (`{url}`, `{urls}`, `{repo}`, `{number}` and `{skill}` are filled in).
+- **The folder.** The session opens in the clone of the repository (PRPulse looks in your usual folders and asks when it cannot find one), or in the **default project** of the organization if you set one: handy when you keep all of an organization's projects under one root folder and run your sessions there. Cursor's link has no folder, so its window is opened on the folder first.
+- **Limits of links.** An app link only fills in the message. Claude Desktop always asks you to confirm a folder that comes from a link, and a request that starts with `/` or is too long for a link (about 8,000 characters) is refused with a note instead of being cut.
 
 ### Stacks, and several pull requests at once
 
-Pull requests in a [GitHub stack](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs) are put together in one row, with a layers icon, how many there are, and a `1/3` on each of them. Click the row and the list becomes that stack, bottom first, with **Review the stack with Claude** (one conversation that sees all of them, from the bottom to the top) and **Review each with Claude** (one conversation for each). In a list that has only some of a stack, the row says so (`2 of 4 PRs of a stack`). A host that does not have stacks, such as GitHub Enterprise Server, shows the plain list.
+Pull requests in a [GitHub stack](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs) are put together in one row, with a layers icon, how many there are, and a `1/3` on each of them. Click the row and the list becomes that stack, bottom first, with **Review the stack** (one conversation that sees all of them, from the bottom to the top) and, for a terminal destination, **Review each** (one conversation for each). In a list that has only some of a stack, the row says so (`2 of 4 PRs of a stack`). A host that does not have stacks, such as GitHub Enterprise Server, shows the plain list.
 
-For pull requests that belong together without being a stack, for example one in each repository of the same feature, **Select** (above the list) puts a checkbox on every row. Tick the ones you want, a stack ticks all of its pull requests, then choose **Review together** or **Review each**. A review of several repositories opens in the first one's folder and can read the clones of the others (never write to them).
+For pull requests that belong together without being a stack, for example one in each repository of the same feature, **Select** (above the list) puts a checkbox on every row. Tick the ones you want, a stack ticks all of its pull requests, then choose **Review together** or, for a terminal destination, **Review each**. A review of several repositories opens in the first one's folder.
 
 <table>
   <tr>
@@ -287,7 +282,7 @@ You need macOS 14 or later and the Swift toolchain (Xcode or the Command Line To
 2. **Organizations:** pick one or more. The ones you worked in most over the last 90 days come first, with a count.
 3. **Exceptions:** tick repositories to ignore (they are listed from the organization) and edit the bot accounts to skip.
 4. **Settings:** refresh interval, notifications, open at login.
-5. **Reviews with Claude:** turn them on, see whether Claude Desktop and Claude Code are ready, and choose who approves (Automatic or Ask me).
+5. **Reviews with AI:** turn them on and choose where they open (Claude Desktop, Codex, Cursor, a terminal or your own command).
 6. **Mascot:** pick the character that lives in the corner of your screen, or turn it off.
 
 > [!NOTE]
@@ -336,7 +331,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 
 - PRPulse talks **only to GitHub** (`api.github.com` and `github.com`) with your own credentials. There is no server of ours, no analytics and no telemetry.
 - A personal token is stored in the **macOS Keychain**. With the `gh` option, the token is read from `gh` on demand and never stored by PRPulse.
-- **Review with Claude** runs Claude Code on your Mac, or hands the request to Claude Desktop. PRPulse sends nothing anywhere for it: only the PR's address and number go in the request, what Claude does with it follows its own terms, and a background review uses your Claude plan like any other session. In the Automatic mode its commands run in a sandbox that cannot write to your repository and reaches only GitHub. The reviews are kept in `~/Library/Application Support/PRPulse/` (the latest twenty), and nothing else is stored.
+- **Review with AI** only opens an app or a terminal on your Mac. PRPulse sends nothing anywhere for it: the PR's address and number go in the request, and what the app does with it follows its own terms. The request is written to a temporary `.command` file for the terminal destinations, which PRPulse deletes after an hour.
 - The only thing PRPulse writes to GitHub is a **nudge**, and only when you ask for one: a comment on a pull request and, when the nudge is to get a review, a request for a new review from that person. Nothing else is created, edited or deleted.
 - Update checks read one small feed file from your releases page on `github.com`. Nothing about you or your Mac is sent.
 - Updates are signed with a key only the maintainer holds, and the app refuses anything that doesn't match.
@@ -351,7 +346,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 | **Exceptions** | repositories to ignore, your list of bot accounts, and two switches: ignore comments from bots, ignore PRs opened by bots |
 | **Mascot** | show it or not, which character, its size, where it sits, and your own characters |
 | **Notifications** | alerts for new pull requests, and for nudges: react or not, play a sound or not, which sound (a macOS one, or a file in the sounds folder) |
-| **Agents** | turn "Review with Claude" on or off, check Claude Desktop and Claude Code, choose who approves (Automatic or Ask me), pick the review skill, set a default project folder per organization, edit the request, and the folders chosen for single repositories |
+| **Agents** | turn "Review with AI" on or off, choose where reviews open and which terminal runs the commands, write a custom command, pick the review skill, set a default project folder per organization, edit the request, and the folders chosen for single repositories |
 | **General** | refresh interval (1 to 30 minutes), popover layout, open at login, global shortcut, automatic updates, run the setup again |
 | **Diagnostics** | version, last sync, GitHub request budget, and a button that copies all of it for a bug report (no token, organization or PR names) |
 | **What's new** | what changed in each version of PRPulse, from the changelog that ships with the app |
@@ -360,7 +355,7 @@ Every row shows how long the PR has been open: neutral under a day, amber from o
 
 - Sign-in through the browser is not available yet; use `gh` or a token.
 - The app is signed ad hoc, so after each update macOS may ask again whether PRPulse can read its Keychain item. Choose **Always Allow**; if you deny it, the icon shows the error state.
-- Reviews with Claude need Claude Code and `gh` signed in; Cursor and Codex are not supported yet. Several background reviews at once use your Claude plan faster, and *Review each* on a big stack starts one for every pull request.
+- Review with AI needs the app or the command you chose installed. *Review each* needs a terminal destination, because an app link only fills in one message at a time.
 - Stacks come from GitHub's own stacked pull requests. On a host without them, such as GitHub Enterprise Server, every pull request shows on its own row.
 - Versions before 0.3.0 don't update themselves: install the latest once, by hand or with `brew upgrade`.
 
@@ -396,7 +391,6 @@ Ideas, in no particular order. Open an issue if one matters to you.
 - [ ] Sign in with GitHub in the browser (device flow)
 - [ ] Snooze a PR for a while, not only mute its repository
 - [ ] A shortcut you can change
-- [ ] Cursor and Codex as review agents
 - [ ] A limit for how many background reviews run at once
 
 ## Contributing

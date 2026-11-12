@@ -22,13 +22,8 @@ final class AppRuntime: ObservableObject {
     @Published private(set) var mascotPlacementToken = 0
 
     let settings = SettingsStore()
-    let reviewAgent: any ReviewAgent = ClaudeDesktopAgent()
-    let agents = AgentRunStore()
-    @Published var cliState = CLIState.unknown
-    var lastCLICheck = Date.distantPast
     /// Set by the popover controller, which owns the panel.
     var onOpenPanel: () -> Void = {}
-    private var agentObservation: AnyCancellable?
     let model: AppModel?
     let notifier = Notifier()
     private let updater: SoftwareUpdater
@@ -83,17 +78,8 @@ final class AppRuntime: ObservableObject {
             shortcut = GlobalShortcut { [weak self] in self?.onShortcut() }
             shortcut?.setEnabled(settings.settings.globalShortcut)
         }
-        agents.onFinished = { [weak self] run in self?.agentFinished(run) }
-        agents.onNeedsApproval = { [weak self] run in self?.agentNeedsApproval(run) }
-        notifier.onOpenRun = { [weak self] id in self?.openAgentRun(id) }
-        agentObservation = agents.objectWillChange.sink { [weak self] _ in
-            DispatchQueue.main.async {
-                self?.objectWillChange.send()
-                self?.refreshMascot()
-            }
-        }
         if DemoMode.current == nil {
-            refreshCLI(force: true)
+            Self.removeBackgroundReviewHistory()
             DispatchQueue.main.async { [weak self] in self?.announceUpdate() }
         }
         mascotTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
@@ -213,9 +199,8 @@ final class AppRuntime: ObservableObject {
                 onRedoSetup: { [weak self] in self?.redoSetup() },
                 onCheckForUpdates: { [weak self] in self?.checkForUpdates() },
                 onResetMascotPosition: { [weak self] in self?.resetMascotPosition() },
-                agentAvailability: { [weak self] in self?.reviewAgent.availability() ?? .notInstalled },
-                cliStatus: { [weak self] in await self?.checkCLI() ?? .unknown },
-                onTestReviewAgent: { [weak self] in self?.testReviewAgent() },
+                reviewStatus: { [weak self] in self?.destinationStatuses() ?? [:] },
+                onTestReview: { [weak self] in self?.testReviewDestination() },
                 diagnostics: { [weak self] in self?.diagnosticsReport() ?? .sample },
                 onClose: { [weak self] in self?.windows.close(id: Self.settingsWindow) }
             )
@@ -269,9 +254,8 @@ final class AppRuntime: ObservableObject {
                 onFinish: { [weak self] in await self?.finishSetup(setup.draft) },
                 onClose: { [weak self] in self?.windows.close(id: Self.setupWindow) },
                 onCancel: { [weak self] in self?.windows.close(id: Self.setupWindow) },
-                agentAvailability: { [weak self] in self?.reviewAgent.availability() ?? .notInstalled },
-                cliStatus: { [weak self] in await self?.checkCLI() ?? .unknown },
-                onTestReviewAgent: { [weak self] in self?.testReviewAgent() }
+                reviewStatus: { [weak self] in self?.destinationStatuses() ?? [:] },
+                onTestReview: { [weak self] in self?.testReviewDestination() }
             )
         }
     }
@@ -374,7 +358,7 @@ final class AppRuntime: ObservableObject {
             isOffline: data.isOffline,
             summary: data.summary,
             freshUntil: data.freshUntil,
-            isRefreshing: (model?.isRefreshing ?? false) || agents.hasRunning,
+            isRefreshing: model?.isRefreshing ?? false,
             upToDateSince: upToDateSince,
             isNudged: !(model?.pendingNudges.isEmpty ?? true)
         )
@@ -428,5 +412,11 @@ final class AppRuntime: ObservableObject {
     private func tick() {
         pulsePhase = (Date().timeIntervalSince1970 * 0.9).truncatingRemainder(dividingBy: 1)
         refreshIcon()
+    }
+
+    /// The history of the reviews that ran inside PRPulse, which no longer exist, is of no use to anyone.
+    private static func removeBackgroundReviewHistory() {
+        guard let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
+        try? FileManager.default.removeItem(at: support.appendingPathComponent("PRPulse/agent-runs.json"))
     }
 }

@@ -76,7 +76,9 @@ struct SettingsChanges {
         if draft.reviewAgentEnabled != saved.reviewAgentEnabled { pages.append(.agents) }
         if draft.reviewSkill != saved.reviewSkill { pages.append(.agents) }
         if draft.reviewPrompt != saved.reviewPrompt { pages.append(.agents) }
-        if draft.reviewApproval != saved.reviewApproval { pages.append(.agents) }
+        if draft.reviewDestination != saved.reviewDestination { pages.append(.agents) }
+        if draft.reviewTerminal != saved.reviewTerminal { pages.append(.agents) }
+        if draft.reviewCustomCommand != saved.reviewCustomCommand { pages.append(.agents) }
         if draft.reviewFolders != saved.reviewFolders { pages.append(.agents) }
         if draft.reviewOrgFolders != saved.reviewOrgFolders { pages.append(.agents) }
         if draft.showNewsAfterUpdate != saved.showNewsAfterUpdate { pages.append(.news) }
@@ -94,9 +96,8 @@ struct SettingsView: View {
     let onRedoSetup: () -> Void
     let onCheckForUpdates: () -> Void
     let onResetMascotPosition: () -> Void
-    let agentAvailability: () -> AgentAvailability
-    let cliStatus: () async -> CLIState
-    let onTestReviewAgent: () -> Void
+    let reviewStatus: () -> [ReviewDestination: Bool]
+    let onTestReview: () -> Void
     let diagnostics: () -> DiagnosticsReport
     let onClose: () -> Void
 
@@ -116,9 +117,8 @@ struct SettingsView: View {
         onRedoSetup: @escaping () -> Void,
         onCheckForUpdates: @escaping () -> Void = {},
         onResetMascotPosition: @escaping () -> Void = {},
-        agentAvailability: @escaping () -> AgentAvailability = { .ready },
-        cliStatus: @escaping () async -> CLIState = { .unknown },
-        onTestReviewAgent: @escaping () -> Void = {},
+        reviewStatus: @escaping () -> [ReviewDestination: Bool] = { [:] },
+        onTestReview: @escaping () -> Void = {},
         diagnostics: @escaping () -> DiagnosticsReport = { .sample },
         onClose: @escaping () -> Void = {}
     ) {
@@ -127,9 +127,8 @@ struct SettingsView: View {
         self.onRedoSetup = onRedoSetup
         self.onCheckForUpdates = onCheckForUpdates
         self.onResetMascotPosition = onResetMascotPosition
-        self.agentAvailability = agentAvailability
-        self.cliStatus = cliStatus
-        self.onTestReviewAgent = onTestReviewAgent
+        self.reviewStatus = reviewStatus
+        self.onTestReview = onTestReview
         self.diagnostics = diagnostics
         self.onClose = onClose
         _page = LocalState(initialValue: initialPage)
@@ -242,7 +241,7 @@ struct SettingsView: View {
                 case .general: GeneralContent(model: model, onRedoSetup: onRedoSetup, onCheckForUpdates: onCheckForUpdates)
                 case .notifications: NotificationsContent(model: model)
                 case .mascot: MascotContent(model: model, onResetPosition: onResetMascotPosition)
-                case .agents: AgentsContent(model: model, availability: agentAvailability, cliStatus: cliStatus, onTest: onTestReviewAgent)
+                case .agents: AgentsContent(model: model, status: reviewStatus, onTest: onTestReview)
                 case .diagnostics: DiagnosticsContent(report: diagnostics)
                 case .news: NewsContent(showAfterUpdate: $model.draft.showNewsAfterUpdate)
                 }

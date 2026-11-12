@@ -1,23 +1,22 @@
 import PRPulseCore
 import SwiftUI
 
-/// The agents that can be asked to review a pull request, and how the request is made.
+/// Where "Review with…" takes a pull request, and what goes with it.
 struct AgentsContent: View {
     @ObservedObject var model: SetupModel
-    let availability: () -> AgentAvailability
-    let cliStatus: () async -> CLIState
+    let status: () -> [ReviewDestination: Bool]
     let onTest: () -> Void
-    /// The setup wizard asks only for what decides whether and how reviews run; the rest is in Settings.
+    /// The setup wizard asks only for what decides whether and where reviews open; the rest is in Settings.
     var isCompact = false
 
-    @LocalState private var status = AgentAvailability.ready
-    @LocalState private var cli = CLIState.unknown
+    @LocalState private var statuses: [ReviewDestination: Bool] = [:]
     @LocalState private var skills: [ReviewSkill] = []
 
+    private var destination: ReviewDestination { model.draft.reviewDestination }
     private var automaticSkill: ReviewSkill? { ReviewSkillCatalog.automatic(from: skills) }
 
     private var resolvedSkill: ReviewSkill? {
-        ReviewSkillCatalog.resolve(choice: model.draft.reviewSkill, from: skills)
+        destination.namesSkills ? ReviewSkillCatalog.resolve(choice: model.draft.reviewSkill, from: skills) : nil
     }
 
     private var defaultPrompt: String {
@@ -27,9 +26,9 @@ struct AgentsContent: View {
     var body: some View {
         VStack(spacing: 0) {
             enabledRow.staggered(2)
-            statusRow.staggered(3)
-            cliRow.staggered(4)
-            approvalRow.staggered(5)
+            destinationRow.staggered(3)
+            if destination == .custom { customRow.staggered(4) }
+            if destination.style == .terminal { terminalRow.staggered(5) }
             if !isCompact {
                 skillRow.staggered(6)
                 projectRow.staggered(7)
@@ -38,8 +37,7 @@ struct AgentsContent: View {
             }
         }
         .task {
-            status = availability()
-            cli = await cliStatus()
+            statuses = status()
             let home = FileManager.default.homeDirectoryForCurrentUser
             skills = await Task.detached { ReviewSkillCatalog.discover(home: home) }.value
         }
@@ -57,82 +55,112 @@ struct AgentsContent: View {
         .overlay(alignment: .bottom) { divider }
     }
 
-    private var statusRow: some View {
-        HStack(spacing: 14) {
-            label(tr("agents.status.title"), detail: status == .ready ? tr("agents.status.ready") : tr("agents.status.missing"))
-            Spacer()
-            Circle().fill(status == .ready ? WizardPalette.success : Palette.ci).frame(width: 8, height: 8)
-            Button(action: onTest) {
-                Text(tr("agents.test"))
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(status == .ready ? WizardPalette.accent : WizardPalette.ink3)
-            }
-            .buttonStyle(.plain)
-            .disabled(status != .ready)
-        }
-        .padding(.vertical, 14)
-        .overlay(alignment: .bottom) { divider }
-    }
-
-    private var cliRow: some View {
-        HStack(spacing: 14) {
-            label(tr("agents.cli.title"), detail: cliDetail)
-            Spacer()
-            Circle().fill(cli.isReady ? WizardPalette.success : (cli == .unknown ? WizardPalette.ink3 : Palette.ci)).frame(width: 8, height: 8)
-            Button { Task { cli = .unknown; cli = await cliStatus() } } label: {
-                Text(tr("agents.cli.check")).font(.system(size: 13, weight: .semibold)).foregroundStyle(WizardPalette.accent)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.vertical, 14)
-        .overlay(alignment: .bottom) { divider }
-    }
-
-    private var cliDetail: String {
-        switch cli {
-        case .unknown: tr("agents.cli.checking")
-        case .missing: tr("agents.cli.missing")
-        case .signedOut: tr("agents.cli.signedOut")
-        case .ready(let account): account.map { tr("agents.cli.ready", $0) } ?? tr("agents.cli.readyNoAccount")
-        }
-    }
-
-    private var approvalRow: some View {
+    private var destinationRow: some View {
         HStack(alignment: .top, spacing: 14) {
-            label(tr("agents.approval.mode.title"), detail: tr(model.draft.reviewApproval == .automatic ? "agents.approval.mode.automaticDetail" : "agents.approval.mode.askDetail"))
+            label(tr("agents.dest.title"), detail: destination.detail + (isInstalled(destination) ? "" : "\n" + tr("agents.dest.missing")))
             Spacer()
-            Menu {
-                approvalItem(.automatic, title: tr("agents.approval.mode.automatic"))
-                approvalItem(.ask, title: tr("agents.approval.mode.ask"))
-            } label: {
-                HStack(spacing: 6) {
-                    Text(tr(model.draft.reviewApproval == .automatic ? "agents.approval.mode.automatic" : "agents.approval.mode.ask"))
-                        .font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold))
+            VStack(alignment: .trailing, spacing: 10) {
+                menuButton(title: destination.title) {
+                    ForEach(ReviewDestination.allCases, id: \.self) { choice in
+                        Button { model.draft.reviewDestination = choice } label: {
+                            let title = isInstalled(choice) ? choice.title : tr("agents.dest.notInstalled", choice.title)
+                            if destination == choice { Label(title, systemImage: "checkmark") } else { Text(title) }
+                        }
+                    }
                 }
+                Button(action: onTest) {
+                    Text(tr("agents.test")).font(.system(size: 13, weight: .semibold)).foregroundStyle(isInstalled(destination) ? WizardPalette.accent : WizardPalette.ink3)
+                }
+                .buttonStyle(.plain)
+                .disabled(!isInstalled(destination))
+                .help(tr("agents.test.help"))
+            }
+        }
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) { divider }
+    }
+
+    private func isInstalled(_ choice: ReviewDestination) -> Bool {
+        statuses.isEmpty ? true : statuses[choice] ?? true
+    }
+
+    private var terminalRow: some View {
+        HStack(alignment: .top, spacing: 14) {
+            label(tr("agents.terminal.title"), detail: tr("agents.terminal.detail"))
+            Spacer()
+            menuButton(title: ReviewRunner.terminalName(for: model.draft.reviewTerminal)) {
+                terminalItem("", title: tr("agents.terminal.system"))
+                ForEach(ReviewRunner.installedTerminals(), id: \.id) { terminalItem($0.id, title: $0.name) }
+                if isOtherTerminal { terminalItem(model.draft.reviewTerminal, title: ReviewRunner.terminalName(for: model.draft.reviewTerminal)) }
+                Divider()
+                Button(tr("agents.terminal.other"), action: chooseTerminal)
+            }
+        }
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) { divider }
+    }
+
+    private var isOtherTerminal: Bool {
+        let setting = model.draft.reviewTerminal
+        return !setting.isEmpty && !ReviewRunner.installedTerminals().contains { $0.id == setting }
+    }
+
+    private func terminalItem(_ setting: String, title: String) -> some View {
+        Button { model.draft.reviewTerminal = setting } label: {
+            if model.draft.reviewTerminal == setting { Label(title, systemImage: "checkmark") } else { Text(title) }
+        }
+    }
+
+    private func chooseTerminal() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.message = tr("agents.terminal.panel")
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        model.draft.reviewTerminal = url.path
+    }
+
+    private var customRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            label(tr("agents.custom.title"), detail: tr("agents.custom.detail", CustomCommand.placeholders.joined(separator: " ")))
+            TextField(tr("agents.custom.placeholder"), text: $model.draft.reviewCustomCommand)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13, design: .monospaced))
                 .foregroundStyle(WizardPalette.ink)
                 .padding(.horizontal, 12)
-                .frame(height: 32)
+                .frame(height: 38)
                 .background(WizardPalette.card, in: RoundedRectangle(cornerRadius: 9))
                 .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(WizardPalette.line))
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
         }
         .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .bottom) { divider }
     }
 
-    private func approvalItem(_ choice: ReviewApproval, title: String) -> some View {
-        Button { model.draft.reviewApproval = choice } label: {
-            if model.draft.reviewApproval == choice { Label(title, systemImage: "checkmark") } else { Text(title) }
+    private func menuButton<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        Menu {
+            content()
+        } label: {
+            HStack(spacing: 6) {
+                Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundStyle(WizardPalette.ink)
+            .padding(.horizontal, 12)
+            .frame(height: 32)
+            .background(WizardPalette.card, in: RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(WizardPalette.line))
         }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
     }
 
     private var skillRow: some View {
         HStack(alignment: .top, spacing: 14) {
-            label(tr("agents.skill.title"), detail: tr("agents.skill.detail"))
+            label(tr("agents.skill.title"), detail: destination.namesSkills ? tr("agents.skill.detail") : tr("agents.skill.claudeOnly"))
             Spacer()
             Menu {
                 skillItem(ReviewSkillCatalog.automaticChoice, title: automaticTitle)
@@ -155,6 +183,8 @@ struct AgentsContent: View {
             .fixedSize()
         }
         .padding(.vertical, 14)
+        .opacity(destination.namesSkills ? 1 : 0.45)
+        .allowsHitTesting(destination.namesSkills)
         .overlay(alignment: .bottom) { divider }
     }
 

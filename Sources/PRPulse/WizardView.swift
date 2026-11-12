@@ -10,9 +10,8 @@ struct WizardView: View {
     let onFinish: () async -> String?
     let onClose: () -> Void
     let onCancel: () -> Void
-    let agentAvailability: () -> AgentAvailability
-    let cliStatus: () async -> CLIState
-    let onTestReviewAgent: () -> Void
+    let reviewStatus: () -> [ReviewDestination: Bool]
+    let onTestReview: () -> Void
 
     @LocalState private var step: SetupStep
     @LocalState private var slide: Int
@@ -32,17 +31,15 @@ struct WizardView: View {
         onFinish: @escaping () async -> String?,
         onClose: @escaping () -> Void = {},
         onCancel: @escaping () -> Void = {},
-        agentAvailability: @escaping () -> AgentAvailability = { .ready },
-        cliStatus: @escaping () async -> CLIState = { .unknown },
-        onTestReviewAgent: @escaping () -> Void = {}
+        reviewStatus: @escaping () -> [ReviewDestination: Bool] = { [:] },
+        onTestReview: @escaping () -> Void = {}
     ) {
         self.model = model
         self.onFinish = onFinish
         self.onClose = onClose
         self.onCancel = onCancel
-        self.agentAvailability = agentAvailability
-        self.cliStatus = cliStatus
-        self.onTestReviewAgent = onTestReviewAgent
+        self.reviewStatus = reviewStatus
+        self.onTestReview = onTestReview
         _step = LocalState(initialValue: initialStep)
         _slide = LocalState(initialValue: initialSlide)
         _failure = LocalState(initialValue: initialFailure)
@@ -83,7 +80,7 @@ struct WizardView: View {
         case .organization: OrganizationBody(model: model)
         case .exceptions: ExceptionsBody(model: model)
         case .general: GeneralBody(model: model)
-        case .agents: AgentsBody(model: model, availability: agentAvailability, cliStatus: cliStatus, onTest: onTestReviewAgent)
+        case .agents: AgentsBody(model: model, status: reviewStatus, onTest: onTestReview)
         case .mascot: MascotBody(model: model)
         case .done: DoneBody(model: model)
         }

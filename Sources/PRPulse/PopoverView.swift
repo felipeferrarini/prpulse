@@ -9,22 +9,11 @@ struct PopoverView: View {
     var showsBorder = true
     var openToken = 0
     var onMute: (PullRequestRef) -> Void = { _ in }
-    /// Set when an agent can be asked to review the pull requests waiting for the viewer.
-    var onReview: ((PullRequestSnapshot) -> Void)?
-    /// Set when the main action runs in the background and a draft in Claude Desktop is the other choice.
-    var onReviewInDesktop: ((PullRequestSnapshot) -> Void)?
-    /// Set when several pull requests can be given to an agent as one: a whole stack, or the ones the viewer chose.
-    var onReviewGroup: (([PullRequestSnapshot], ReviewRequest.Scope) -> Void)?
-    /// Set when several pull requests can each be given to an agent.
-    var onReviewEach: (([PullRequestSnapshot]) -> Void)?
-    var agentRuns = AgentRunList()
-    var agentActions: AgentActions?
-    var agentFocus = AgentFocus()
     /// The live popover is built anew each time it opens, so it plays its entrance when it appears.
     var entersOnAppear = false
     /// Called when something inside the popover changes what it needs to show, so its window can follow.
     var onContentChange: () -> Void = {}
-    /// What the pictures of the README start with: a stack opened, pull requests ticked, the agents with a review open.
+    /// What the pictures of the README start with: a stack opened, pull requests ticked, pull requests ticked.
     var initialStack: (tab: PopoverTab, key: StackKey)?
     var initialSelection: Set<PullRequestRef>?
     let onRefresh: () -> Void
@@ -34,8 +23,6 @@ struct PopoverView: View {
     @LocalState private var filter: ActionLane?
     @LocalState private var reviewFilter = ReviewFilter()
     @LocalState private var entered = true
-    @LocalState private var showsAgents = false
-    @LocalState private var openRun: UUID?
 
     init(
         data: ViewData,
@@ -44,18 +31,10 @@ struct PopoverView: View {
         showsBorder: Bool = true,
         openToken: Int = 0,
         onMute: @escaping (PullRequestRef) -> Void = { _ in },
-        onReview: ((PullRequestSnapshot) -> Void)? = nil,
-        onReviewInDesktop: ((PullRequestSnapshot) -> Void)? = nil,
-        onReviewGroup: (([PullRequestSnapshot], ReviewRequest.Scope) -> Void)? = nil,
-        onReviewEach: (([PullRequestSnapshot]) -> Void)? = nil,
-        agentRuns: AgentRunList = AgentRunList(),
-        agentActions: AgentActions? = nil,
-        agentFocus: AgentFocus = AgentFocus(),
         entersOnAppear: Bool = false,
         onContentChange: @escaping () -> Void = {},
         initialStack: (tab: PopoverTab, key: StackKey)? = nil,
         initialSelection: Set<PullRequestRef>? = nil,
-        initialAgentRun: UUID? = nil,
         initialTab: PopoverTab = .review,
         initialFilter: ActionLane? = nil,
         initialReviewFilter: ReviewFilter = ReviewFilter(),
@@ -68,13 +47,6 @@ struct PopoverView: View {
         self.showsBorder = showsBorder
         self.openToken = openToken
         self.onMute = onMute
-        self.onReview = onReview
-        self.onReviewInDesktop = onReviewInDesktop
-        self.onReviewGroup = onReviewGroup
-        self.onReviewEach = onReviewEach
-        self.agentRuns = agentRuns
-        self.agentActions = agentActions
-        self.agentFocus = agentFocus
         self.entersOnAppear = entersOnAppear
         self.onContentChange = onContentChange
         self.initialStack = initialStack
@@ -85,8 +57,6 @@ struct PopoverView: View {
         _filter = LocalState(initialValue: initialFilter)
         _reviewFilter = LocalState(initialValue: initialReviewFilter)
         _entered = LocalState(initialValue: !entersOnAppear)
-        _showsAgents = LocalState(initialValue: initialAgentRun != nil)
-        _openRun = LocalState(initialValue: initialAgentRun)
     }
 
     private static let singleWidth: CGFloat = 560
@@ -104,10 +74,6 @@ struct PopoverView: View {
         .overlay { if showsBorder { RoundedRectangle(cornerRadius: PopoverChrome.cornerRadius, style: .continuous).strokeBorder(Palette.line) } }
         .focusEffectDisabled()
         .onChange(of: openToken) { _, _ in popoverOpened() }
-        .onChange(of: agentFocus.token) { _, _ in applyAgentFocus() }
-        .onChange(of: showsAgents) { _, _ in onContentChange() }
-        .onChange(of: openRun) { _, _ in onContentChange() }
-        .onChange(of: agentRuns) { _, _ in onContentChange() }
         .onAppear { if entersOnAppear { popoverOpened() } }
     }
 
@@ -138,13 +104,11 @@ struct PopoverView: View {
     private func summaryContent(_ summary: Summary) -> some View {
         let isSingle = layout == .single
         return VStack(spacing: 0) {
-            PopoverHeader(org: data.orgLabel, total: summary.total, layout: $layout, agentRuns: agentRuns, showsAgents: $showsAgents)
+            PopoverHeader(org: data.orgLabel, total: summary.total, layout: $layout)
                 .padding(.horizontal, 14)
                 .padding(.top, 14)
                 .padding(.bottom, 12)
-            if showsAgents, let agentActions {
-                AgentsPane(runs: agentRuns, actions: agentActions, openRun: $openRun)
-            } else if summary.total == 0 && summary.mine.isEmpty && summary.review.isEmpty {
+            if summary.total == 0 && summary.mine.isEmpty && summary.review.isEmpty {
                 EmptyStateView()
             } else {
                 TabSegment(tab: $tab, reviewCount: summary.awaitingReviewCount, mineCount: summary.mine.count)
@@ -153,7 +117,7 @@ struct PopoverView: View {
                     .folded(!isSingle, height: 50)
                 LaneFilterBar(lanes: summary.activeLanes, summary: summary, selection: laneSelection(summary))
                     .padding(.bottom, 12)
-                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, sorts: $sorts, reviewFilter: $reviewFilter, entered: entered, showsOwner: data.showsOwner, onMute: onMute, onReview: onReview, onReviewInDesktop: onReviewInDesktop, onReviewGroup: onReviewGroup, onReviewEach: onReviewEach, initialStack: initialStack, initialSelection: initialSelection, onContentChange: onContentChange)
+                SummaryPanes(summary: summary, layout: layout, tab: tab, filter: filter, sorts: $sorts, reviewFilter: $reviewFilter, entered: entered, showsOwner: data.showsOwner, onMute: onMute, initialStack: initialStack, initialSelection: initialSelection, onContentChange: onContentChange)
             }
         }
     }
@@ -182,21 +146,8 @@ struct PopoverView: View {
             filter = nil
             reviewFilter = ReviewFilter()
             tab = (data.summary?.awaitingReviewCount ?? 0) == 0 && hasMineContent ? .mine : .review
-            showsAgents = false
-            openRun = nil
         }
         DispatchQueue.main.async { entered = true }
-        applyAgentFocus()
-    }
-
-    /// A review was just started, or its notification was opened: show the agents, and the review if there is one.
-    private func applyAgentFocus() {
-        guard agentFocus.isPending, let agentActions else { return }
-        withAnimation(PopoverMotion.spring) {
-            showsAgents = true
-            openRun = agentFocus.run
-        }
-        agentActions.consumeFocus()
     }
 }
 
@@ -218,10 +169,7 @@ private struct SummaryPanes: View {
     let entered: Bool
     let showsOwner: Bool
     let onMute: (PullRequestRef) -> Void
-    let onReview: ((PullRequestSnapshot) -> Void)?
-    let onReviewInDesktop: ((PullRequestSnapshot) -> Void)?
-    let onReviewGroup: (([PullRequestSnapshot], ReviewRequest.Scope) -> Void)?
-    let onReviewEach: (([PullRequestSnapshot]) -> Void)?
+    @Environment(\.reviewing) private var reviewing
     var initialStack: (tab: PopoverTab, key: StackKey)?
     var initialSelection: Set<PullRequestRef>?
     let onContentChange: () -> Void
@@ -239,7 +187,7 @@ private struct SummaryPanes: View {
 
     private var isSingle: Bool { layout == .single }
     private var paneWidth: CGFloat { isSingle ? Self.singleWidth : Self.splitWidth / 2 }
-    private var canSelect: Bool { onReviewGroup != nil || onReviewEach != nil }
+    private var canSelect: Bool { reviewing.canSelect }
 
     private var listHeight: CGFloat {
         let tallest = max(heights[.review] ?? 0, heights[.mine] ?? 0)
@@ -315,8 +263,6 @@ private struct SummaryPanes: View {
         PullRequestRow(
             model: row, isDimmed: isDimmed(row), entranceIndex: index, entered: entered,
             onMute: { onMute(row.pr.ref) },
-            onReview: onReview.map { review in { review(row.pr) } },
-            onReviewInDesktop: onReviewInDesktop.map { review in { review(row.pr) } },
             selection: selection(of: row, kind: kind)
         )
     }
@@ -361,13 +307,11 @@ private struct SummaryPanes: View {
     }
 
     @ViewBuilder private func stackActions(_ group: StackGroup<RowModel>, _ kind: PopoverTab) -> some View {
-        if kind == .review, onReviewGroup != nil || onReviewEach != nil {
+        if kind == .review, reviewing.isAvailable {
             HStack(spacing: 8) {
-                if let onReviewGroup {
-                    PillButton(title: tr("stack.review"), symbol: "sparkles") { onReviewGroup(group.members.map(\.pr), .stack) }
-                }
-                if let onReviewEach {
-                    PillButton(title: tr("stack.reviewEach"), symbol: "list.bullet") { onReviewEach(group.members.map(\.pr)) }
+                PillButton(title: tr("stack.review"), symbol: "sparkles") { reviewing.reviewTogether(group.members.map(\.pr), .stack) }
+                if reviewing.canReviewEach {
+                    PillButton(title: tr("stack.reviewEach"), symbol: "list.bullet") { reviewing.reviewEach(group.members.map(\.pr)) }
                 }
                 Spacer(minLength: 0)
             }
@@ -396,11 +340,11 @@ private struct SummaryPanes: View {
 
     private func actions(for group: StackGroup<RowModel>, kind: PopoverTab) -> [RowAction] {
         var actions: [RowAction] = []
-        if kind == .review, let onReviewGroup {
-            actions.append(RowAction(id: "stack", title: tr("stack.review"), symbol: "sparkles") { onReviewGroup(group.members.map(\.pr), .stack) })
-        }
-        if kind == .review, let onReviewEach {
-            actions.append(RowAction(id: "each", title: tr("stack.reviewEach"), symbol: "list.bullet") { onReviewEach(group.members.map(\.pr)) })
+        if kind == .review, reviewing.isAvailable {
+            actions.append(RowAction(id: "stack", title: tr("stack.review"), symbol: "sparkles") { reviewing.reviewTogether(group.members.map(\.pr), .stack) })
+            if reviewing.canReviewEach {
+                actions.append(RowAction(id: "each", title: tr("stack.reviewEach"), symbol: "list.bullet") { reviewing.reviewEach(group.members.map(\.pr)) })
+            }
         }
         actions.append(RowAction(id: "open", title: tr("stack.open"), symbol: "arrow.up.right.square") { NSWorkspace.shared.open(group.bottom.url) })
         actions.append(RowAction(id: "copy", title: tr("stack.copy"), symbol: "link") { Self.copyLinks(of: group) })
@@ -455,17 +399,15 @@ private struct SummaryPanes: View {
         return HStack(spacing: 8) {
             Text(tr("batch.count", chosen.count)).font(.system(size: 12)).foregroundStyle(.secondary)
             Spacer(minLength: 0)
-            if let onReviewEach {
+            if reviewing.canReviewEach {
                 PillButton(title: tr("batch.each"), symbol: "list.bullet", isEnabled: !chosen.isEmpty) {
-                    onReviewEach(chosen)
+                    reviewing.reviewEach(chosen)
                     endSelecting()
                 }
             }
-            if let onReviewGroup {
-                PillButton(title: tr("batch.together"), symbol: "sparkles", isEnabled: chosen.count > 1) {
-                    onReviewGroup(chosen, .together)
-                    endSelecting()
-                }
+            PillButton(title: tr("batch.together"), symbol: "sparkles", isEnabled: chosen.count > 1) {
+                reviewing.reviewTogether(chosen, .together)
+                endSelecting()
             }
         }
         .padding(.horizontal, 14)

@@ -7,103 +7,70 @@ private enum ReviewFolder {
     case cancel
 }
 
-/// Asking an agent on this Mac to review a pull request: in the background through the Claude Code command line when
-/// it is ready, or as a draft in Claude Desktop.
+/// Taking a pull request to the app or the terminal the viewer chose, with the words, the folder and the skill in place.
 extension AppRuntime {
-    private var desktopIsReady: Bool { reviewAgent.availability() == .ready }
+    // MARK: What can be done
 
-    var canReview: Bool {
-        settings.settings.reviewAgentEnabled && (cliState.isReady || desktopIsReady)
+    private func isReady(_ destination: ReviewDestination) -> Bool {
+        if destination == .custom { return !settings.settings.reviewCustomCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        guard let link = destination.appLink else { return true }
+        return NSWorkspace.shared.urlForApplication(toOpen: link) != nil
     }
 
-    /// Several pull requests in one conversation, or one conversation for each, need the Claude Code command line.
-    var canReviewMany: Bool {
-        settings.settings.reviewAgentEnabled && cliState.isReady
+    /// Which destinations are there to use now: the apps that are installed, the terminals, and the custom command once it is written.
+    func destinationStatuses() -> [ReviewDestination: Bool] {
+        Dictionary(uniqueKeysWithValues: ReviewDestination.allCases.map { ($0, isReady($0)) })
     }
 
-    /// The draft in Claude Desktop as a second choice, when the main action runs in the background.
-    var offersDraft: Bool {
-        canReview && cliState.isReady && desktopIsReady
+    /// What the viewer chose, or the first app that is installed when that one is not, or Claude Code.
+    private var primaryDestination: ReviewDestination {
+        let chosen = settings.settings.reviewDestination
+        if isReady(chosen) { return chosen }
+        return ReviewDestination.allCases.first { $0.style == .link && isReady($0) } ?? .claudeCode
     }
 
-    var agentActions: AgentActions {
-        AgentActions(
-            open: { [weak self] in self?.agents.open($0) },
-            remove: { [weak self] in self?.agents.cancelOrRemove($0) },
-            answer: { [weak self] in self?.agents.answer($0, allow: $1) },
-            ask: { [weak self] in self?.askFollowUp($0, $1) },
-            retry: { [weak self] in self?.retry($0) },
-            continueInDesktop: { [weak self] in self?.continueInDesktop($0) },
-            continueInTerminal: { [weak self] in self?.continueInTerminal($0) },
-            consumeFocus: { [weak self] in self?.agents.consumeFocus() }
+    var reviewActions: ReviewActions {
+        guard settings.settings.reviewAgentEnabled else { return ReviewActions() }
+        let primary = primaryDestination
+        return ReviewActions(
+            primary: primary,
+            others: ReviewDestination.allCases.filter { $0 != primary && isReady($0) },
+            review: { [weak self] pr, destination in self?.requestReview(of: pr, in: destination) },
+            reviewTogether: { [weak self] prs, scope in self?.requestReview(of: prs, scope: scope) },
+            reviewEach: { [weak self] prs in self?.requestEachReview(of: prs) }
         )
-    }
-
-    // MARK: Command line status
-
-    /// Looks again at the Claude Code command line, at most every 20 seconds unless `force` is set.
-    func refreshCLI(force: Bool = false) {
-        guard force || Date().timeIntervalSince(lastCLICheck) > 20 else { return }
-        lastCLICheck = Date()
-        Task { cliState = await CLIState.check() }
-    }
-
-    func checkCLI() async -> CLIState {
-        lastCLICheck = Date()
-        cliState = await CLIState.check()
-        return cliState
     }
 
     // MARK: Asking for a review
 
-    func requestReview(of pr: PullRequestSnapshot) {
-        begin(pr, inBackground: cliState.isReady)
-    }
-
-    func requestDraftReview(of pr: PullRequestSnapshot) {
-        begin(pr, inBackground: false)
+    func requestReview(of pr: PullRequestSnapshot, in destination: ReviewDestination) {
+        let request = ReviewRequest(ref: pr.ref, url: pr.url)
+        Task { await startReview(request, in: destination) }
     }
 
     /// Several pull requests in one conversation, to be seen as one change: a whole stack, or the ones the viewer chose.
     func requestReview(of prs: [PullRequestSnapshot], scope: ReviewRequest.Scope) {
-        guard cliState.isReady, !prs.isEmpty else { return }
-        guard prs.count > 1 else { return requestReview(of: prs[0]) }
+        guard !prs.isEmpty else { return }
+        guard prs.count > 1 else { return requestReview(of: prs[0], in: primaryDestination) }
         let request = ReviewRequest(targets: prs.map { ReviewTarget(ref: $0.ref, url: $0.url) }, scope: scope)
-        if let running = agents.list.runs.first(where: { $0.isRunning && Set($0.targets ?? []) == Set(request.targets) }) {
-            return agents.requestFocus(run: running.id)
-        }
-        let title = tr(scope == .stack ? "agents.group.stack" : "agents.group.together", prs.count)
-        Task { await startReview(request, title: title, inBackground: true) }
+        Task { await startReview(request, in: primaryDestination) }
     }
 
-    /// One conversation for each pull request.
+    /// One conversation for each pull request, one after the other: the folder of a repository may have to be asked for.
     func requestEachReview(of prs: [PullRequestSnapshot]) {
-        prs.forEach { requestReview(of: $0) }
-    }
-
-    /// Opens a session that asks for nothing but a reply, to see that the connection works.
-    func testReviewAgent() {
-        guard desktopIsReady else { return showAlert(tr("agents.missing.title"), tr("agents.missing.detail")) }
-        launch(AgentLaunch(prompt: tr("agents.test.prompt"), folder: nil))
-    }
-
-    private func begin(_ pr: PullRequestSnapshot, inBackground: Bool) {
-        if inBackground {
-            if let running = agents.list.running(for: pr.ref) { return agents.requestFocus(run: running.id) }
-        } else if !desktopIsReady {
-            return showAlert(tr("agents.missing.title"), tr("agents.missing.detail"))
+        let destination = primaryDestination
+        Task {
+            for pr in prs { await startReview(ReviewRequest(ref: pr.ref, url: pr.url), in: destination) }
         }
-        let request = ReviewRequest(ref: pr.ref, url: pr.url)
-        Task { await startReview(request, title: pr.title, inBackground: inBackground) }
     }
 
-    private func retry(_ run: AgentRun) {
-        agents.remove(run.id)
-        let request = run.targets.map { ReviewRequest(targets: $0, scope: run.scope ?? .together) } ?? ReviewRequest(ref: run.ref, url: run.url)
-        Task { await startReview(request, title: run.title, inBackground: true) }
+    /// Opens the destination with a message that asks for nothing but a reply, to see that the way there works.
+    func testReviewDestination() {
+        let request = ReviewRequest(ref: PullRequestRef(owner: "", repo: "", number: 0), url: URL(string: "https://github.com")!)
+        run(prompt: tr("agents.test.prompt"), folder: nil, request: request, in: primaryDestination)
     }
 
-    private func startReview(_ request: ReviewRequest, title: String, inBackground: Bool) async {
+    private func startReview(_ request: ReviewRequest, in destination: ReviewDestination) async {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let folder: URL?
         switch await reviewFolder(for: request.ref, home: home) {
@@ -111,70 +78,38 @@ extension AppRuntime {
         case .without: folder = nil
         case .cancel: return
         }
-        let extraFolders = request.isGroup ? await otherFolders(of: request, besides: folder, home: home) : []
         let current = settings.settings
-        let skills = await Task.detached { ReviewSkillCatalog.discover(home: home) }.value
-        let skill = ReviewSkillCatalog.resolve(choice: current.reviewSkill, from: skills)
+        var skill: ReviewSkill?
+        if destination.namesSkills {
+            let skills = await Task.detached { ReviewSkillCatalog.discover(home: home) }.value
+            skill = ReviewSkillCatalog.resolve(choice: current.reviewSkill, from: skills)
+        }
         let words = promptWords(for: request.scope)
         let template = ReviewPrompt.template(custom: current.reviewPrompt, generic: words.generic, withSkill: words.withSkill, skill: skill?.name)
-        let prompt = ReviewPrompt.render(template, for: request, skill: skill?.name)
-        guard inBackground else { return launch(AgentLaunch(prompt: prompt, folder: folder)) }
-        guard let cli = ClaudeCLI.locate(home: home) else { return showAlert(tr("agents.run.failedTitle"), tr("agents.cli.missing")) }
-        agents.start(
-            request: request, title: title, prompt: prompt, folder: folder, extraFolders: extraFolders,
-            skill: skill?.name, approval: current.reviewApproval, cli: cli
-        )
-        agents.requestFocus(run: nil)
+        run(prompt: ReviewPrompt.render(template, for: request, skill: skill?.name), folder: folder, request: request, in: destination)
     }
 
-    // MARK: What happens after
-
-    func agentFinished(_ run: AgentRun) {
-        let title = run.state == .finished ? tr("agents.done.title") : tr("agents.run.failedTitle")
-        showMascotBubble(title: title, detail: run.isGroup ? run.title : "\(run.ref.shortName) \(run.title)", seconds: 8)
-        if settings.settings.notificationsEnabled { Task { await notifier.deliver(run: run) } }
-    }
-
-    func agentNeedsApproval(_ run: AgentRun) {
-        guard let approval = run.approval else { return }
-        showMascotBubble(title: tr("agents.approval.title"), detail: "\(run.ref.shortName) \(approval.tool)", seconds: 10)
-        if settings.settings.notificationsEnabled { Task { await notifier.deliver(run: run) } }
-    }
-
-    private func askFollowUp(_ id: UUID, _ question: String) {
-        agents.ask(id, question: question, approval: settings.settings.reviewApproval, cli: ClaudeCLI.locate(home: FileManager.default.homeDirectoryForCurrentUser))
-    }
-
-    func openAgentRun(_ id: UUID) {
-        agents.requestFocus(run: id)
-        onOpenPanel()
-    }
-
-    private func continueInDesktop(_ run: AgentRun) {
-        guard desktopIsReady else { return showAlert(tr("agents.missing.title"), tr("agents.missing.detail")) }
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let folder = run.folder == home ? nil : URL(fileURLWithPath: run.folder)
-        launch(AgentLaunch(prompt: ClaudeCLI.continuationPrompt(urls: run.urls, review: run.output ?? ""), folder: folder))
-    }
-
-    private func continueInTerminal(_ run: AgentRun) {
-        guard let cli = ClaudeCLI.locate(home: FileManager.default.homeDirectoryForCurrentUser), let session = run.sessionID else { return }
-        let script = ClaudeCLI.resumeScript(cli: cli, folder: run.folder, sessionID: session)
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("PRPulse-resume-\(run.id.uuidString).command")
+    private func run(prompt: String, folder: URL?, request: ReviewRequest, in destination: ReviewDestination) {
+        let current = settings.settings
         do {
-            try script.write(to: file, atomically: true, encoding: .utf8)
-            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: file.path)
-            NSWorkspace.shared.open(file)
+            let launch = try ReviewLauncher.plan(
+                for: destination, prompt: prompt, folder: folder, request: request,
+                customCommand: current.reviewCustomCommand, cliMissing: { tr("agents.cli.notFound", $0) }
+            )
+            try ReviewRunner.run(launch, terminal: current.reviewTerminal)
         } catch {
-            showAlert(tr("agents.failed.title"), error.localizedDescription)
+            showAlert(tr("agents.failed.title"), Self.failureDetail(error, destination))
         }
     }
 
-    private func launch(_ launch: AgentLaunch) {
-        do {
-            try reviewAgent.launch(launch)
-        } catch {
-            showAlert(tr("agents.failed.title"), tr("agents.failed.detail"))
+    private static func failureDetail(_ error: Error, _ destination: ReviewDestination) -> String {
+        switch error {
+        case ReviewLaunchError.slashPrompt: tr("agents.failed.slash")
+        case ReviewLaunchError.tooLong: tr("agents.failed.tooLong")
+        case ReviewLaunchError.missingCommand: tr("agents.failed.noCommand")
+        case ReviewLaunchError.emptyPrompt: tr("agents.failed.empty")
+        case ReviewLaunchFailure.script(let text): text
+        default: tr("agents.failed.detail", destination.title)
         }
     }
 
@@ -187,27 +122,6 @@ extension AppRuntime {
     }
 
     // MARK: Folder
-
-    /// The clones of the other repositories of a review, where they are known or can be found without asking.
-    private func otherFolders(of request: ReviewRequest, besides primary: URL?, home: URL) async -> [URL] {
-        let current = settings.settings
-        let firstKey = request.ref.folderKey
-        var seen: Set<String> = primary.map { [$0.path] } ?? []
-        var folders: [URL] = []
-        var repositories = Set([firstKey])
-        for target in request.targets where repositories.insert(target.ref.folderKey).inserted {
-            let ref = target.ref
-            var found: URL?
-            switch ReviewFolders.saved(for: ref, repositories: current.reviewFolders, organizations: current.reviewOrgFolders, isFolder: Self.isFolder) {
-            case .use(let url): found = url
-            case .without: continue
-            case nil:
-                found = await Task.detached { RepositoryLocator.find(owner: ref.owner, repo: ref.repo, roots: RepositoryLocator.roots(home: home)) }.value
-            }
-            if let found, seen.insert(found.path).inserted { folders.append(found) }
-        }
-        return folders
-    }
 
     /// What the viewer chose (the repository's folder, else its organization's default project), else a clone found in
     /// the usual folders, else the folder the viewer points to now.

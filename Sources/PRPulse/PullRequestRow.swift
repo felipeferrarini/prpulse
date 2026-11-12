@@ -24,8 +24,6 @@ struct PullRequestRow: View {
     let entranceIndex: Int
     let entered: Bool
     var onMute: (() -> Void)?
-    var onReview: (() -> Void)?
-    var onReviewInDesktop: (() -> Void)?
     /// What a click does instead of opening the pull request: a stack opens its own list.
     var onOpen: (() -> Void)?
     var selection: RowSelection?
@@ -33,6 +31,7 @@ struct PullRequestRow: View {
     var groupActions: [RowAction] = []
 
     @Environment(\.nudging) private var nudging
+    @Environment(\.reviewing) private var reviewing
     @LocalState private var isHovering = false
     @LocalState private var copied = false
 
@@ -114,11 +113,17 @@ struct PullRequestRow: View {
             nudging.opened(model.pr.url)
             NSWorkspace.shared.open(model.pr.url)
         } label: { Label(tr("row.open"), systemImage: "arrow.up.right.square") }
-        if model.kind == .review, let onReview {
-            Button(action: onReview) { Label(tr("row.review"), systemImage: "sparkles") }
-        }
-        if model.kind == .review, let onReviewInDesktop {
-            Button(action: onReviewInDesktop) { Label(tr("row.reviewDesktop"), systemImage: "bubble.left.and.text.bubble.right") }
+        if model.kind == .review, let primary = reviewing.primary {
+            Button { reviewing.review(model.pr, primary) } label: { Label(tr("row.reviewWith", primary.title), systemImage: "sparkles") }
+            if !reviewing.others.isEmpty {
+                Menu {
+                    ForEach(reviewing.others, id: \.self) { destination in
+                        Button { reviewing.review(model.pr, destination) } label: { Text(destination.title) }
+                    }
+                } label: {
+                    Label(tr("row.reviewElsewhere"), systemImage: "arrow.up.forward.app")
+                }
+            }
         }
         Button(action: copyLink) { Label(tr("row.copyLink"), systemImage: "link") }
         nudgeMenu

@@ -40,22 +40,21 @@ O PRPulse consulta o GitHub a cada poucos minutos, mantém **duas listas curtas*
 - **Minhas PRs:** todas as suas PRs abertas, as mais urgentes primeiro: *Conflito*, depois o que precisa de resposta (*Ajustar*, *Responder*), depois *Corrigir CI* e *Merge*, depois as que ninguém revisou ainda, as em review e os rascunhos. Cada uma traz o verbo que resolve. Só as que pedem algo de você contam no ícone.
 - **Filtros por ação** e dois layouts, visão única ou lado a lado. A escolha fica salva.
 - **Ordenar e filtrar:** toda lista tem um menu de ordem (prioridade, a padrão, mais antigas, mais novas, atividade recente, projeto e, em *Para revisar*, autor), e a escolha fica salva. Em *Para revisar* você também busca por título e branch e filtra por autor e projeto; esses filtros zeram a cada abertura do popover. Uma PR que ninguém revisou ganha o botão *Copiar link* (ao passar o mouse) para você cobrar a pessoa certa.
-- **Menu ⋯ em cada linha:** abrir no GitHub, copiar o link e, na lista de revisão, *Revisar com o Claude* e *Silenciar o repositório*, sem abrir os Ajustes.
+- **Menu ⋯ em cada linha:** abrir no GitHub, copiar o link e, na lista de revisão, *Revisar com…* e *Silenciar o repositório*, sem abrir os Ajustes.
 - **Uma ou várias organizações**, e um **atalho global**, ⌥⌘P, que abre e fecha o painel de qualquer lugar.
 - **Um ícone que avisa antes de você olhar:** um glifo de pull request que acompanha o tema da barra quando está tudo em dia, vira uma pílula laranja com o número quando algo precisa de você, faz um anel de pulso quando chega um item novo e fica vermelho se não conseguir atualizar.
 - **Menu do botão direito:** atualizar agora (⌘R), abrir no GitHub (buscas já filtradas pela sua organização), liga/desliga de notificações, Ajustes (⌘,), Sobre e Sair.
-- **Assistente de configuração** com prévia ao vivo do popover (conexão, organizações, exceções, frequência, revisão com o Claude e mascote), e uma tela de **Ajustes** que conta as alterações não salvas (⌘S salva) e tem uma aba **Novidades** com o que mudou em cada versão.
+- **Assistente de configuração** com prévia ao vivo do popover (conexão, organizações, exceções, frequência, onde abrir os reviews e mascote), e uma tela de **Ajustes** que conta as alterações não salvas (⌘S salva) e tem uma aba **Novidades** com o que mudou em cada versão.
 - **Um ícone no Dock enquanto uma janela está aberta:** com o assistente ou os Ajustes abertos, o PRPulse aparece no Dock e no ⌘Tab, para você achar a janela de novo depois de outro app passar na frente. Ao fechar a última, ele volta a ficar só na barra de menu.
 - **Atualiza sozinho:** busca versões novas e instala em segundo plano (dá para desligar em Ajustes).
 - **Um mascote no canto da tela:** um amiguinho no canto inferior direito que reage ao que acontece (alerta, comemora item novo, se preocupa com PR antiga, dorme quando está tudo em dia). Dá para arrastar, trocar de personagem e de tamanho, e adicionar o seu em `~/Library/Application Support/PRPulse/Mascots/`. Vem ligado e dá para desligar em Ajustes ou pelo menu do ícone.
-- **Peça ao Claude para revisar uma PR:** nas PRs que esperam o seu review, o menu `⋯` (e o botão direito) tem **Revisar com o Claude**. Precisa do [Claude Code](https://claude.com/claude-code) instalado e logado (rode `claude` uma vez num terminal e use `/login`) e do [`gh`](https://cli.github.com) logado, porque o agente lê a PR com ele.
-  - **Em segundo plano:** nada se abre. Um botão `✦` aparece no topo do painel com os reviews em andamento (o que o agente está lendo agora e há quanto tempo) e os já prontos. Uma notificação e o mascote avisam quando um fica pronto.
-  - **Perguntar mais:** embaixo de um review pronto há um campo para **perguntar mais** na mesma conversa. *Parar* interrompe uma resposta e mantém o review. Dá para continuar no Claude Desktop ou no Terminal, copiar ou tentar de novo.
-  - **Só leitura:** o agente lê o código e a PR por conta própria (`gh pr view`, `gh pr diff`, `git log`…). Em Ajustes → Agentes, **Aprovações** decide o resto. **Automático** (o padrão) usa o [modo automático](https://code.claude.com/docs/en/permission-modes) do Claude Code: o classificador dele decide o que é seguro, então os reviews raramente esperam por você. O PRPulse mantém o review só de leitura por cima disso: os comandos rodam num sandbox em que a pasta do repositório não pode ser escrita e só o GitHub pode ser acessado (`~/.ssh`, `~/.aws` e `~/.gnupg` não podem ser lidos), e editar arquivos, mexer no git ou escrever no GitHub (`gh pr comment`, `gh api`…) é negado. Se o modo automático não estiver disponível para você, o Claude Code pergunta. **Perguntar a mim** deixa o review esperando, com o comando à mostra e uma notificação, até você apertar Permitir ou Negar (uma vez, nunca fica lembrado).
-  - **O pedido:** leva o endereço da PR, o foco (performance, segurança, padrão de código e do projeto) e um aviso para não publicar nada no GitHub. Só o endereço e o número vão, nunca o título nem a descrição, que foram escritos por outras pessoas. Se você tem uma skill de review em `~/.claude` ou num plugin, o pedido cita essa skill; em Ajustes → Agentes dá para escolher a skill e editar o texto (`{url}`, `{urls}`, `{repo}`, `{number}` e `{skill}` são preenchidos).
-  - **A pasta:** a sessão abre na pasta do clone do repositório (o PRPulse procura nas suas pastas de sempre e pergunta quando não acha) ou, se você definir um **projeto padrão** para a organização, nessa pasta: útil quando você guarda todos os projetos de uma organização sob uma pasta raiz e roda as suas sessões ali.
-  - **Claude Desktop:** sem o Claude Code, ou pelo segundo item do menu, **Abrir rascunho no Claude Desktop** abre uma sessão com o pedido já escrito (você aperta Enter para enviar). Um review feito em segundo plano não aparece sozinho na lista do Claude Desktop; *Help → Troubleshooting → Import Claude Code CLI sessions* lá pode trazê-lo, e uma nota embaixo de cada review avisa isso.
-  - Cursor e Codex estão nos planos.
+- **Revisar com IA:** nas PRs para revisar, o menu `⋯` (e o botão direito) tem **Revisar com …**, com o destino que você escolheu em primeiro e os outros em **Revisar com…**. O PRPulse não roda o review: leva a PR até o app ou o terminal em que você já trabalha, com o pedido, a pasta e a skill no lugar, e você segue com todos os recursos desse app (aprovar comandos, trocar modelo, comentar na PR).
+  - **Destinos:** Claude Desktop (nova sessão do Code, com o pedido e a pasta), Codex (app, nova conversa com a pasta como workspace), Cursor (abre o repositório e depois o pedido no chat), Claude Code, Codex e Cursor Agent no terminal, e um **comando personalizado**. Os apps só preenchem a mensagem e você aperta Enter; os terminais começam sozinhos.
+  - **O terminal é seu:** os destinos de terminal abrem um script `.command` com o padrão do sistema, que é o app que o macOS usa para esse tipo de arquivo (o Terminal, a menos que você tenha mudado). Em Ajustes → Agentes → **Terminal** dá para escolher outro (iTerm, Ghostty e Warp aparecem quando instalados, e **Outro app…** aceita qualquer app). Se algum app não roda arquivos `.command`, use um comando personalizado.
+  - **Comando personalizado:** pode usar `{prompt}`, `{url}`, `{urls}`, `{repo}`, `{number}` e `{folder}`; cada um entra como uma palavra entre aspas, então nada do que uma PR diz vira parte do comando, e o pedido vai no fim quando `{prompt}` não está lá.
+  - **O pedido:** leva o endereço da PR, o foco (performance, segurança, padrão de código e do projeto) e um aviso para não publicar nada no GitHub a menos que você peça. Só o endereço e o número vão, nunca o título ou a descrição, que outras pessoas escreveram. Se você tem uma skill de review em `~/.claude` ou num plugin, os destinos do Claude a citam; Ajustes → Agentes deixa escolher a skill e editar o texto (`{url}`, `{urls}`, `{repo}`, `{number}` e `{skill}` são preenchidos).
+  - **A pasta:** a sessão abre no clone do repositório (o PRPulse procura nas suas pastas de costume e pergunta quando não acha), ou no **projeto padrão** da organização, se você definiu um. O link do Cursor não leva pasta, então a janela dele é aberta na pasta antes.
+  - **Limites dos links:** um link de app só preenche a mensagem. O Claude Desktop sempre pede para você confirmar a pasta que vem de um link, e um pedido que começa com `/` ou é grande demais para um link (cerca de 8.000 caracteres) é recusado com um aviso, e não cortado.
 - **Cutucar:** dois tipos, pelo menu do botão direito de uma PR. No Mac da outra pessoa, o mascote pula e treme, toca um som e aparece uma notificação. Como é para ser notado, tem regras:
   - **Para conseguir um review:** numa PR sua que ainda não tem os reviews, **Cutucar** lista qualquer pessoa do time (quem aparece nas PRs que o PRPulse lê) que ainda não revisou. Quem participou da PR continua na lista depois que você sobe um commit depois da última atividade da pessoa.
   - **Para fazer o merge:** numa PR de outra pessoa que você revisou e que já tem os reviews necessários, **Avisar rita que já pode subir** cutuca o autor. Só os reviews contam: check falhando ou conflito não impedem. Se o repositório não exige review, vale a sua aprovação.
@@ -64,8 +63,8 @@ O PRPulse consulta o GitHub a cada poucos minutos, mantém **duas listas curtas*
   - **Para quando termina:** o mascote fica inquieto até a pessoa abrir a PR, e uma segunda notificação sai depois de 15 minutos se ela não abriu. A cutucada chega na próxima atualização dela, então pode levar até o intervalo configurado (1 a 30 minutos).
   - **Pelo GitHub:** a cutucada para conseguir review pede o review de novo e deixa um comentário com um marcador escondido; a para fazer o merge só deixa o comentário. Quem não usa o PRPulse vê uma menção comum. Não precisa de servidor, e é a única coisa que o PRPulse escreve no GitHub.
   - **Para quem recebe, vem ligado** (Ajustes → **Notificações**: **Reagir a cutucadas** e **Som da cutucada**). O menu do botão direito do mascote tem **Pausar cutucadas**, por uma hora ou até amanhã de manhã. O som é o Sosumi, a menos que você escolha outro: a linha **Som** da mesma página lista os sons do macOS e tem um botão para ouvir. Para usar o seu, clique em **Abrir a pasta de sons** e coloque nela um arquivo `.wav`, `.caf`, `.aiff`, `.m4a` ou `.mp3` (`~/Library/Application Support/PRPulse/Sounds`); ele aparece na lista, e o que passar de três segundos é cortado. Se o arquivo sumir, toca o Sosumi.
-- **Stacks e várias PRs de uma vez:** as PRs de uma [stack do GitHub](https://docs.github.com/pt/pull-requests/get-started/about-stacked-prs) aparecem juntas numa linha só, com um ícone de camadas, quantas são e um `1/3` em cada uma. Ao clicar, a lista vira a stack, da base ao topo, com **Revisar a stack com o Claude** (uma conversa que vê todas, da base ao topo) e **Revisar cada uma com o Claude**. Quando a sua lista tem só algumas PRs de uma stack, a linha diz (`2 de 4 PRs de uma stack`). Num host sem stacks, como o GitHub Enterprise Server, cada PR aparece na sua própria linha.
-  - **Várias de uma vez:** para PRs que são da mesma funcionalidade sem ser uma stack, como uma em cada repositório, **Selecionar** (acima da lista) põe uma caixa em cada linha: marque as que quiser, uma stack marca todas as suas PRs, e escolha **Revisar juntas** ou **Revisar cada uma**. Um review de vários repositórios abre na pasta do primeiro e pode ler os clones dos outros (nunca escrever neles).
+- **Stacks e várias PRs de uma vez:** as PRs de uma [stack do GitHub](https://docs.github.com/pt/pull-requests/get-started/about-stacked-prs) aparecem juntas numa linha só, com um ícone de camadas, quantas são e um `1/3` em cada uma. Ao clicar, a lista vira a stack, da base ao topo, com **Revisar a stack** (uma conversa que vê todas, da base ao topo) e, num destino de terminal, **Revisar cada uma**. Quando a sua lista tem só algumas PRs de uma stack, a linha diz (`2 de 4 PRs de uma stack`). Num host sem stacks, como o GitHub Enterprise Server, cada PR aparece na sua própria linha.
+  - **Várias de uma vez:** para PRs que são da mesma funcionalidade sem ser uma stack, como uma em cada repositório, **Selecionar** (acima da lista) põe uma caixa em cada linha: marque as que quiser, uma stack marca todas as suas PRs, e escolha **Revisar juntas** ou, num destino de terminal, **Revisar cada uma**. Um review de vários repositórios abre na pasta do primeiro.
 - **Silencioso por padrão:** os comentários de bots não pedem resposta e as PRs que eles abrem, como as do Dependabot, ficam fora da lista de revisão (dois interruptores em Ajustes, ambos ligados por padrão), a primeira execução não despeja o backlog antigo em notificações e cada item avisa uma vez.
 
 <table>
@@ -87,21 +86,14 @@ O PRPulse consulta o GitHub a cada poucos minutos, mantém **duas listas curtas*
 
 <table>
   <tr>
-    <td width="33%" align="center">
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/images/agents-dark.png">
-        <img src="docs/images/agents-light.png" alt="Um review do Claude pronto, com o campo para perguntar mais" width="100%">
-      </picture>
-      <br><sub>Um review pronto</sub>
-    </td>
-    <td width="33%" align="center">
+    <td width="50%" align="center">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/images/stack-dark.png">
         <img src="docs/images/stack-light.png" alt="Uma stack de três PRs, aberta" width="100%">
       </picture>
       <br><sub>Uma stack, aberta</sub>
     </td>
-    <td width="33%" align="center">
+    <td width="50%" align="center">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/images/batch-dark.png">
         <img src="docs/images/batch-light.png" alt="PRs marcadas para revisar juntas" width="100%">
@@ -155,7 +147,7 @@ Você precisa de macOS 14 ou mais novo e do toolchain Swift (Xcode ou as Command
 2. **Organizações:** escolha uma ou mais. As que você mais usou nos últimos 90 dias vêm primeiro, com a contagem.
 3. **Exceções:** marque repositórios para ignorar (eles são listados a partir da organização) e edite as contas de bot a pular. Ali também há dois interruptores: ignorar comentários de bots e ignorar as PRs que eles abrem.
 4. **Ajustes:** frequência de atualização, notificações, abrir ao iniciar o Mac e atualizações automáticas. Em Ajustes há também uma aba de **Diagnóstico**, com um botão que copia as informações para um relato de problema (sem token, nem nomes de organização ou de PR), e a aba **Novidades**, que mostra o que mudou em cada versão; depois de uma atualização, uma janela mostra as novidades uma vez (dá para desligar).
-5. **Revisão com o Claude:** ligue ou desligue, veja se o Claude Desktop e o Claude Code estão prontos e escolha quem aprova (Automático ou Perguntar a mim).
+5. **Revisão com IA:** ligue ou desligue e escolha onde abrir (Claude Desktop, Codex, Cursor, um terminal ou o seu comando).
 6. **Mascote:** escolha o personagem que fica no canto da tela, ou desligue.
 
 <p align="center">
@@ -207,7 +199,7 @@ Todas as PRs abertas de outras pessoas na organização, nesta ordem por padrão
 
 - O PRPulse fala **só com o GitHub** (`api.github.com` e `github.com`), com as suas próprias credenciais. Não há servidor nosso, análise de uso nem telemetria.
 - Um token pessoal fica no **Keychain do macOS**. Com a opção `gh`, o token é lido do `gh` na hora e nunca guardado pelo PRPulse.
-- **Revisar com o Claude** roda o Claude Code no seu Mac, ou entrega o pedido ao Claude Desktop. O PRPulse não envia nada para lugar nenhum por causa disso: só o endereço e o número da PR vão no pedido, o que o Claude faz com ele segue os termos dele, e um review em segundo plano gasta o seu plano do Claude como qualquer outra sessão. No modo Automático, os comandos rodam num sandbox que não escreve no seu repositório e só alcança o GitHub. Os reviews ficam em `~/Library/Application Support/PRPulse/` (os últimos vinte), e mais nada é guardado.
+- **Revisar com IA** só abre um app ou um terminal no seu Mac. O PRPulse não envia nada para lugar nenhum por causa disso: o endereço e o número da PR vão no pedido, e o que o app faz com ele segue os termos dele. Para os destinos de terminal, o pedido vai para um arquivo `.command` temporário, que o PRPulse apaga depois de uma hora.
 - A única coisa que o PRPulse escreve no GitHub é uma **cutucada**, e só quando você pede: um novo pedido de review àquela pessoa e um comentário na sua própria PR. Nada mais é criado, editado ou apagado.
 - A checagem de atualização lê um arquivo pequeno da página de releases em `github.com`. Nada sobre você ou o seu Mac é enviado.
 - As atualizações são assinadas com uma chave que só quem mantém o projeto tem, e o app recusa o que não bater.
@@ -217,7 +209,7 @@ Todas as PRs abertas de outras pessoas na organização, nesta ordem por padrão
 
 - Entrar pelo navegador ainda não existe; use o `gh` ou um token.
 - O app é assinado ad hoc, então depois de cada atualização o macOS pode perguntar de novo se o PRPulse pode ler o item do Keychain. Escolha **Sempre Permitir**; se negar, o ícone mostra o estado de erro.
-- A revisão com o Claude precisa do Claude Code e do `gh` logados; Cursor e Codex ainda não são suportados. Vários reviews em segundo plano ao mesmo tempo gastam o seu plano do Claude mais rápido, e *Revisar cada uma* numa stack grande começa um por PR.
+- Revisar com IA precisa do app ou do comando que você escolheu instalado. *Revisar cada uma* exige um destino de terminal, porque o link de um app só preenche uma mensagem por vez.
 - As stacks vêm das PRs empilhadas do próprio GitHub. Num host sem elas, como o GitHub Enterprise Server, cada PR aparece na sua própria linha.
 - Versões anteriores à 0.3.0 não se atualizam sozinhas: instale a mais recente uma vez, à mão ou com `brew upgrade`.
 

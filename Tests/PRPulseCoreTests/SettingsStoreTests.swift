@@ -140,7 +140,8 @@ private func freshDefaults() -> UserDefaults {
 
     #expect(old.reviewAgentEnabled)
     #expect(old.reviewSkill == ReviewSkillCatalog.automaticChoice)
-    #expect(old.reviewApproval == .automatic)
+    #expect(old.reviewDestination == .claudeDesktop)
+    #expect(old.reviewTerminal.isEmpty && old.reviewCustomCommand.isEmpty)
     #expect(old.reviewPrompt.isEmpty)
     #expect(old.reviewFolders.isEmpty)
     #expect(old.reviewOrgFolders.isEmpty)
@@ -150,7 +151,9 @@ private func freshDefaults() -> UserDefaults {
     var settings = AppSettings.defaults
     settings.reviewAgentEnabled = false
     settings.reviewSkill = "pr-review"
-    settings.reviewApproval = .ask
+    settings.reviewDestination = .codexCLI
+    settings.reviewTerminal = "com.googlecode.iterm2"
+    settings.reviewCustomCommand = "my-agent --review"
     settings.reviewPrompt = "Look at {url}"
     settings.reviewFolders = ["acme/web": "/Users/me/web", "acme/docs": ""]
     settings.reviewOrgFolders = ["acme": "/Users/me/acme"]
@@ -173,4 +176,12 @@ private func freshDefaults() -> UserDefaults {
     #expect(old.showNewsAfterUpdate)
     #expect(old.lastSeenVersion.isEmpty)
     #expect(old.oauthClientID.isEmpty)
+}
+
+@Test func anOldApprovalSettingOrAnUnknownDestinationDoesNotBreakTheSettings() throws {
+    let saved = #"{"orgs":["acme"],"reviewApproval":"ask","reviewDestination":"somethingFromTheFuture","reviewSkill":"pr-review"}"#
+    let settings = try JSONDecoder().decode(AppSettings.self, from: Data(saved.utf8))
+
+    #expect(settings.reviewDestination == .claudeDesktop)
+    #expect(settings.reviewSkill == "pr-review")
 }
