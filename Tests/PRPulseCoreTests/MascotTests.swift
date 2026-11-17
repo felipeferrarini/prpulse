@@ -141,3 +141,10 @@ private func manifest(
     let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
     #expect(decoded == settings)
 }
+
+@Test func anOldRequestOnADraftDoesNotWorryTheMascot() {
+    let draft = ReviewItem(
+        pr: .fixture(number: 9, author: otherHuman, isDraft: true, createdAt: now.addingTimeInterval(-100 * hour)), isRequested: true
+    )
+    #expect(mood(MascotSituation(summary: summary(review: [draft]))) == .calm)
+}

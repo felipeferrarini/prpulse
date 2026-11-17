@@ -321,7 +321,7 @@ A PR with several reasons appears once, with the most urgent one highlighted and
 
 ### To review
 
-Every open PR from other people in the organization, in this order by default: requests to you, PRs nobody has reviewed yet, PRs you reviewed that can be merged, PRs you reviewed that cannot yet, and drafts; the oldest wait first within each. Only the first two groups need you, so only they count in the icon and in the notifications. A PR you reviewed stays in the list (tagged *Reviewed*, or *Ready to merge* when it can go), and it needs you again only if you are asked for a new review. A PR with a merge conflict has a small warning.
+Every open PR from other people in the organization, in this order by default: requests to you, PRs nobody has reviewed yet, PRs you reviewed that can be merged, PRs you reviewed that cannot yet, and drafts; the oldest wait first within each. Only the first two groups need you, so only they count in the icon and in the notifications, and a draft never does, even if you were requested: it starts to count when it is marked ready. A PR you reviewed stays in the list (tagged *Reviewed*, or *Ready to merge* when it can go), and it needs you again only if you are asked for a new review. A PR with a merge conflict has a small warning.
 
 ### Waiting time
 

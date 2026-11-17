@@ -193,7 +193,7 @@ Uma PR com vários motivos aparece uma vez, com o mais urgente em destaque e um 
 
 ### Para revisar
 
-Todas as PRs abertas de outras pessoas na organização, nesta ordem por padrão: pedidos a você, PRs que ninguém revisou ainda, PRs que você revisou e podem subir, PRs que você revisou e ainda não podem, e rascunhos; dentro de cada grupo, as mais antigas na frente. Só os dois primeiros grupos precisam de você, então só eles contam no ícone e nas notificações. Uma PR que você revisou continua na lista (com a etiqueta *Revisada*, ou *Pode subir* quando dá para fazer o merge) e só volta a precisar de você se pedirem um novo review. Uma PR com conflito de merge ganha um pequeno aviso.
+Todas as PRs abertas de outras pessoas na organização, nesta ordem por padrão: pedidos a você, PRs que ninguém revisou ainda, PRs que você revisou e podem subir, PRs que você revisou e ainda não podem, e rascunhos; dentro de cada grupo, as mais antigas na frente. Só os dois primeiros grupos precisam de você, então só eles contam no ícone e nas notificações, e um rascunho nunca conta, mesmo que tenham pedido você: ele passa a contar quando é marcado como pronto. Uma PR que você revisou continua na lista (com a etiqueta *Revisada*, ou *Pode subir* quando dá para fazer o merge) e só volta a precisar de você se pedirem um novo review. Uma PR com conflito de merge ganha um pequeno aviso.
 
 ## Privacidade
 

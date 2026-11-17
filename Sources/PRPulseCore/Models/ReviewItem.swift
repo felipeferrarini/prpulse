@@ -24,8 +24,9 @@ public struct ReviewItem: Equatable, Sendable {
         self.hasReviewed = hasReviewed
     }
 
-    /// What asks the viewer for a review: a request, or a pull request the viewer has not reviewed.
-    public var needsAction: Bool { isRequested || !hasReviewed }
+    /// What asks the viewer for a review: a request, or a pull request the viewer has not reviewed. A draft is not ready to be
+    /// reviewed, so it asks nothing yet, even when the viewer was requested.
+    public var needsAction: Bool { !pr.isDraft && (isRequested || !hasReviewed) }
 
     public var status: ReviewStatus {
         if pr.isDraft { return .draft }

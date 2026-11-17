@@ -149,3 +149,25 @@ private func bots(_ prs: [PullRequestSnapshot], skip: Bool, listed: Set<String> 
     #expect(hidden.review.isEmpty)
     #expect(hidden.total == 0)
 }
+
+@Test func aDraftDoesNotCountNotifyOrLightTheReviewPillEvenWhenTheViewerWasRequested() {
+    let draft = PullRequestSnapshot.fixture(number: 1, author: otherHuman, isDraft: true)
+    let requestedDraft = PullRequestSnapshot.fixture(number: 2, author: otherHuman, isDraft: true, requestedReviewers: [viewer])
+    let ready = PullRequestSnapshot.fixture(number: 3, author: otherHuman)
+    let summary = SummaryBuilder.build(minePRs: [], reviewPRs: [draft, requestedDraft, ready], viewer: viewer, ignoredBots: [], ignoredRepos: [])
+
+    #expect(summary.review.count == 3)
+    #expect(summary.awaitingReviewCount == 1)
+    #expect(summary.total == 1)
+    #expect(summary.count(for: .review) == 1)
+    #expect(summary.count(for: .draft) == 2)
+    #expect(summary.pendingKeys.map(\.ref.number) == [3])
+}
+
+@Test func aDraftBecomesAPendingReviewWhenItIsMarkedReady() {
+    let asDraft = PullRequestSnapshot.fixture(number: 1, author: otherHuman, isDraft: true)
+    let ready = PullRequestSnapshot.fixture(number: 1, author: otherHuman)
+
+    #expect(items([asDraft]).allSatisfy { !$0.needsAction })
+    #expect(items([ready]).allSatisfy { $0.needsAction })
+}
