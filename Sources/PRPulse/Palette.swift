@@ -50,7 +50,8 @@ extension ActionLane {
         case .respond: Palette.respond
         case .ci: Palette.ci
         case .conflict: Palette.conflict
-        case .merge: Palette.merge
+        case .merge, .ready: Palette.merge
+        case .reviewed, .waiting, .inReview, .draft: Color.secondary
         }
     }
 
@@ -62,6 +63,20 @@ extension ActionLane {
         case .ci: "xmark.circle"
         case .conflict: "exclamationmark.triangle"
         case .merge: "arrow.triangle.merge"
+        case .ready: "checkmark.circle"
+        case .reviewed: "checkmark"
+        case .waiting: "hourglass"
+        case .inReview: "ellipsis.bubble"
+        case .draft: "doc.text"
+        }
+    }
+
+    /// The tab where the lane lives; nil for the one that is in both.
+    var tab: PopoverTab? {
+        switch self {
+        case .review, .ready, .reviewed: .review
+        case .conflict, .changes, .respond, .ci, .merge, .waiting, .inReview: .mine
+        case .draft: nil
         }
     }
 
@@ -73,6 +88,11 @@ extension ActionLane {
         case .ci: tr("lane.ci")
         case .conflict: tr("lane.conflict")
         case .merge: tr("lane.merge")
+        case .ready: tr("chip.reviewedReady")
+        case .reviewed: tr("chip.reviewed")
+        case .waiting: tr("chip.noReview")
+        case .inReview: tr("chip.inReview")
+        case .draft: tr("chip.draft")
         }
     }
 
@@ -84,6 +104,11 @@ extension ActionLane {
         case .ci: tr("chip.ci")
         case .conflict: tr("chip.conflict")
         case .merge: tr("chip.merge")
+        case .ready: tr("chip.reviewedReady")
+        case .reviewed: tr("chip.reviewed")
+        case .waiting: tr("chip.noReview")
+        case .inReview: tr("chip.inReview")
+        case .draft: tr("chip.draft")
         }
     }
 }

@@ -128,7 +128,7 @@ struct PopoverView: View {
             set: { lane in
                 filter = lane
                 guard let lane, layout == .single else { return }
-                withAnimation(PopoverMotion.spring) { tab = lane == .review ? .review : .mine }
+                if let target = lane.tab { withAnimation(PopoverMotion.spring) { tab = target } }
             }
         )
     }

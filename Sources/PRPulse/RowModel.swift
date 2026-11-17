@@ -61,7 +61,7 @@ struct RowModel: Identifiable {
             lead: .avatar(pr.author.login),
             subtitle: "\(repository(pr, showsOwner: showsOwner)) #\(pr.ref.number), \(pr.author.login)",
             chips: reviewChips(item),
-            lanes: item.needsAction ? [.review] : [],
+            lanes: Set(ActionLane.allCases.filter { item.matches($0) }),
             kind: .review,
             canMute: !item.isRequested,
             stackBadge: badge(of: pr)
@@ -80,7 +80,7 @@ struct RowModel: Identifiable {
             lead: .lane(primary.lane),
             subtitle: "\(repository(pr, showsOwner: showsOwner)) #\(pr.ref.number), \(reasonText(primary))",
             chips: chips,
-            lanes: Set(item.reasons.map(\.lane)),
+            lanes: Set(ActionLane.allCases.filter { item.matches($0) }),
             kind: .mine,
             canMute: false,
             stackBadge: badge(of: pr)
@@ -100,7 +100,7 @@ struct RowModel: Identifiable {
             lead: .symbol(symbol),
             subtitle: "\(repository(pr, showsOwner: showsOwner)) #\(pr.ref.number), \(detail)",
             chips: [Chip(id: "quiet", text: chip, tone: nil)],
-            lanes: [],
+            lanes: Set(ActionLane.allCases.filter { item.matches($0) }),
             kind: .mine,
             canMute: false,
             stackBadge: badge(of: pr)
