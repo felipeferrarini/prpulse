@@ -4,6 +4,12 @@ All notable changes to PRPulse. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-11-17
+
+### Fixed
+
+- **Drafts of other people no longer count.** A draft that waited for your review was in the icon, the "N pending", the notifications and the **Review** pill, even though it is not ready to be reviewed. It now stays in the list, under the **Draft** pill, and counts only once it is marked ready. Your own drafts are unchanged.
+
 ## [0.14.1] - 2026-11-17
 
 ### Added
