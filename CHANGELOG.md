@@ -4,6 +4,12 @@ All notable changes to PRPulse. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-11-17
+
+### Added
+
+- **More filter pills.** Besides the ones that ask something of you, the pills now cover where the others stand: **Ready to merge** and **Reviewed** (pull requests you reviewed), **No review**, **In review** (yours, asking nothing of you) and **Draft** (yours and of others). Each shows how many there are, and picking one dims the rest, like the other pills.
+
 ## [0.14.0] - 2026-11-12
 
 ### Changed
