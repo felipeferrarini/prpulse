@@ -4,6 +4,12 @@ All notable changes to PRPulse. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.14.3] - 2026-11-18
+
+### Added
+
+- **The footer says when it is updating.** While a refresh runs, "Updated 8:55" becomes "Updating…" with a breathing dot, so you do not have to look at the mascot to know.
+
 ## [0.14.2] - 2026-11-17
 
 ### Fixed
