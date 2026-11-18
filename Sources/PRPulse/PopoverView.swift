@@ -67,7 +67,7 @@ struct PopoverView: View {
             if data.isOffline { OfflineBanner(text: data.summary == nil ? tr("popover.offline.noData") : tr("popover.offline")) }
             content
             Divider()
-            PopoverFooter(lastUpdated: data.lastUpdated, onRefresh: onRefresh, onSettings: onSettings)
+            PopoverFooter(lastUpdated: data.lastUpdated, isRefreshing: data.isRefreshing, onRefresh: onRefresh, onSettings: onSettings)
         }
         .frame(width: width)
         .clipShape(RoundedRectangle(cornerRadius: PopoverChrome.cornerRadius, style: .continuous))

@@ -21,6 +21,9 @@ enum DemoSnapshot {
                     write(popover(mode.viewData, scheme, layout: .single, tab: .mine, filter: .ci), named: "\(name)-mine-filtered", to: directory)
                     write(popover(mode.viewData, scheme, layout: .split, filter: .merge), named: "\(name)-split-filtered", to: directory)
                     write(popover(mode.viewData, scheme, layout: .single, tab: .mine), named: "\(name)-mine", to: directory)
+                    var refreshing = mode.viewData
+                    refreshing.isRefreshing = true
+                    write(popover(refreshing, scheme, layout: .single), named: "\(name)-refreshing", to: directory)
                     write(popover(mode.viewData, scheme, layout: .single, reviewFilter: ReviewFilter(author: "mia", repository: "acme/api"), sorts: ListSorts(review: .oldest, mine: .priority)), named: "\(name)-review-author", to: directory)
                     write(popover(mode.viewData, scheme, layout: .single, reviewFilter: ReviewFilter(query: "zzz")), named: "\(name)-review-nomatch", to: directory)
                     write(selecting(mode.viewData, scheme, picked: []), named: "\(name)-review-select", to: directory)

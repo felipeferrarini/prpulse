@@ -6,6 +6,7 @@
 "popover.empty.body" = "Nada precisa de você agora.";
 "popover.loading" = "Carregando…";
 "popover.updated" = "Atualizado %@";
+"popover.updating" = "Atualizando…";
 "popover.offline" = "Sem conexão com o GitHub. Mostrando a última atualização.";
 "popover.offline.noData" = "Ainda sem conexão com o GitHub. Tentando de novo em breve.";
 "popover.pending.one" = "1 pendente";

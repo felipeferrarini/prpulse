@@ -6,6 +6,8 @@ struct ViewData {
     var summary: Summary?
     var lastUpdated: Date?
     var isOffline = false
+    /// A refresh is in flight: the footer says so instead of when it last finished.
+    var isRefreshing = false
     var freshUntil: Date?
     var isSetupComplete = true
     var orgs: [String] = []

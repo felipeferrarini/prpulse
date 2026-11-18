@@ -75,8 +75,24 @@ struct FailureView: View {
     }
 }
 
+/// The dot of the footer while a refresh is under way: it breathes, so the viewer can tell it from the resting one.
+private struct RefreshingDot: View {
+    var body: some View {
+        TimelineView(.animation) { context in
+            let wave = sin(context.date.timeIntervalSinceReferenceDate * 4.5)
+            Circle()
+                .fill(Palette.review)
+                .frame(width: 7, height: 7)
+                .opacity(0.65 + 0.35 * wave)
+        }
+        .frame(width: 7, height: 7)
+        .accessibilityHidden(true)
+    }
+}
+
 struct PopoverFooter: View {
     let lastUpdated: Date?
+    var isRefreshing = false
     let onRefresh: () -> Void
     let onSettings: () -> Void
 
@@ -84,7 +100,10 @@ struct PopoverFooter: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            if let lastUpdated {
+            if isRefreshing {
+                RefreshingDot()
+                Text(tr("popover.updating")).font(.caption).foregroundStyle(.secondary)
+            } else if let lastUpdated {
                 Circle().fill(Palette.merge).frame(width: 7, height: 7).accessibilityHidden(true)
                 Text(tr("popover.updated", lastUpdated.formatted(date: .omitted, time: .shortened)))
                     .font(.caption).foregroundStyle(.secondary)

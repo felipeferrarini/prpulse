@@ -328,6 +328,7 @@ final class AppRuntime: ObservableObject {
             summary: model.lastSummary,
             lastUpdated: model.lastUpdated,
             isOffline: model.isOffline,
+            isRefreshing: model.isRefreshing,
             freshUntil: model.freshUntil,
             isSetupComplete: settings.settings.hasCompletedSetup,
             orgs: settings.settings.orgs
