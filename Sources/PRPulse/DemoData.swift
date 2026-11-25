@@ -56,16 +56,26 @@ enum DemoData {
     )
 
     /// Ninety pull requests, to see how the panel behaves with a long list.
-    static let crowded = Summary(
-        mine: (0 ..< 40).map { index in
-            item(1000 + index, "api", "Change number \(index)", hoursAgo: Double(index) * 3 + 2, reasons: [[.ciFailed, .conflict, .readyToMerge, .unansweredComment][index % 4]])
-        } + (0 ..< 5).map { index in
-            item(3000 + index, "infra", "Waiting number \(index)", hoursAgo: Double(index) * 20 + 60, reasons: [], quiet: .noReview, reviewers: index % 2 == 0 ? ["mia"] : [])
-        },
-        review: (0 ..< 45).map { index in
-            review(2000 + index, "web", "Review number \(index)", author: ["sam", "mia", "ivan", "leo"][index % 4], hoursAgo: Double(index) * 2 + 1, requested: index % 5 == 0)
+    static let crowded: Summary = {
+        let reasons: [MineReason] = [.ciFailed, .conflict, .readyToMerge, .unansweredComment]
+        let authors: [String] = ["sam", "mia", "ivan", "leo"]
+        var mine: [MineItem] = []
+        for index in 0 ..< 40 {
+            let hours = Double(index) * 3 + 2
+            mine.append(item(1000 + index, "api", "Change number \(index)", hoursAgo: hours, reasons: [reasons[index % 4]]))
         }
-    )
+        for index in 0 ..< 5 {
+            let hours = Double(index) * 20 + 60
+            let reviewers: [String] = index % 2 == 0 ? ["mia"] : []
+            mine.append(item(3000 + index, "infra", "Waiting number \(index)", hoursAgo: hours, reasons: [], quiet: .noReview, reviewers: reviewers))
+        }
+        var toReview: [ReviewItem] = []
+        for index in 0 ..< 45 {
+            let hours = Double(index) * 2 + 1
+            toReview.append(review(2000 + index, "web", "Review number \(index)", author: authors[index % 4], hoursAgo: hours, requested: index % 5 == 0))
+        }
+        return Summary(mine: mine, review: toReview)
+    }()
 
     private static func snapshot(
         _ number: Int, _ repo: String, _ title: String, author: String, hoursAgo: Double, draft: Bool, stack: (Int, Int, Int)? = nil,
