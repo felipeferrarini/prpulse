@@ -219,7 +219,7 @@ For pull requests that belong together without being a stack, for example one in
 
 Two nudges, both started from the right click menu of a pull request. On the other person's Mac the mascot jumps and shakes, a sound plays and a notification shows. It is meant to be noticed, so it has rules.
 
-**To get a review.** On a pull request of yours that lacks reviews, **Nudge** lists anyone on the team (whoever shows up in the pull requests PRPulse reads) who has not reviewed it. People who took part in it stay listed once you pushed a commit after their last activity.
+**To get a review.** On a pull request of yours that lacks reviews, **Nudge** lists anyone on the team (whoever shows up in the pull requests PRPulse reads) who has not reviewed it. People who took part in it stay listed once you pushed a commit after their last activity. To ask the same person about several of your pull requests, **Select** them in **My PRs** and use **Nudge** in the bar: it lists whoever can be nudged on at least one of them (`mia · 3 of 4` when not on all) and sends one nudge on each of those, one comment per pull request, with the same line if you write one.
 
 **To merge.** On a pull request of someone else that you reviewed and that already has the reviews it needs, **Tell rita it can be merged** nudges its author. Only the reviews are looked at: failing checks or a conflict do not stop it. If the repository asks for no reviews, your own approval is what counts.
 

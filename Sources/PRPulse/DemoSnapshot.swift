@@ -128,9 +128,15 @@ enum DemoSnapshot {
             data: data, layout: .constant(layout), initialSelection: picked.map { (tab, $0) }, initialTab: tab, onRefresh: {}, onSettings: {}
         )
         .environment(\.reviewing, reviewing)
+        .environment(\.nudging, nudging)
         .background(Color(nsColor: .windowBackgroundColor))
         .environment(\.colorScheme, scheme)
     }
+
+    /// Two teammates who can be nudged on any of the viewer's pull requests, one of them already nudged once.
+    static let nudging = NudgeActions(candidates: { _ in
+        [NudgeCandidate(login: "mia", tone: 1, block: nil), NudgeCandidate(login: "leo", tone: 2, block: nil)]
+    })
 
     /// What the rows and lists need to offer a review, as if Claude Desktop were installed.
     static let reviewing = ReviewActions(primary: .claudeDesktop, others: [.claudeCode, .codexApp, .cursorApp])

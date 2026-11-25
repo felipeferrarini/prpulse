@@ -6,6 +6,8 @@ import SwiftUI
 struct NudgeActions {
     var candidates: (PullRequestSnapshot) -> [NudgeCandidate] = { _ in [] }
     var send: (PullRequestSnapshot, NudgeCandidate, _ withMessage: Bool) -> Void = { _, _, _ in }
+    /// One person, nudged on each of several pull requests.
+    var sendMany: (String, [NudgeTarget.Item], _ withMessage: Bool) -> Void = { _, _, _ in }
     /// The viewer opened a pull request: a nudge about it has done its job.
     var opened: (URL) -> Void = { _ in }
 }
@@ -118,10 +120,10 @@ enum NudgeSound {
 @MainActor
 enum NudgePrompt {
     /// Nil when the author gave up; an empty string when they sent it with no text.
-    static func ask(reviewer: String, title: String) -> String? {
+    static func ask(reviewer: String, detail: String) -> String? {
         let alert = NSAlert()
         alert.messageText = tr("nudge.prompt.title", reviewer)
-        alert.informativeText = tr("nudge.prompt.detail", title)
+        alert.informativeText = detail
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
         field.placeholderString = tr("nudge.prompt.placeholder", NudgeCodec.maxMessageLength)
         alert.accessoryView = field

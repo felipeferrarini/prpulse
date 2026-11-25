@@ -8,6 +8,7 @@ extension AppRuntime {
         NudgeActions(
             candidates: { [weak self] in self?.nudgeCandidates(for: $0) ?? [] },
             send: { [weak self] pr, candidate, withMessage in self?.startNudge(pr, candidate, withMessage: withMessage) },
+            sendMany: { [weak self] login, items, withMessage in self?.startNudges(to: login, items, withMessage: withMessage) },
             opened: { [weak self] in self?.model?.acknowledgeNudges(openedURL: $0) }
         )
     }
@@ -30,17 +31,10 @@ extension AppRuntime {
     private func startNudge(_ pr: PullRequestSnapshot, _ candidate: NudgeCandidate, withMessage: Bool) {
         var message: String?
         if withMessage {
-            guard let typed = NudgePrompt.ask(reviewer: candidate.login, title: pr.title) else { return }
+            guard let typed = NudgePrompt.ask(reviewer: candidate.login, detail: tr("nudge.prompt.detail", pr.title)) else { return }
             message = NudgeCodec.clean(typed)
         }
-        let request = NudgeRequest(
-            ref: pr.ref,
-            reviewer: candidate.login,
-            tone: candidate.tone,
-            message: message,
-            text: Self.commentText(reviewer: candidate.login, tone: candidate.tone, message: message, kind: candidate.kind),
-            kind: candidate.kind
-        )
+        let request = Self.request(for: pr, candidate, message: message)
         let nudger = ClientFactory.nudger(settings: settings)
         Task { @MainActor in
             do {
@@ -51,6 +45,47 @@ extension AppRuntime {
                 report(tr("nudge.failed", candidate.login), detail: Self.reason(for: error))
             }
         }
+    }
+
+    /// The same person on each of several pull requests, one after the other, with a single line for all of them.
+    private func startNudges(to login: String, _ items: [NudgeTarget.Item], withMessage: Bool) {
+        guard !items.isEmpty else { return }
+        var message: String?
+        if withMessage {
+            guard let typed = NudgePrompt.ask(reviewer: login, detail: tr("nudge.prompt.detail.several", items.count)) else { return }
+            message = NudgeCodec.clean(typed)
+        }
+        let requests = items.map { Self.request(for: $0.pr, $0.candidate, message: message) }
+        let nudger = ClientFactory.nudger(settings: settings)
+        Task { @MainActor in
+            var sent = 0
+            var firstError: Error?
+            for request in requests {
+                do {
+                    _ = try await nudger.nudge(request)
+                    sent += 1
+                } catch {
+                    firstError = firstError ?? error
+                }
+            }
+            if let firstError {
+                report(tr("nudge.failedSome", login, requests.count - sent, requests.count), detail: Self.reason(for: firstError))
+            } else {
+                report(tr("nudge.sentMany", login, sent), detail: items.map(\.pr.title).joined(separator: ", "))
+            }
+            refresh()
+        }
+    }
+
+    private static func request(for pr: PullRequestSnapshot, _ candidate: NudgeCandidate, message: String?) -> NudgeRequest {
+        NudgeRequest(
+            ref: pr.ref,
+            reviewer: candidate.login,
+            tone: candidate.tone,
+            message: message,
+            text: commentText(reviewer: candidate.login, tone: candidate.tone, message: message, kind: candidate.kind),
+            kind: candidate.kind
+        )
     }
 
     private static func commentText(reviewer: String, tone: Int, message: String?, kind: NudgeKind) -> String {

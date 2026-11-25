@@ -170,6 +170,7 @@ private struct SummaryPanes: View {
     let showsOwner: Bool
     let onMute: (PullRequestRef) -> Void
     @Environment(\.reviewing) private var reviewing
+    @Environment(\.nudging) private var nudging
     var initialStack: (tab: PopoverTab, key: StackKey)?
     var initialSelection: (tab: PopoverTab, refs: Set<PullRequestRef>)?
     let onContentChange: () -> Void
@@ -427,9 +428,43 @@ private struct SummaryPanes: View {
                     endSelecting()
                 }
             }
+            if kind == .mine { nudgeMenu(chosen, showsTitle: !compact) }
             copyMenu(chosen, showsTitle: !compact)
             shareLink(chosen)
         }
+    }
+
+    /// Whoever can be nudged on at least one of the pull requests picked, with how many of them.
+    private func nudgeMenu(_ chosen: [PullRequestSnapshot], showsTitle: Bool) -> some View {
+        let targets = NudgeBatch.targets(for: chosen, candidates: nudging.candidates)
+        return Menu {
+            ForEach(targets) { target in
+                Button(nudgeTitle(target, of: chosen.count)) { send(target, withMessage: false) }
+            }
+            Menu(tr("batch.nudge.withMessage")) {
+                ForEach(targets) { target in
+                    Button(nudgeTitle(target, of: chosen.count)) { send(target, withMessage: true) }
+                }
+            }
+        } label: {
+            PillLabel(title: tr("batch.nudge"), symbol: "hand.wave", showsTitle: showsTitle)
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .fixedSize()
+        .disabled(targets.isEmpty)
+        .opacity(targets.isEmpty ? 0.4 : 1)
+        .help(chosen.isEmpty || !targets.isEmpty ? tr("batch.nudge.help") : tr("batch.nudge.none"))
+    }
+
+    private func nudgeTitle(_ target: NudgeTarget, of chosen: Int) -> String {
+        target.items.count == chosen ? target.login : tr("batch.nudge.person", target.login, target.items.count, chosen)
+    }
+
+    private func send(_ target: NudgeTarget, withMessage: Bool) {
+        nudging.sendMany(target.login, target.items, withMessage)
+        endSelecting()
     }
 
     private func copyMenu(_ chosen: [PullRequestSnapshot], showsTitle: Bool) -> some View {

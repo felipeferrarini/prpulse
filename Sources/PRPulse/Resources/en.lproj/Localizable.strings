@@ -371,6 +371,14 @@
 "batch.copied" = "Copied";
 "batch.copy.help" = "Copy the links";
 "batch.format" = "Other ways to copy";
+"batch.nudge" = "Nudge";
+"batch.nudge.help" = "Nudge someone about the pull requests picked";
+"batch.nudge.none" = "Nobody can be nudged about these pull requests right now";
+"batch.nudge.withMessage" = "With a message…";
+"batch.nudge.person" = "%@ · %d of %d";
+"nudge.prompt.detail.several" = "The message is left as a comment on each of the %d pull requests, where everyone can read it.";
+"nudge.sentMany" = "Nudged %@ on %d PRs";
+"nudge.failedSome" = "Couldn't nudge %@ on %d of %d PRs";
 "batch.share" = "Share";
 "batch.share.help" = "Share the pull requests";
 "batch.format.links" = "Links only";

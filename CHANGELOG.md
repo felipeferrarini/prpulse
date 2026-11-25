@@ -4,6 +4,10 @@ All notable changes to PRPulse. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Added
+
+- **Nudge one person about several of your pull requests.** With **Select** on in **My PRs**, the bar has a **Nudge** button. It lists whoever can be nudged on at least one of the pull requests you ticked (`mia · 3 of 4` when it is not on all of them) and sends the nudge on each of those, with a line of your own if you choose **With a message…**. The usual limits apply to each pull request, so one that is blocked for that person is skipped and the rest still go.
+
 ## [0.15.0] - 2026-11-25
 
 ### Added

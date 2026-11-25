@@ -371,6 +371,14 @@
 "batch.copied" = "Copiado";
 "batch.copy.help" = "Copiar os links";
 "batch.format" = "Outras formas de copiar";
+"batch.nudge" = "Cutucar";
+"batch.nudge.help" = "Cutucar alguém nas PRs marcadas";
+"batch.nudge.none" = "Ninguém pode ser cutucado nessas PRs agora";
+"batch.nudge.withMessage" = "Com mensagem…";
+"batch.nudge.person" = "%@ · %d de %d";
+"nudge.prompt.detail.several" = "A mensagem fica como comentário em cada uma das %d PRs, onde todo mundo pode ler.";
+"nudge.sentMany" = "Cutucou %@ em %d PRs";
+"nudge.failedSome" = "Não foi possível cutucar %@ em %d de %d PRs";
 "batch.share" = "Compartilhar";
 "batch.share.help" = "Compartilhar as PRs";
 "batch.format.links" = "Só os links";
