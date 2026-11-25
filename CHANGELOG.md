@@ -4,6 +4,8 @@ All notable changes to PRPulse. The format follows [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-25
+
 ### Added
 
 - **Pick several of your pull requests to send to someone.** **Select** now also sits above **My PRs**. Tick the ones you want (a stack ticks all of its pull requests) and **Copy links** puts one address per line on the clipboard. The arrow beside it writes them as **Title and link** or as a **Markdown list**, and the share button hands them to Messages, Mail and the like. In **To review** the same buttons sit beside the review ones, and Select no longer needs a review agent to be set up.
