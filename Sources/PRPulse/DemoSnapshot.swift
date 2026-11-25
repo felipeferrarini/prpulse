@@ -28,6 +28,9 @@ enum DemoSnapshot {
                     write(popover(mode.viewData, scheme, layout: .single, reviewFilter: ReviewFilter(query: "zzz")), named: "\(name)-review-nomatch", to: directory)
                     write(selecting(mode.viewData, scheme, picked: []), named: "\(name)-review-select", to: directory)
                     write(selecting(mode.viewData, scheme, picked: nil), named: "\(name)-review-selectable", to: directory)
+                    write(selecting(mode.viewData, scheme, tab: .mine, picked: Self.minePicked), named: "\(name)-mine-select", to: directory)
+                    write(selecting(mode.viewData, scheme, tab: .mine, picked: Self.minePicked, layout: .split), named: "\(name)-split-mine-select", to: directory)
+                    write(selecting(mode.viewData, scheme, picked: Self.minePicked, layout: .split), named: "\(name)-split-review-select", to: directory)
                     write(popover(mode.viewData, scheme, layout: .split, reviewFilter: ReviewFilter(repository: "acme/api", query: "pagination"), sorts: ListSorts(review: .newest, mine: .oldest)), named: "\(name)-split-search", to: directory)
                 }
             }
@@ -98,6 +101,13 @@ enum DemoSnapshot {
         return WizardView(model: model, initialStep: step, initialSlide: slide, initialFailure: failure, onFinish: { nil })
     }
 
+    private static let minePicked: Set<PullRequestRef> = [
+        PullRequestRef(owner: "acme", repo: "web", number: 405),
+        PullRequestRef(owner: "acme", repo: "api", number: 201),
+        PullRequestRef(owner: "acme", repo: "web", number: 410),
+        PullRequestRef(owner: "acme", repo: "web", number: 411),
+    ]
+
     static func popover(
         _ data: ViewData, _ scheme: ColorScheme, layout: PopoverLayout, tab: PopoverTab = .review, filter: ActionLane? = nil,
         reviewFilter: ReviewFilter = ReviewFilter(), sorts: ListSorts = ListSorts()
@@ -110,10 +120,12 @@ enum DemoSnapshot {
             .environment(\.colorScheme, scheme)
     }
 
-    /// The list to review with the button that picks several, switched on or off.
-    static func selecting(_ data: ViewData, _ scheme: ColorScheme, picked: Set<PullRequestRef>?) -> some View {
+    /// A list with the button that picks several, switched on or off.
+    static func selecting(
+        _ data: ViewData, _ scheme: ColorScheme, tab: PopoverTab = .review, picked: Set<PullRequestRef>?, layout: PopoverLayout = .single
+    ) -> some View {
         PopoverView(
-            data: data, layout: .constant(.single), initialSelection: picked, onRefresh: {}, onSettings: {}
+            data: data, layout: .constant(layout), initialSelection: picked.map { (tab, $0) }, initialTab: tab, onRefresh: {}, onSettings: {}
         )
         .environment(\.reviewing, reviewing)
         .background(Color(nsColor: .windowBackgroundColor))

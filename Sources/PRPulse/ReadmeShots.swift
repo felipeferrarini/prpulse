@@ -38,7 +38,7 @@ enum ReadmeShots {
     ) -> some View {
         PopoverView(
             data: data, layout: .constant(layout),
-            initialStack: stack.map { (PopoverTab.review, $0) }, initialSelection: selection,
+            initialStack: stack.map { (PopoverTab.review, $0) }, initialSelection: selection.map { (PopoverTab.review, $0) },
             onRefresh: {}, onSettings: {}
         )
         .environment(\.reviewing, DemoSnapshot.reviewing)

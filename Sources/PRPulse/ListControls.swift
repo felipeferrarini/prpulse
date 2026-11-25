@@ -86,6 +86,7 @@ private struct BarMenu<Content: View>: View {
 /// The button that starts choosing several pull requests, when there is no room for it elsewhere.
 struct SelectControl {
     let isOn: Bool
+    let help: String
     let toggle: () -> Void
 }
 
@@ -104,7 +105,7 @@ private struct BarSelect: View {
         .buttonStyle(.plain)
         .padding(BarSlot.margin)
         .layoutPriority(2)
-        .help(control.isOn ? tr("batch.cancel") : tr("batch.help"))
+        .help(control.isOn ? tr("batch.cancel") : control.help)
         .accessibilityLabel(control.isOn ? tr("batch.cancel") : tr("batch.select"))
     }
 }
@@ -270,11 +271,16 @@ struct ReviewControls: View {
 /// What sits above the list of the viewer's own pull requests: the order.
 struct MineControls: View {
     @Binding var sort: PullRequestSort
+    var select: SelectControl?
 
     var body: some View {
         ControlBar {
             BarMenu(symbol: "arrow.up.arrow.down", value: sort.title, help: tr("sort.help")) {
                 SortOptions(options: PullRequestSort.mineOptions, selection: $sort)
+            }
+            if let select {
+                BarDivider()
+                BarSelect(control: select)
             }
         }
         .fixedSize()

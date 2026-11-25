@@ -15,7 +15,7 @@ struct PopoverView: View {
     var onContentChange: () -> Void = {}
     /// What the pictures of the README start with: a stack opened, pull requests ticked, pull requests ticked.
     var initialStack: (tab: PopoverTab, key: StackKey)?
-    var initialSelection: Set<PullRequestRef>?
+    var initialSelection: (tab: PopoverTab, refs: Set<PullRequestRef>)?
     let onRefresh: () -> Void
     let onSettings: () -> Void
 
@@ -34,7 +34,7 @@ struct PopoverView: View {
         entersOnAppear: Bool = false,
         onContentChange: @escaping () -> Void = {},
         initialStack: (tab: PopoverTab, key: StackKey)? = nil,
-        initialSelection: Set<PullRequestRef>? = nil,
+        initialSelection: (tab: PopoverTab, refs: Set<PullRequestRef>)? = nil,
         initialTab: PopoverTab = .review,
         initialFilter: ActionLane? = nil,
         initialReviewFilter: ReviewFilter = ReviewFilter(),
@@ -171,13 +171,15 @@ private struct SummaryPanes: View {
     let onMute: (PullRequestRef) -> Void
     @Environment(\.reviewing) private var reviewing
     var initialStack: (tab: PopoverTab, key: StackKey)?
-    var initialSelection: Set<PullRequestRef>?
+    var initialSelection: (tab: PopoverTab, refs: Set<PullRequestRef>)?
     let onContentChange: () -> Void
 
     @LocalState private var heights: [PopoverTab: CGFloat] = [:]
     @LocalState private var openStacks: [PopoverTab: StackKey] = [:]
-    @LocalState private var selecting = false
+    /// The pane in which pull requests are being chosen.
+    @LocalState private var selecting: PopoverTab? = nil
     @LocalState private var selection: Set<PullRequestRef> = []
+    @LocalState private var copied = false
 
     private static let minListHeight: CGFloat = 120
     private static let maxListHeight: CGFloat = 410
@@ -187,7 +189,6 @@ private struct SummaryPanes: View {
 
     private var isSingle: Bool { layout == .single }
     private var paneWidth: CGFloat { isSingle ? Self.singleWidth : Self.splitWidth / 2 }
-    private var canSelect: Bool { reviewing.canSelect }
 
     private var listHeight: CGFloat {
         let tallest = max(heights[.review] ?? 0, heights[.mine] ?? 0)
@@ -209,11 +210,12 @@ private struct SummaryPanes: View {
         .animation(PopoverMotion.spring, value: tab)
         .onChange(of: openStacks) { _, _ in onContentChange() }
         .onChange(of: selecting) { _, _ in onContentChange() }
+        .onChange(of: tab) { _, _ in if selecting != nil { endSelecting() } }
         .onAppear {
             if let initialStack { openStacks[initialStack.tab] = initialStack.key }
             if let initialSelection {
-                selecting = true
-                selection = initialSelection
+                selecting = initialSelection.tab
+                selection = initialSelection.refs
             }
         }
     }
@@ -243,7 +245,7 @@ private struct SummaryPanes: View {
             }
             .frame(height: max(listHeight - chipsHeight(for: kind, showsStack: open != nil), Self.minListHeight / 2))
             .animation(.easeOut(duration: 0.2), value: chipsHeight(for: kind, showsStack: open != nil))
-            if kind == .review && selecting { selectionBar }
+            if selecting == kind { selectionBar(kind) }
         }
         .accessibilityHidden(hidden)
         .allowsHitTesting(!hidden)
@@ -359,13 +361,13 @@ private struct SummaryPanes: View {
     // MARK: Choosing several
 
     private func selection(of row: RowModel, kind: PopoverTab) -> RowSelection? {
-        guard selecting, kind == .review, row.kind == .review else { return nil }
+        guard selecting == kind else { return nil }
         let ref = row.pr.ref
         return RowSelection(state: selection.contains(ref) ? .on : .off) { toggle(ref) }
     }
 
     private func selection(of group: StackGroup<RowModel>, kind: PopoverTab) -> RowSelection? {
-        guard selecting, kind == .review else { return nil }
+        guard selecting == kind else { return nil }
         let refs = group.refs
         let chosen = refs.filter(selection.contains).count
         let state: SelectionState = chosen == 0 ? .off : (chosen == refs.count ? .on : .partial)
@@ -383,36 +385,94 @@ private struct SummaryPanes: View {
         reviewFilter.apply(to: ListOrder.sorted(summary.review, by: sorts.review))
     }
 
-    private func chosenPullRequests() -> [PullRequestSnapshot] {
-        visibleReview.map(\.pr).filter { selection.contains($0.ref) }
+    private var sortedMine: [MineItem] { ListOrder.sorted(summary.mine, by: sorts.mine) }
+
+    private func chosenPullRequests(in kind: PopoverTab) -> [PullRequestSnapshot] {
+        let shown = kind == .review ? visibleReview.map(\.pr) : sortedMine.map(\.pr)
+        return shown.filter { selection.contains($0.ref) }
     }
 
     private func endSelecting() {
         withAnimation(PopoverMotion.spring) {
-            selecting = false
+            selecting = nil
             selection = []
+            copied = false
         }
     }
 
-    private var selectionBar: some View {
-        let chosen = chosenPullRequests()
-        return HStack(spacing: 8) {
-            Text(tr("batch.count", chosen.count)).font(.system(size: 12)).foregroundStyle(.secondary)
-            Spacer(minLength: 0)
-            if reviewing.canReviewEach {
-                PillButton(title: tr("batch.each"), symbol: "list.bullet", isEnabled: !chosen.isEmpty) {
-                    reviewing.reviewEach(chosen)
-                    endSelecting()
-                }
-            }
-            PillButton(title: tr("batch.together"), symbol: "sparkles", isEnabled: chosen.count > 1) {
-                reviewing.reviewTogether(chosen, .together)
-                endSelecting()
-            }
+    private func selectionBar(_ kind: PopoverTab) -> some View {
+        let chosen = chosenPullRequests(in: kind)
+        return ViewThatFits(in: .horizontal) {
+            selectionBar(kind, chosen: chosen, compact: false)
+            selectionBar(kind, chosen: chosen, compact: true)
         }
         .padding(.horizontal, 14)
         .frame(height: 44)
         .overlay(alignment: .top) { Rectangle().fill(Palette.line).frame(height: 1) }
+    }
+
+    private func selectionBar(_ kind: PopoverTab, chosen: [PullRequestSnapshot], compact: Bool) -> some View {
+        HStack(spacing: 8) {
+            Text(tr("batch.count", chosen.count)).font(.system(size: 12)).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            if kind == .review && reviewing.isAvailable {
+                if reviewing.canReviewEach {
+                    PillButton(title: tr("batch.each"), symbol: "list.bullet", isEnabled: !chosen.isEmpty) {
+                        reviewing.reviewEach(chosen)
+                        endSelecting()
+                    }
+                }
+                PillButton(title: tr("batch.together"), symbol: "sparkles", isEnabled: chosen.count > 1) {
+                    reviewing.reviewTogether(chosen, .together)
+                    endSelecting()
+                }
+            }
+            copyMenu(chosen, showsTitle: !compact)
+            shareLink(chosen)
+        }
+    }
+
+    private func copyMenu(_ chosen: [PullRequestSnapshot], showsTitle: Bool) -> some View {
+        HStack(spacing: 2) {
+            Button { copy(chosen, as: .links) } label: {
+                PillLabel(
+                    title: copied ? tr("batch.copied") : tr("batch.copy"), symbol: copied ? "checkmark" : "link", showsTitle: showsTitle || copied
+                )
+            }
+            .buttonStyle(.plain)
+            .help(tr("batch.copy.help"))
+            Menu {
+                ForEach(LinkFormat.allCases, id: \.self) { format in
+                    Button(format.title) { copy(chosen, as: format) }
+                }
+            } label: {
+                PillLabel(title: tr("batch.format"), symbol: "chevron.down", showsTitle: false)
+            }
+            .menuStyle(.button)
+            .menuIndicator(.hidden)
+            .buttonStyle(.plain)
+            .fixedSize()
+            .help(tr("batch.format"))
+        }
+        .disabled(chosen.isEmpty || copied)
+        .opacity(chosen.isEmpty ? 0.4 : 1)
+    }
+
+    private func shareLink(_ chosen: [PullRequestSnapshot]) -> some View {
+        ShareLink(item: LinkFormat.titled.text(for: chosen)) {
+            PillLabel(title: tr("batch.share"), symbol: "square.and.arrow.up", showsTitle: false)
+        }
+        .buttonStyle(.plain)
+        .disabled(chosen.isEmpty)
+        .opacity(chosen.isEmpty ? 0.4 : 1)
+        .help(tr("batch.share.help"))
+    }
+
+    private func copy(_ chosen: [PullRequestSnapshot], as format: LinkFormat) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(format.text(for: chosen), forType: .string)
+        withAnimation(.easeOut(duration: 0.15)) { copied = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { if copied { endSelecting() } }
     }
 
     // MARK: Headers and the rest
@@ -429,11 +489,11 @@ private struct SummaryPanes: View {
         case .review where !summary.review.isEmpty:
             ReviewControls(
                 items: summary.review, shown: visibleReview.count, filter: $reviewFilter, sort: $sorts.review, showsOwner: showsOwner,
-                select: isSingle && canSelect ? SelectControl(isOn: selecting, toggle: toggleSelecting) : nil
+                select: isSingle ? selectControl(.review) : nil
             )
                 .padding(.bottom, 4)
         case .mine where !summary.mine.isEmpty:
-            MineControls(sort: $sorts.mine).padding(.bottom, 4)
+            MineControls(sort: $sorts.mine, select: isSingle ? selectControl(.mine) : nil).padding(.bottom, 4)
         default:
             EmptyView()
         }
@@ -449,12 +509,13 @@ private struct SummaryPanes: View {
 
     private func paneHeader(_ kind: PopoverTab) -> some View {
         let isReview = kind == .review
+        let hasRows = isReview ? !summary.review.isEmpty : !summary.mine.isEmpty
         return HStack {
             Label(isReview ? tr("popover.review") : tr("popover.mine"), systemImage: isReview ? "eye" : "arrow.triangle.branch")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(isReview ? Palette.review : Color.primary)
             Spacer()
-            if isReview && canSelect && !summary.review.isEmpty && !isSingle { selectButton }
+            if !isSingle && hasRows { selectButton(kind) }
             Text(isReview ? tr("popover.pane.review.count", summary.review.count) : tr("popover.pane.mine.count", summary.mine.count))
                 .font(.system(size: 12)).foregroundStyle(.secondary)
         }
@@ -462,25 +523,39 @@ private struct SummaryPanes: View {
         .frame(height: Self.paneHeaderHeight, alignment: .center)
     }
 
-    private func toggleSelecting() {
-        if selecting { endSelecting() } else { withAnimation(PopoverMotion.spring) { selecting = true } }
+    private func toggleSelecting(_ kind: PopoverTab) {
+        if selecting == kind { return endSelecting() }
+        withAnimation(PopoverMotion.spring) {
+            selecting = kind
+            selection = []
+            copied = false
+        }
     }
 
-    private var selectButton: some View {
-        Button(action: toggleSelecting) {
-            Label(selecting ? tr("batch.cancel") : tr("batch.select"), systemImage: selecting ? "xmark" : "checklist")
+    private func selectControl(_ kind: PopoverTab) -> SelectControl {
+        SelectControl(isOn: selecting == kind, help: selectHelp(kind)) { toggleSelecting(kind) }
+    }
+
+    private func selectHelp(_ kind: PopoverTab) -> String {
+        kind == .review && reviewing.isAvailable ? tr("batch.help.review") : tr("batch.help")
+    }
+
+    private func selectButton(_ kind: PopoverTab) -> some View {
+        let isOn = selecting == kind
+        return Button { toggleSelecting(kind) } label: {
+            Label(isOn ? tr("batch.cancel") : tr("batch.select"), systemImage: isOn ? "xmark" : "checklist")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Palette.review)
+                .foregroundStyle(kind == .review ? Palette.review : Color.primary)
         }
         .buttonStyle(.plain)
         .padding(.trailing, isSingle ? 0 : 6)
-        .help(tr("batch.help"))
+        .help(selectHelp(kind))
     }
 
     private func rows(for kind: PopoverTab) -> [RowModel] {
         switch kind {
         case .review: visibleReview.map { RowModel.review($0, showsOwner: showsOwner) }
-        case .mine: ListOrder.sorted(summary.mine, by: sorts.mine).map { RowModel.mine($0, showsOwner: showsOwner) }
+        case .mine: sortedMine.map { RowModel.mine($0, showsOwner: showsOwner) }
         }
     }
 
@@ -498,17 +573,34 @@ struct PillButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol)
-                .font(.system(size: 11.5, weight: .semibold))
-                .foregroundStyle(Palette.review)
-                .padding(.horizontal, 8)
-                .frame(height: 24)
-                .background(Palette.review.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+        Button(action: action) { PillLabel(title: title, symbol: symbol) }
+            .buttonStyle(.plain)
+            .disabled(!isEnabled)
+            .opacity(isEnabled ? 1 : 0.4)
+    }
+}
+
+/// What a pill shows. Without its title it keeps only the icon, and the title stays for those who cannot see it.
+struct PillLabel: View {
+    let title: String
+    let symbol: String
+    var showsTitle = true
+
+    var body: some View {
+        Group {
+            if showsTitle {
+                Label(title, systemImage: symbol)
+            } else {
+                Image(systemName: symbol).frame(width: 14).accessibilityLabel(title)
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : 0.4)
+        .font(.system(size: 11.5, weight: .semibold))
+        .foregroundStyle(Palette.review)
+        .lineLimit(1)
+        .padding(.horizontal, 8)
+        .frame(height: 24)
+        .background(Palette.review.opacity(0.14), in: RoundedRectangle(cornerRadius: 6))
+        .fixedSize()
     }
 }
 

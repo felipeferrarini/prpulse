@@ -194,6 +194,8 @@ Pull requests in a [GitHub stack](https://docs.github.com/en/pull-requests/get-s
 
 For pull requests that belong together without being a stack, for example one in each repository of the same feature, **Select** (above the list) puts a checkbox on every row. Tick the ones you want, a stack ticks all of its pull requests, then choose **Review together** or, for a terminal destination, **Review each**. A review of several repositories opens in the first one's folder.
 
+**Select** also works in **My PRs**, to send several of yours to someone. Tick the ones you want and choose **Copy links** (one address per line, so a chat turns each into a preview). The arrow beside it writes them as **Title and link** or as a **Markdown list**, and the share button hands them to Messages, Mail and the like, as title and link. In **To review** the same two buttons sit beside the review ones.
+
 <table>
   <tr>
     <td width="50%" align="center">

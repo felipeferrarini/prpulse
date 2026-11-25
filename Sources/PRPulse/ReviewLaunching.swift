@@ -47,7 +47,6 @@ struct ReviewActions {
     var isAvailable: Bool { primary != nil }
     /// A conversation for each pull request can be opened at once only where the agent starts by itself: a link only fills in a message.
     var canReviewEach: Bool { primary?.startsByItself == true }
-    var canSelect: Bool { isAvailable }
 }
 
 private struct ReviewActionsKey: EnvironmentKey {
